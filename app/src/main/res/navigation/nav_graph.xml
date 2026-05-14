@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/nav_graph"
+    app:startDestination="@id/loginFragment">
+
+    <fragment
+        android:id="@+id/loginFragment"
+        android:name="com.example.mobile_appafn.ui.auth.LoginFragment"
+        android:label="Connexion">
+        <action
+            android:id="@+id/action_login_to_feed"
+            app:destination="@id/feedFragment"
+            app:popUpTo="@id/loginFragment"
+            app:popUpToInclusive="true" />
+        <action
+            android:id="@+id/action_login_to_register"
+            app:destination="@id/registerFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/registerFragment"
+        android:name="com.example.mobile_appafn.ui.auth.RegisterFragment"
+        android:label="Inscription">
+        <action
+            android:id="@+id/action_register_to_feed"
+            app:destination="@id/feedFragment"
+            app:popUpTo="@id/loginFragment"
+            app:popUpToInclusive="true" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/feedFragment"
+        android:name="com.example.mobile_appafn.ui.feed.FeedFragment"
+        android:label="Fil d'actualité">
+        <action
+            android:id="@+id/action_feed_to_profile"
+            app:destination="@id/profileFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/profileFragment"
+        android:name="com.example.mobile_appafn.ui.profile.ProfileFragment"
+        android:label="Profil">
+        <argument
+            android:name="uid"
+            app:argType="string"
+            android:defaultValue="" />
+    </fragment>
+
+</navigation>
