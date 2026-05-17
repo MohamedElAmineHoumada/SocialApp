@@ -1,9 +1,7 @@
 plugins {
     alias(libs.plugins.android.application)
-    alias(libs.plugins.kotlin.compose)
     id("com.google.gms.google-services")
 }
-
 android {
     namespace = "com.Groupe15.SocialApp"
     compileSdk = 35
