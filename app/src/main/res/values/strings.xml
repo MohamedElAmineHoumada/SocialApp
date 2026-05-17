@@ -1,7 +1,3 @@
 <resources>
-    <string name="profile_title">Profil</string>
-    <string name="feed_title">Fil d\'actualité</string>
-    <string name="login_title">Bienvenue !</string>
-    <string name="register_title">Créer un compte</string>
-    <string name="app_name">Mobile-AppAFN</string>
+    <string name="app_name">SocialApp</string>
 </resources>

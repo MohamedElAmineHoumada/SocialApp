@@ -22,5 +22,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "Mobile-AppAFN"
+rootProject.name = "SocialApp"
 include(":app")
