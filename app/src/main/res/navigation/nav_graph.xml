@@ -6,7 +6,7 @@
 
     <fragment
         android:id="@+id/loginFragment"
-        android:name="com.example.mobile_appafn.ui.auth.LoginFragment"
+        android:name="com.Groupe15.SocialApp.ui.auth.LoginFragment"
         android:label="Connexion">
         <action
             android:id="@+id/action_login_to_feed"
@@ -20,7 +20,7 @@
 
     <fragment
         android:id="@+id/registerFragment"
-        android:name="com.example.mobile_appafn.ui.auth.RegisterFragment"
+        android:name="com.Groupe15.SocialApp.ui.auth.RegisterFragment"
         android:label="Inscription">
         <action
             android:id="@+id/action_register_to_feed"
@@ -31,7 +31,7 @@
 
     <fragment
         android:id="@+id/feedFragment"
-        android:name="com.example.mobile_appafn.ui.feed.FeedFragment"
+        android:name="com.Groupe15.SocialApp.ui.feed.FeedFragment"
         android:label="Fil d'actualité">
         <action
             android:id="@+id/action_feed_to_profile"
@@ -40,7 +40,7 @@
 
     <fragment
         android:id="@+id/profileFragment"
-        android:name="com.example.mobile_appafn.ui.profile.ProfileFragment"
+        android:name="com.Groupe15.SocialApp.ui.profile.ProfileFragment"
         android:label="Profil">
         <argument
             android:name="uid"

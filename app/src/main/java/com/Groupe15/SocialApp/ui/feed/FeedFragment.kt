@@ -11,7 +11,6 @@ import androidx.recyclerview.widget.RecyclerView
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.Groupe15.SocialApp.R
-
 class FeedFragment : Fragment(R.layout.fragment_feed) {
 
     private val viewModel: FeedViewModel by viewModels()
