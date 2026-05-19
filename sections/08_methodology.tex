@@ -1,0 +1,131 @@
+\chapter{Matériel et Méthodes (ou Méthodologie)}
+\section{Matériel}
+The project was conducted on a Virtual Private Server (VPS) running Ubuntu. The server's IP address was 192.168.1.111.
+
+\section{Outils}
+The following tools were used in this project:
+\begin{itemize}
+    \item \texttt{iptables}: The firewall tool itself (already included in Ubuntu).
+    \item \texttt{iptables-persistent} / \texttt{netfilter-persistent}: Saves firewall rules so they survive a server reboot. Without this, all rules are lost when the machine restarts.
+    \item \texttt{nmap}: For network scanning and firewall validation.
+\end{itemize}
+The installation of the persistence tool was done via the command:
+\begin{lstlisting}[language=bash]
+sudo apt install iptables iptables-persistent -y
+\end{lstlisting}
+
+\section{Méthodologie}
+All rules were written in a single shell script located at: \texttt{/etc/iptables/rules.sh}. This makes rules easy to re-apply and modify. Here is the final working script with a detailed explanation of every section.
+
+\subsection{Flush Existing Rules}
+Before adding new rules, the existing ones are cleared:
+\begin{lstlisting}[language=bash]
+iptables -F
+iptables -X
+iptables -Z
+\end{lstlisting}
+\begin{itemize}
+    \item \texttt{-F} flushes (deletes) all rules from all chains.
+    \item \texttt{-X} deletes any custom user-defined chains.
+    \item \texttt{-Z} zeroes the packet/byte counters (useful for monitoring).
+\end{itemize}
+This ensures no leftover rules interfere with the new configuration.
+
+\subsection{Default Policies}
+This is the most important section. It sets the default policy — what happens to a packet if no rule matches it.
+\begin{lstlisting}[language=bash]
+iptables -P INPUT DROP
+iptables -P FORWARD DROP
+iptables -P OUTPUT ACCEPT
+\end{lstlisting}
+\begin{itemize}
+    \item \texttt{INPUT DROP} — by default, all incoming traffic is blocked. Only traffic explicitly allowed by a rule gets through. This is a “whitelist” approach: everything is denied unless permitted.
+    \item \texttt{FORWARD DROP} — this server is not a router, so it does not forward traffic between networks.
+    \item \texttt{OUTPUT ACCEPT} — outgoing traffic from the server is allowed freely (the server can reach the internet, install packages, etc.)
+\end{itemize}
+
+\subsection{Allow Loopback}
+The loopback interface (\texttt{lo}) is an internal virtual network interface. It allows the server to communicate with itself.
+\begin{lstlisting}[language=bash]
+iptables -A INPUT -i lo -j ACCEPT
+iptables -A OUTPUT -o lo -j ACCEPT
+\end{lstlisting}
+
+\subsection{Allow Established Connections}
+When the server initiates a connection to the outside, the reply packets need to be allowed back in.
+\begin{lstlisting}[language=bash]
+iptables -A INPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+\end{lstlisting}
+\begin{itemize}
+    \item \texttt{ESTABLISHED} — packets belonging to an already-open connection.
+    \item \texttt{RELATED} — packets related to an existing connection.
+\end{itemize}
+
+\subsection{Allow ICMP (Ping) with Rate Limiting}
+This rule allows ping so the server can be checked for availability and limits it to 1 ping per second to prevent ICMP flood attacks.
+\begin{lstlisting}[language=bash]
+iptables -A INPUT -p icmp --icmp-type echo-request -m limit --limit 1/s --limit-burst 4 -j ACCEPT
+\end{lstlisting}
+
+\subsection{SSH Protection — Brute Force Rate Limiting}
+SSH (port 22) is the most attacked service on any Linux server.
+\begin{lstlisting}[language=bash]
+iptables -A INPUT -p tcp --dport 22 -m conntrack --ctstate NEW -m recent --set --name SSH_BRUTE
+iptables -A INPUT -p tcp --dport 22 -m conntrack --ctstate NEW -m recent --update --seconds 60 --hitcount 4 --name SSH_BRUTE -j DROP
+iptables -A INPUT -p tcp --dport 22 -j ACCEPT
+\end{lstlisting}
+\begin{itemize}
+    \item Rule 1: Records every new SSH connection attempt in a list named \texttt{SSH\_BRUTE}.
+    \item Rule 2: Drops packets if the same IP makes 4 or more new connections within 60 seconds.
+    \item Rule 3: Accepts the connection if the limit has not been exceeded.
+\end{itemize}
+
+\subsection{Allow HTTP and HTTPS}
+Ports 80 (HTTP) and 443 (HTTPS) are opened for web traffic.
+\begin{lstlisting}[language=bash]
+iptables -A INPUT -p tcp --dport 80 -j ACCEPT
+iptables -A INPUT -p tcp --dport 443 -j ACCEPT
+\end{lstlisting}
+
+\subsection{DoS Protection — SYN Flood}
+A SYN flood is a DoS attack where an attacker sends large numbers of TCP SYN packets to exhaust server resources.
+\begin{lstlisting}[language=bash]
+iptables -A INPUT -p tcp --syn -m limit --limit 25/s --limit-burst 50 -j ACCEPT
+iptables -A INPUT -p tcp --syn -j DROP
+\end{lstlisting}
+The rules allow SYN packets up to 25 per second and drop the rest.
+
+\subsection{DoS Protection — Invalid TCP Packets}
+A legitimate TCP connection always starts with a SYN packet. This rule drops any packet that attempts to start a new connection without the SYN flag.
+\begin{lstlisting}[language=bash]
+iptables -A INPUT -p tcp ! --syn -m conntrack --ctstate NEW -j DROP
+\end{lstlisting}
+
+\subsection{DoS Protection — Fragmented Packets}
+This rule drops fragmented packets, which are sometimes used in evasion and denial-of-service attacks.
+\begin{lstlisting}[language=bash]
+iptables -A INPUT -f -j DROP
+\end{lstlisting}
+
+\subsection{Logging}
+This rule logs dropped packets to the system journal, limited to five messages per minute to avoid log flooding.
+\begin{lstlisting}[language=bash]
+iptables -A INPUT -m limit --limit 5/min -j LOG --log-prefix "IPT DROP: " --log-level 4
+\end{lstlisting}
+
+\subsection{Save Rules}
+Saves all current rules to \texttt{/etc/iptables/rules.v4} so they are automatically restored after every reboot.
+\begin{lstlisting}[language=bash]
+netfilter-persistent save
+\end{lstlisting}
+
+\subsection{IPv6 Rules}
+Without IPv6 rules, an attacker could bypass the IPv4 firewall entirely by connecting over IPv6.
+\begin{lstlisting}[language=bash]
+sudo ip6tables -P INPUT DROP
+sudo ip6tables -P FORWARD DROP
+sudo ip6tables -A INPUT -i lo -j ACCEPT
+sudo ip6tables -A INPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+sudo ip6tables -A INPUT -p tcp --dport 22 -j ACCEPT
+sudo netfilter-persistent save
+\end{lstlisting}

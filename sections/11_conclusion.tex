@@ -1,0 +1,14 @@
+\chapter{Conclusion et perspectives}
+Un pare-feu entièrement fonctionnel a été déployé avec succès sur un serveur Ubuntu en utilisant \texttt{iptables}. Le pare-feu :
+\begin{itemize}
+    \item Bloque tout le trafic par défaut (approche de la liste blanche)
+    \item N'autorise que SSH, HTTP et HTTPS
+    \item Protège SSH contre les attaques par force brute en utilisant la limitation du débit de connexion
+    \item Défend contre les attaques par inondation SYN, les paquets fragmentés et les paquets TCP invalides
+    \item Enregistre les paquets suspects rejetés pour la surveillance
+    \item Persiste après les redémarrages
+\end{itemize}
+Les scans nmap avant/après ont confirmé que le pare-feu fonctionne : 1021 ports sont passés de "fermés" à "filtrés", et le temps de scan a augmenté de 0.22 à 4.79 secondes car les paquets rejetés ne produisent aucune réponse et forcent nmap à attendre les délais d'attente.
+
+\section{Perspectives}
+\lipsum[11-12]

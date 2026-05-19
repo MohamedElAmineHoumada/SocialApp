@@ -1,0 +1,21 @@
+\chapter{Discussion}
+\section{Analyse des problèmes rencontrés}
+Au cours du projet, deux problèmes ont été découverts et résolus :
+\begin{itemize}
+    \item \textbf{Problème 1 — Le scan "avant" a été effectué sans le pare-feu actif} : Les règles du pare-feu ont été purgées pour capturer l'état "avant", mais le deuxième scan a été exécuté par erreur avant de réappliquer les règles. La réapplication du script et la réexécution du scan ont résolu le problème.
+    \item \textbf{Problème 2 — La règle contre les inondations SYN était trop large} : La règle originale acceptait tous les paquets TCP SYN en dessous de 25/sec, quel que soit le port de destination. La restriction de la règle aux seuls ports 22, 80 et 443 a fait apparaître les ports bloqués comme "filtrés" au lieu de "fermés".
+\end{itemize}
+
+\section{ufw — L'alternative plus simple}
+\texttt{ufw} (Uncomplicated Firewall) est un outil de plus haut niveau qui écrit automatiquement les règles \texttt{iptables}.
+\begin{lstlisting}[language=bash]
+sudo ufw default deny incoming
+sudo ufw default allow outgoing
+sudo ufw allow ssh
+sudo ufw allow http
+sudo ufw allow https
+sudo ufw limit ssh
+sudo ufw enable
+\end{lstlisting}
+\texttt{ufw} est plus facile à utiliser mais moins flexible que l'écriture directe de règles \texttt{iptables}. Travailler avec \texttt{iptables} brutes offre une compréhension plus approfondie du filtrage de paquets.
+\lipsum[9-10]

@@ -1,0 +1,65 @@
+\chapter*{Résumé}
+\addcontentsline{toc}{chapter}{Résumé}
+
+Ce rapport détaille le déploiement et la configuration d'un pare-feu sur un serveur Linux en utilisant \texttt{iptables}, le gestionnaire de pare-feu natif du noyau Linux. L'objectif principal était de sécuriser un serveur privé virtuel (VPS) en bloquant tous les ports non nécessaires, en protégeant le service SSH contre les attaques par force brute, et en atténuant les attaques par déni de service (DoS) de base. 
+
+Les règles du pare-feu ont été mises en œuvre via un script shell unique, en adoptant une politique de "liste blanche" (approche de refus par défaut) où tout le trafic entrant est bloqué par défaut, sauf s'il est explicitement autorisé par une règle. Cette approche garantit une sécurité maximale en réduisant la surface d'attaque du serveur.
+
+Des mesures spécifiques ont été prises pour autoriser le trafic légitime et essentiel, notamment :
+\begin{itemize}
+    \item L'autorisation des connexions réseau déjà établies et des connexions liées (ESTABLISHED, RELATED)
+    \item La limitation de débit du trafic ICMP (ping) pour permettre les diagnostics tout en prévenant les attaques par inondation ICMP
+    \item L'autorisation des services web (HTTP sur le port 80 et HTTPS sur le port 443)
+    \item L'autorisation du protocole SSH (port 22) pour l'administration à distance
+\end{itemize}
+
+La sécurité de SSH a été renforcée par l'implémentation d'une limitation du nombre de nouvelles connexions provenant d'une même adresse IP, ce qui rend les attaques par force brute inefficaces en bloquant automatiquement les adresses IP qui tentent trop de connexions rapidement.
+
+Des protections avancées contre les attaques DoS ont également été configurées :
+\begin{itemize}
+    \item Limitation du débit des paquets TCP SYN pour contrer les attaques par inondation SYN (SYN Flood)
+    \item Blocage des paquets TCP invalides qui ne commencent pas par un drapeau SYN
+    \item Rejet des paquets fragmentés, souvent utilisés dans les attaques par déni de service
+\end{itemize}
+
+Un système de journalisation a été mis en place pour enregistrer les paquets rejetés, permettant une surveillance proactive des activités suspectes et l'audit de sécurité du serveur.
+
+La validation de l'efficacité du pare-feu a été réalisée en comparant des scans réseau \texttt{nmap} avant et après l'activation des règles. Cette comparaison a démontré que les ports bloqués sont passés de l'état "fermé" à "filtré", augmentant considérablement le temps de scan et masquant effectivement la présence de services sur le serveur — un objectif clé de la sécurité.
+
+Enfin, une configuration IPv6 complète a également été mise en place pour prévenir les attaquants de contourner le pare-feu IPv4 via le protocole IPv6.
+
+\vspace{1.5cm}
+\noindent\textbf{Mots clés :} Pare-feu, iptables, Sécurité Réseau, Linux, nmap, DoS, SSH, Netfilter, Administration Système.
+
+\chapter*{Abstract}
+\addcontentsline{toc}{chapter}{Abstract}
+
+This report details the deployment and configuration of a firewall on a Linux server using \texttt{iptables}, the native firewall manager of the Linux kernel. The primary objective was to secure a Virtual Private Server (VPS) by blocking all unnecessary ports, protecting the SSH service from brute-force attacks, and mitigating basic Denial of Service (DoS) attacks.
+
+The firewall rules were implemented via a single shell script, adopting a "whitelist" policy (default-deny approach) where all incoming traffic is blocked by default unless explicitly allowed by a rule. This approach ensures maximum security by minimizing the server's attack surface.
+
+Specific measures were taken to permit legitimate and essential traffic, including:
+\begin{itemize}
+    \item Authorization of already-established network connections and related connections (ESTABLISHED, RELATED)
+    \item Rate-limiting of ICMP traffic (ping) to allow diagnostics while preventing ICMP flood attacks
+    \item Authorization of web services (HTTP on port 80 and HTTPS on port 443)
+    \item Authorization of SSH protocol (port 22) for remote administration
+\end{itemize}
+
+SSH security was enhanced by implementing a limit on the number of new connections from a single IP address, rendering brute-force attacks ineffective by automatically blocking IP addresses that attempt too many connections rapidly.
+
+Advanced protections against DoS attacks were also configured:
+\begin{itemize}
+    \item Rate-limiting of TCP SYN packets to counter SYN Flood attacks
+    \item Blocking of invalid TCP packets that do not begin with a SYN flag
+    \item Rejection of fragmented packets, often used in denial-of-service attacks
+\end{itemize}
+
+A logging system was implemented to record rejected packets, enabling proactive monitoring of suspicious activities and security auditing of the server.
+
+The firewall's effectiveness was validated by comparing \texttt{nmap} network scans before and after rule activation. This comparison demonstrated that blocked ports changed from "closed" to "filtered" state, significantly increasing scan time and effectively obscuring the presence of services on the server — a key security objective.
+
+Finally, comprehensive IPv6 configuration was also implemented to prevent attackers from bypassing the IPv4 firewall via the IPv6 protocol.
+
+\vspace{1.5cm}
+\noindent\textbf{Keywords:} Firewall, iptables, Network Security, Linux, nmap, DoS, SSH, Netfilter, System Administration.

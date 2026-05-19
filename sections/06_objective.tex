@@ -1,0 +1,103 @@
+\chapter{Objectif}
+
+\section{Objectif principal}
+
+L'objectif principal de ce projet est de concevoir et d'implémenter une solution de pare-feu robuste et efficace pour un serveur Linux, en utilisant \texttt{iptables}. Cette solution doit non seulement bloquer les accès non autorisés, mais aussi protéger le serveur contre les attaques les plus courantes rencontrées dans les environnements de production.
+
+\section{Objectifs spécifiques}
+
+\subsection{1. Implémentation d'une politique de sécurité robuste}
+
+Le premier objectif est d'établir une architecture de sécurité basée sur le principe du "refus par défaut" (default-deny policy). Cela signifie que :
+\begin{itemize}
+    \item Tout le trafic entrant est bloqué par défaut
+    \item Seul le trafic explicitement autorisé par une règle est accepté
+    \item Cette approche crée une liste blanche de services autorisés plutôt qu'une liste noire de services interdits
+\end{itemize}
+
+L'avantage de cette approche est que même les services non documentés ou oubliés ne posent pas de risque de sécurité, puisqu'ils sont bloqués par défaut.
+
+\subsection{2. Sécurisation du service SSH}
+
+SSH (Secure Shell) est le principal vecteur d'attaque contre les serveurs Linux car c'est le protocole privilégié pour l'administration à distance. Les objectifs concernant SSH sont :
+\begin{itemize}
+    \item Maintenir SSH accessible pour l'administration légitime du serveur
+    \item Protéger SSH contre les attaques par force brute (où un attaquant essaie des millions de combinaisons de noms d'utilisateur et de mots de passe)
+    \item Implémenter un mécanisme de limitation de débit (rate-limiting) qui détecte et bloque automatiquement les tentatives répétées d'une même adresse IP
+    \item Configurer les règles de telle sorte que les utilisateurs légitimes ne soient pas affectés par les protections
+\end{itemize}
+
+\subsection{3. Mitigation des attaques DoS et DDoS}
+
+Les attaques par déni de service visent à rendre un serveur inaccessible en le surchargeant avec un volume énorme de trafic. Les objectifs spécifiques sont :
+\begin{itemize}
+    \item \textbf{Protection contre les attaques SYN Flood} : Implémenter une limitation du débit pour les paquets TCP SYN entrants, qui est le premier étape de l'établissement d'une connexion TCP
+    \item \textbf{Blocage des paquets TCP invalides} : Rejeter les paquets TCP qui ne respectent pas le protocole normal d'établissement de connexion (p.ex., les paquets qui arrivent avec des drapeaux autres que SYN pour une nouvelle connexion)
+    \item \textbf{Rejet des paquets fragmentés} : Éliminer les paquets fragmentés qui peuvent être utilisés pour des attaques d'évasion ou de reconnaissance
+    \item \textbf{Limitation du trafic ICMP} : Tout en autorisant le ping pour les diagnostics, limiter strictement le nombre de requêtes ICMP pour prévenir les attaques par inondation ICMP
+\end{itemize}
+
+\subsection{4. Autorisation du trafic légitime}
+
+Parallèlement à la protection, le pare-feu doit autoriser le trafic essentiel :
+\begin{itemize}
+    \item \textbf{Trafic loopback} : Permettre à l'interface de loopback (lo) de fonctionner correctement, ce qui est essentiel pour l'exécution des services locaux
+    \item \textbf{Connexions établies} : Autoriser les paquets qui font partie de connexions déjà établies, ce qui est crucial pour tout service qui initie des connexions externes (comme les téléchargements de paquets avec \texttt{apt})
+    \item \textbf{Services web} : Ouvrir les ports HTTP (80) et HTTPS (443) pour permettre l'hébergement de services web si nécessaire
+    \item \textbf{Service SSH} : Bien entendu, autoriser les connexions SSH tout en les protégeant
+    \item \textbf{Diagnostics réseau} : Permettre le ping (ICMP) avec limitation de débit pour les vérifications de disponibilité
+\end{itemize}
+
+\subsection{5. Persistence du pare-feu}
+
+Un objectif crucial est d'assurer que les règles du pare-feu persistent après un redémarrage du serveur. Sans cela, le serveur serait de nouveau vulnérable après chaque redémarrage. Les objectifs sont :
+\begin{itemize}
+    \item Installer et configurer \texttt{netfilter-persistent} pour sauvegarder les règles
+    \item Tester que les règles sont correctement rechargées après redémarrage
+    \item Documenter le processus de persistence pour d'éventuelles mises à jour futures
+\end{itemize}
+
+\subsection{6. Implémentation de la journalisation et du monitoring}
+
+Pour la surveillance et l'audit, les objectifs incluent :
+\begin{itemize}
+    \item Enregistrer les paquets rejetés dans les logs système
+    \item Implémenter une limitation de débit pour les logs afin d'éviter que le système ne soit submergé par des enregistrements excessifs
+    \item Créer un mécanisme permettant l'analyse des logs pour détecter les activités suspectes
+\end{itemize}
+
+\subsection{7. Support IPv6}
+
+Enfin, nous devons configurer des règles pare-feu pour IPv6 afin d'empêcher les attaquants de contourner nos protections IPv4 en utilisant le protocole IPv6 :
+\begin{itemize}
+    \item Appliquer les mêmes principes de sécurité à IPv6
+    \item Bloquer le trafic IPv6 non autorisé
+    \item Permettre SSH sur IPv6 pour l'administration
+\end{itemize}
+
+\section{Critères de succès}
+
+Le succès du projet sera mesuré selon les critères suivants :
+
+\begin{enumerate}
+    \item \textbf{Fonctionnalité du pare-feu} : Les règles doivent s'appliquer correctement et tous les objectifs spécifiques doivent être atteints
+    
+    \item \textbf{Validations empiriques} : Les scans \texttt{nmap} avant et après doivent montrer une différence claire, notamment le passage des ports bloqués de l'état "closed" à "filtered"
+    
+    \item \textbf{Persistence} : Les règles doivent survivre à un redémarrage du serveur
+    
+    \item \textbf{Absence de disruption} : Les services légitimes (SSH, web, etc.) doivent continuer à fonctionner normalement
+    
+    \item \textbf{Documentation} : Tout le processus doit être bien documenté et facilement reproductible
+    
+    \item \textbf{Résolution de problèmes} : Tout problème rencontré doit être identifié, documenté et résolu avec une explication claire
+\end{enumerate}
+
+\section{Calendrier du projet}
+
+Le projet a été réalisé dans un délai court mais intensif :
+\begin{itemize}
+    \item \textbf{Jours 1-2} : Recherche, planification et préparation de l'infrastructure
+    \item \textbf{Jour 3} : Implémentation du script du pare-feu, test et dépannage
+    \item \textbf{Jour 4} : Réalisation des scans \texttt{nmap}, analyse des résultats et finalisation du rapport
+\end{itemize}
