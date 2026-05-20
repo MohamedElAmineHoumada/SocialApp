@@ -14,7 +14,7 @@ android {
 
     defaultConfig {
         applicationId = "com.Groupe15.SocialApp"
-        minSdk = 24
+        minSdk = 26
         targetSdk = 36
         versionCode = 1
         versionName = "1.0"
@@ -52,6 +52,7 @@ dependencies {
     implementation(libs.androidx.navigation.fragment.ktx)
     implementation(libs.androidx.navigation.ui.ktx)
     testImplementation(libs.junit)
+    implementation("androidx.swiperefreshlayout:swiperefreshlayout:1.1.0")
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(platform(libs.androidx.compose.bom))
@@ -59,5 +60,7 @@ dependencies {
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
     implementation("com.google.firebase:firebase-auth-ktx:23.1.0")
+    implementation("io.coil-kt:coil:2.5.0")
     implementation("com.google.firebase:firebase-firestore-ktx:25.1.1")
+    implementation("androidx.cardview:cardview:1.0.0")
 }
