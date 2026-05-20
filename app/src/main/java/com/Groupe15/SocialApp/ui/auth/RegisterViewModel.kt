@@ -4,11 +4,15 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import dagger.hilt.android.lifecycle.HiltViewModel
+import com.Groupe15.SocialApp.data.repository.AuthRepository
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
-class RegisterViewModel : ViewModel() {
-
-    private val repository = AuthRepository()
+@HiltViewModel
+class RegisterViewModel @Inject constructor(
+    private val repository: AuthRepository
+) : ViewModel() {
 
     private val _state = MutableLiveData(AuthState())
     val state: LiveData<AuthState> = _state
@@ -23,7 +27,7 @@ class RegisterViewModel : ViewModel() {
                 AuthState(success = true)
             } else {
                 AuthState(
-                    error = result.exceptionOrNull()?.message
+                    error = result.exceptionOrNull()?.message ?: "Erreur inconnue"
                 )
             }
         }

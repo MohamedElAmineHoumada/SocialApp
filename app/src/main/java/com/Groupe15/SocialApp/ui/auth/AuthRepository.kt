@@ -1,8 +1,15 @@
-package com.Groupe15.SocialApp.ui.auth
+package com.Groupe15.SocialApp.data.repository
+
 import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.tasks.await
-class AuthRepository {
-    private val auth = FirebaseAuth.getInstance()
+import javax.inject.Inject
+import javax.inject.Singleton
+
+@Singleton // Assure une instance unique de AuthRepository pour toute l'application
+class AuthRepository @Inject constructor(
+    private val auth: FirebaseAuth // Injecté automatiquement par Hilt depuis votre FirebaseModule
+) {
+
     suspend fun login(email: String, password: String): Result<Boolean> {
         return try {
             auth.signInWithEmailAndPassword(email, password).await()
@@ -11,6 +18,7 @@ class AuthRepository {
             Result.failure(e)
         }
     }
+
     suspend fun register(
         email: String,
         password: String,
@@ -23,9 +31,11 @@ class AuthRepository {
             Result.failure(e)
         }
     }
+
     fun logout() {
         auth.signOut()
     }
+
     fun isLoggedIn(): Boolean {
         return auth.currentUser != null
     }

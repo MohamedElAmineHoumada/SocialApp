@@ -3,37 +3,25 @@ package com.Groupe15.SocialApp.ui.feed
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.asLiveData
 import androidx.lifecycle.viewModelScope
 import com.Groupe15.SocialApp.data.model.Post
-import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.firestore.Query
+import com.Groupe15.SocialApp.ui.auth.PostRepository
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
-class FeedViewModel : ViewModel() {
+@HiltViewModel
+class FeedViewModel @Inject constructor(
+    private val postRepository: PostRepository
+) : ViewModel() {
 
-    private val firestore = FirebaseFirestore.getInstance()
-
-    private val _posts = MutableLiveData<List<Post>>()
-    val posts: LiveData<List<Post>> = _posts
-
-    private var listenerRegistration = firestore
-        .collection("posts")
-        .orderBy("createdAt", Query.Direction.DESCENDING)
-        .limit(50)
-        .addSnapshotListener { snapshot, error ->
-            if (error != null) return@addSnapshotListener
-            val postList = snapshot?.toObjects(Post::class.java) ?: emptyList()
-            _posts.postValue(postList)
-        }
+    // On transforme le Flow du Repository en LiveData pour le Fragment
+    val posts: LiveData<List<Post>> = postRepository.getLivePostsFlux().asLiveData()
 
     fun toggleLike(postId: String) {
         viewModelScope.launch {
-            // like avec Soukina
+            postRepository.toggleLike(postId)
         }
-    }
-
-    override fun onCleared() {
-        super.onCleared()
-        listenerRegistration.remove()
     }
 }
