@@ -11,25 +11,27 @@ import javax.inject.Inject
 
 @HiltViewModel
 class LoginViewModel @Inject constructor(
-    private val repository: AuthRepository
+    private val authRepository: AuthRepository
 ) : ViewModel() {
 
-    private val _state = MutableLiveData(AuthState())
+    private val _state = MutableLiveData<AuthState>(AuthState.Idle)
     val state: LiveData<AuthState> = _state
 
     fun login(email: String, password: String) {
         viewModelScope.launch {
-            _state.value = AuthState(isLoading = true)
+            _state.value = AuthState.Loading
+            val result = authRepository.login(email, password)
+            _state.value = if (result.isSuccess) AuthState.Success
+            else AuthState.Error(result.exceptionOrNull()?.message ?: "Erreur")
+        }
+    }
 
-            val result = repository.login(email, password)
-
-            _state.value = if (result.isSuccess) {
-                AuthState(success = true)
-            } else {
-                AuthState(
-                    error = result.exceptionOrNull()?.message ?: "Erreur inconnue"
-                )
-            }
+    fun signInWithGoogle(idToken: String) {
+        viewModelScope.launch {
+            _state.value = AuthState.Loading
+            val result = authRepository.signInWithGoogle(idToken)
+            _state.value = if (result.isSuccess) AuthState.Success
+            else AuthState.Error(result.exceptionOrNull()?.message ?: "Erreur")
         }
     }
 }

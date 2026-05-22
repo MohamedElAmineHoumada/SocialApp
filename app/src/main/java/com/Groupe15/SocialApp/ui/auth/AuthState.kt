@@ -1,7 +1,8 @@
 package com.Groupe15.SocialApp.ui.auth
 
-data class AuthState(
-    val success: Boolean = false,
-    val error: String? = null,
-    val isLoading: Boolean = false
-)
+sealed class AuthState {
+    object Idle : AuthState()
+    object Loading : AuthState()
+    object Success : AuthState()
+    data class Error(val message: String) : AuthState()
+}

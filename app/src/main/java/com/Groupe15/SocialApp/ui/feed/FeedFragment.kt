@@ -1,3 +1,5 @@
+// app/src/main/java/com/Groupe15/SocialApp/ui/feed/FeedFragment.kt
+
 package com.Groupe15.SocialApp.ui.feed
 
 import android.os.Bundle
@@ -11,8 +13,9 @@ import androidx.recyclerview.widget.RecyclerView
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.Groupe15.SocialApp.R
+import com.Groupe15.SocialApp.viewmodel.FeedViewModel  // ← import mis à jour
 import dagger.hilt.android.AndroidEntryPoint
-
+import com.Groupe15.SocialApp.models.Post
 @AndroidEntryPoint
 class FeedFragment : Fragment(R.layout.fragment_feed) {
 
@@ -22,18 +25,18 @@ class FeedFragment : Fragment(R.layout.fragment_feed) {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        val recyclerView = view.findViewById<RecyclerView>(R.id.recyclerView)
-        val swipeRefresh = view.findViewById<SwipeRefreshLayout>(R.id.swipeRefresh)
-        val tvEmpty = view.findViewById<TextView>(R.id.tvEmpty)
+        val recyclerView  = view.findViewById<RecyclerView>(R.id.recyclerView)
+        val swipeRefresh  = view.findViewById<SwipeRefreshLayout>(R.id.swipeRefresh)
+        val tvEmpty       = view.findViewById<TextView>(R.id.tvEmpty)
         val fabCreatePost = view.findViewById<FloatingActionButton>(R.id.fabCreatePost)
 
         adapter = PostAdapter(
-            onLike = { post -> viewModel.toggleLike(post.postId) },
+            onLike    = { post -> viewModel.toggleLike(post.postId) },
             onComment = { },
             onProfile = { }
         )
 
-        recyclerView.adapter = adapter
+        recyclerView.adapter      = adapter
         recyclerView.layoutManager = LinearLayoutManager(requireContext())
 
         swipeRefresh.setOnRefreshListener {
