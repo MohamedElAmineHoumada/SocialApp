@@ -1,14 +1,19 @@
 package com.Groupe15.SocialApp.data.repository
 
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.GoogleAuthProvider
+import com.google.firebase.firestore.FirebaseFirestore
+import com.Groupe15.SocialApp.models.User
 import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 import javax.inject.Singleton
 
-@Singleton // Assure une instance unique de AuthRepository pour toute l'application
+@Singleton
 class AuthRepository @Inject constructor(
-    private val auth: FirebaseAuth // Injecté automatiquement par Hilt depuis votre FirebaseModule
+    private val auth: FirebaseAuth,
+    private val firestore: FirebaseFirestore
 ) {
+    fun isLoggedIn(): Boolean = auth.currentUser != null
 
     suspend fun login(email: String, password: String): Result<Boolean> {
         return try {
@@ -19,24 +24,27 @@ class AuthRepository @Inject constructor(
         }
     }
 
-    suspend fun register(
-        email: String,
-        password: String,
-        username: String
-    ): Result<Boolean> {
+    suspend fun register(email: String, password: String, username: String): Result<Boolean> {
         return try {
-            auth.createUserWithEmailAndPassword(email, password).await()
+            val result = auth.createUserWithEmailAndPassword(email, password).await()
+            val uid = result.user?.uid ?: return Result.failure(Exception("UID null"))
+            val user = User(uid = uid, username = username, email = email)
+            firestore.collection("users").document(uid).set(user).await()
             Result.success(true)
         } catch (e: Exception) {
             Result.failure(e)
         }
     }
 
-    fun logout() {
-        auth.signOut()
+    suspend fun signInWithGoogle(idToken: String): Result<Boolean> {
+        return try {
+            val credential = GoogleAuthProvider.getCredential(idToken, null)
+            auth.signInWithCredential(credential).await()
+            Result.success(true)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
     }
 
-    fun isLoggedIn(): Boolean {
-        return auth.currentUser != null
-    }
+    fun logout() = auth.signOut()
 }

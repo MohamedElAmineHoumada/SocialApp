@@ -9,5 +9,8 @@ import javax.inject.Inject
 class AuthViewModel @Inject constructor(
     private val authRepository: AuthRepository
 ) : ViewModel() {
-    // Logique d'authentification
+
+    fun isLoggedIn() = authRepository.isLoggedIn()
+
+    fun signOut() = authRepository.logout()
 }
