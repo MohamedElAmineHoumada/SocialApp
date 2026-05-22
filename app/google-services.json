@@ -1,26 +1,36 @@
 {
   "project_info": {
-    "project_number": "980317964815",
-    "project_id": "socialapp-68521",
-    "storage_bucket": "socialapp-68521.firebasestorage.app"
+    "project_number": "137216888053",
+    "project_id": "socialapp-6bdbf",
+    "storage_bucket": "socialapp-6bdbf.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:980317964815:android:409e06ecce36075db3317a",
+        "mobilesdk_app_id": "1:137216888053:android:d654079048f37162c309bc",
         "android_client_info": {
           "package_name": "com.Groupe15.SocialApp"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "137216888053-sbc9e9rvhq92eo36bqhqf1sed35mu9ti.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
-          "current_key": "AIzaSyBY5vyjMeZKLncJsvvYyDKjqHoG0oFTM2U"
+          "current_key": "AIzaSyA-jPsLtC2gtDKi7bE575cp6iLbg8VKbSQ"
         }
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "137216888053-sbc9e9rvhq92eo36bqhqf1sed35mu9ti.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }

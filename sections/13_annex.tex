@@ -1,0 +1,50 @@
+\chapter{Annexes}
+\section{Script complet du pare-feu}
+\begin{lstlisting}[language=bash]
+#!/bin/bash
+
+# Flush Existing Rules
+iptables -F
+iptables -X
+iptables -Z
+
+# Default Policies
+iptables -P INPUT DROP
+iptables -P FORWARD DROP
+iptables -P OUTPUT ACCEPT
+
+# Allow Loopback
+iptables -A INPUT -i lo -j ACCEPT
+iptables -A OUTPUT -o lo -j ACCEPT
+
+# Allow Established Connections
+iptables -A INPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+
+# Allow ICMP (Ping) with Rate Limiting
+iptables -A INPUT -p icmp --icmp-type echo-request -m limit --limit 1/s --limit-burst 4 -j ACCEPT
+
+# SSH Protection - Brute Force Rate Limiting
+iptables -A INPUT -p tcp --dport 22 -m conntrack --ctstate NEW -m recent --set --name SSH_BRUTE
+iptables -A INPUT -p tcp --dport 22 -m conntrack --ctstate NEW -m recent --update --seconds 60 --hitcount 4 --name SSH_BRUTE -j DROP
+iptables -A INPUT -p tcp --dport 22 -j ACCEPT
+
+# Allow HTTP and HTTPS
+iptables -A INPUT -p tcp --dport 80 -j ACCEPT
+iptables -A INPUT -p tcp --dport 443 -j ACCEPT
+
+# DoS Protection - SYN Flood
+iptables -A INPUT -p tcp --syn -m limit --limit 25/s --limit-burst 50 -j ACCEPT
+iptables -A INPUT -p tcp --syn -j DROP
+
+# DoS Protection - Invalid TCP Packets
+iptables -A INPUT -p tcp ! --syn -m conntrack --ctstate NEW -j DROP
+
+# DoS Protection - Fragmented Packets
+iptables -A INPUT -f -j DROP
+
+# Logging
+iptables -A INPUT -m limit --limit 5/min -j LOG --log-prefix "IPT DROP: " --log-level 4
+
+# Save Rules
+netfilter-persistent save
+\end{lstlisting}

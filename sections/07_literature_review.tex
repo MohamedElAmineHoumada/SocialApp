@@ -1,0 +1,21 @@
+\chapter{Revue bibliographique}
+\section{iptables}
+\texttt{iptables} is the Linux kernel’s built-in firewall tool. It inspects every network packet and decides what to do with it based on rules organized into chains:
+\begin{description}
+    \item[INPUT] Packets coming into the server
+    \item[OUTPUT] Packets going out of the server
+    \item[FORWARD] Packets passing through the server (routing)
+\end{description}
+Each rule in a chain has a target — what to do with the packet:
+\begin{description}
+    \item[ACCEPT] Let the packet through
+    \item[DROP] Silently discard the packet — no response sent
+    \item[REJECT] Discard and send an error back to the sender
+    \item[LOG] Write information about the packet to the system log
+\end{description}
+Rules are evaluated top to bottom. The first matching rule wins. If no rule matches, the default policy applies.
+\lipsum[3-5]
+
+\section{nmap}
+\texttt{nmap} (Network Mapper) is a free and open-source network scanner. It is used to discover hosts and services on a computer network by sending packets and analyzing the responses. \texttt{nmap} provides a number of features for probing computer networks, including host discovery and service and operating system detection.
+\lipsum[6-7]

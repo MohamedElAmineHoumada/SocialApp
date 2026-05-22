@@ -1,0 +1,63 @@
+\chapter{Introduction générale}
+
+\section{Contexte et enjeux}
+
+La cybersécurité est devenue une priorité absolue dans le monde numérique actuel. Avec l'augmentation exponentielle des cyberattaques, des tentatives de violation de données et des menaces d'intrusion, la protection des systèmes informatiques est plus critique que jamais. Les serveurs Linux, en particulier, sont souvent ciblés en raison de leur omniprésence dans les infrastructures critiques, les centres de données et les services cloud.
+
+Un pare-feu est un composant fondamental de tout système de sécurité réseau. Il fonctionne comme une barrière entre un réseau interne et le monde extérieur, inspectant chaque paquet qui passe par l'interface réseau et décidant soit de l'accepter, soit de le rejeter, selon des règles prédéfinies.
+
+Sans pare-feu adéquatement configuré, un serveur Linux est gravement vulnérable. Tous ses ports sont visibles à quiconque effectue un scan réseau. Les attaquants peuvent aisément identifier les services en cours d'exécution, énumérer les vulnérabilités potentielles et lancer des attaques ciblées contre ceux-ci. De plus, sans protection, le serveur est exposé à des attaques indiscriminées telles que les balayages de ports, les attaques DoS, et les tentatives d'exploitation brute-force.
+
+\section{Motivations du projet}
+
+Ce projet a été entrepris avec plusieurs motivations clés :
+
+\begin{enumerate}
+    \item \textbf{Compréhension approfondie de la sécurité réseau} : Bien que de nombreux outils automatisés existent pour gérer les pare-feu, la compréhension des mécanismes sous-jacents de filtrage de paquets est cruciale pour tout professionnel de la cybersécurité. En travaillant directement avec \texttt{iptables}, plutôt qu'avec un outil abstrait comme \texttt{ufw}, nous acquérons une connaissance granulaire du fonctionnement des pare-feu.
+    
+    \item \textbf{Application pratique des théories de cybersécurité} : Le cours de Sécurité Réseau Avancée a fourni les fondations théoriques concernant les architectures de sécurité, les principes de "défense en profondeur" et les modèles de sécurité. Ce projet offre l'opportunité de traduire ces concepts abstraits en implémentation concrète et tangible.
+    
+    \item \textbf{Expérience avec les outils standards de l'industrie} : Les administrateurs système et les spécialistes en sécurité utilisent couramment \texttt{iptables} dans les environnements de production, notamment sur les serveurs Linux sans interface graphique. Maîtriser cet outil est une compétence largement demandée.
+    
+    \item \textbf{Résolution de défis pratiques} : Lors du déploiement de pare-feu réels, des problèmes techniques inattendus surgissent. Ce projet a permis de rencontrer, diagnostiquer et résoudre des problèmes réels, comme une règle de protection contre les inondations SYN qui était initialement trop permissive.
+\end{enumerate}
+
+\section{Objectifs généraux}
+
+L'objectif global de ce projet est de démontrer la conception et l'implémentation d'une architecture de sécurité réseau robuste et efficace pour un serveur Linux. Plus spécifiquement, nous avions pour buts :
+
+\begin{itemize}
+    \item Bloquer tous les ports inutiles et accepter seulement le trafic essentiel
+    \item Protéger le service SSH des attaques par force brute
+    \item Défendre le serveur contre les attaques DoS communes
+    \item Valider l'efficacité du pare-feu via des tests empiriques (scans \texttt{nmap})
+    \item Assurer la persistance des règles après redémarrage du serveur
+\end{itemize}
+
+\section{Aperçu de la structure du rapport}
+
+Ce rapport est organisé comme suit :
+
+\begin{description}
+    \item[Chapitre 1 - Introduction générale] (ce chapitre) : Fournit le contexte, la motivation et une vue d'ensemble du projet.
+    
+    \item[Chapitre 2 - Cahier des charges] : Formalise les besoins, contraintes, exigences et critères d'acceptation du projet.
+    
+    \item[Chapitre 3 - Revue bibliographique] : Examine les concepts théoriques et les outils pertinents, y compris une explication détaillée de \texttt{iptables}, \texttt{nmap} et autres technologies clés.
+    
+    \item[Chapitre 4 - Matériel et Méthodes] : Décrit l'environnement expérimental, l'infrastructure, les outils utilisés et la méthodologie suivie pour mettre en œuvre les règles du pare-feu.
+    
+    \item[Chapitre 5 - Résultats] : Présente les résultats empiriques des tests, notamment les scans \texttt{nmap} avant et après l'activation du pare-feu, avec analyses quantitatives.
+    
+    \item[Chapitre 6 - Discussion] : Analyse critique des résultats, discussion des problèmes rencontrés et de leur résolution, comparaison avec des approches alternatives.
+    
+    \item[Chapitre 7 - Conclusion et perspectives] : Synthèse des accomplissements, leçons apprises et suggestions pour les améliorations futures.
+    
+    \item[Références bibliographiques] : Listing des sources consultées, documentation officielle et références techniques.
+    
+    \item[Annexes] : Script complet du pare-feu, logs d'exécution et autres documents pertinents.
+\end{description}
+
+\section{Importance de cette étude}
+
+Avec la multiplication des cybermenaces et l'évolution constante des techniques d'attaque, les organismes et les entreprises doivent investir dans la sécurité de leurs infrastructures informatiques. Un pare-feu correctement configuré est une première ligne de défense incontournable. Les connaissances et l'expérience acquises à travers ce projet constituent des compétences essentielles pour toute personne travaillant dans le domaine de la cybersécurité ou de l'administration système.

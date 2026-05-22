@@ -1,0 +1,136 @@
+\documentclass[12pt, a4paper, twoside]{report}
+
+% --- PACKAGES ---
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{geometry}
+\usepackage{hyperref}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{tocbibind}
+\usepackage{array}
+\usepackage{multirow}
+\usepackage{booktabs}
+\usepackage{float}
+\usepackage{fancyhdr}
+\usepackage{setspace}
+
+% --- GEOMETRY ---
+\geometry{
+ a4paper,
+ total={160mm,247mm},
+ left=25mm,
+ right=25mm,
+ top=25mm,
+ bottom=25mm,
+}
+
+% --- LINE SPACING ---
+\onehalfspacing
+
+% --- LISTINGS (for code blocks) ---
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+
+\lstdefinestyle{mystyle}{
+    backgroundcolor=\color{backcolour},   
+    commentstyle=\color{codegreen},
+    keywordstyle=\color{magenta},
+    numberstyle=\tiny\color{codegray},
+    stringstyle=\color{codepurple},
+    basicstyle=\ttfamily\footnotesize,
+    breakatwhitespace=false,         
+    breaklines=true,                 
+    captionpos=b,                    
+    keepspaces=true,                 
+    numbers=left,                    
+    numbersep=5pt,                  
+    showspaces=false,                
+    showstringspaces=false,
+    showtabs=false,                  
+    tabsize=2,
+    frame=single,
+    rulecolor=\color{codegray},
+}
+\lstset{style=mystyle}
+
+% --- HYPERREF SETUP ---
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    filecolor=magenta,      
+    urlcolor=cyan,
+    pdftitle={Rapport de Projet: Déploiement et Configuration d'un Pare-feu avec iptables},
+    pdfauthor={cybervm},
+}
+
+% --- HEADERS AND FOOTERS ---
+\pagestyle{fancy}
+\fancyhf{}
+\rhead{\thepage}
+\lhead{\nouppercase{\leftmark}}
+\renewcommand{\headrulewidth}{0.5pt}
+
+% --- DOCUMENT START ---
+\begin{document}
+
+% --- TITLE PAGE ---
+\input{sections/00_cover_page.tex}
+\newpage
+
+% --- DEDICATIONS ---
+\input{sections/01_dedications.tex}
+\newpage
+
+% --- ACKNOWLEDGEMENTS ---
+\input{sections/02_acknowledgements.tex}
+\newpage
+
+% --- ABSTRACTS ---
+\input{sections/03_abstract.tex}
+\newpage
+
+% --- TABLE OF CONTENTS ---
+\tableofcontents
+\newpage
+
+% --- LISTS ---
+\listoffigures
+\newpage
+\listoftables
+\newpage
+
+% --- ABBREVIATIONS ---
+\input{sections/04_abbreviations.tex}
+\newpage
+
+% --- CHAPTERS ---
+\input{sections/05_introduction.tex}
+\newpage
+\input{sections/06_objective.tex}
+\newpage
+\input{sections/07_literature_review.tex}
+\newpage
+\input{sections/08_methodology.tex}
+\newpage
+\input{sections/09_results.tex}
+\newpage
+\input{sections/10_discussion.tex}
+\newpage
+\input{sections/11_conclusion.tex}
+\newpage
+
+% --- BIBLIOGRAPHY ---
+\input{sections/12_bibliography.tex}
+\newpage
+
+% --- ANNEXES ---
+\appendix
+\input{sections/13_annex.tex}
+
+\end{document}

@@ -1,3 +1,13 @@
 <resources>
     <string name="app_name">SocialApp</string>
+    <string name="login_title">Bienvenue !</string>
+    <string name="register_title">Créer un compte</string>
+    <string name="feed_title">Fil d\'actualité</string>
+    <string name="profile_title">Profil</string>
+    <string name="btn_login">Se connecter</string>
+    <string name="btn_register">S\'inscrire</string>
+    <string name="go_register">Pas encore de compte ? S\'inscrire</string>
+    <string name="go_login">Déjà un compte ? Se connecter</string>
+    <!-- TODO: Remove or change this placeholder text -->
+    <string name="hello_blank_fragment">Hello blank fragment</string>
 </resources>

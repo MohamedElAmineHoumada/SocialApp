@@ -1,0 +1,224 @@
+\chapter{Cahier des charges}
+
+\section{Présentation générale du projet}
+
+Le présent cahier des charges définit les exigences fonctionnelles, techniques et organisationnelles relatives à la conception et au déploiement d'un pare-feu logiciel basé sur \texttt{iptables} pour un serveur Linux. L'objectif est de formaliser, dans une logique académique de niveau master, les besoins du système, le périmètre d'intervention, les contraintes de réalisation ainsi que les critères d'acceptation du projet.
+
+\section{Contexte et justification}
+
+La généralisation des services exposés sur Internet augmente considérablement la surface d'attaque des serveurs Linux. Dans ce contexte, la mise en place d'une politique de filtrage rigoureuse constitue une mesure de sécurité prioritaire. \texttt{iptables} s'impose comme un outil de référence pour la maîtrise fine du trafic réseau, car il permet de définir des règles explicites, reproductibles et adaptées aux exigences d'un environnement de production.
+
+Le projet s'inscrit dans une démarche de validation expérimentale des mécanismes de sécurité réseau. Il vise à traduire des principes théoriques, tels que le refus par défaut, la limitation de débit et la journalisation des événements suspects, en une configuration opérationnelle et testable.
+
+\section{Périmètre du projet}
+
+Le système à réaliser couvre les fonctionnalités suivantes :
+\begin{itemize}
+    \item filtrage du trafic entrant, sortant et transitant sur l'hôte Linux ;
+    \item sécurisation des accès distants, en particulier le service SSH ;
+    \item protection contre les tentatives de reconnaissance et certaines attaques par déni de service ;
+    \item journalisation des paquets rejetés afin de faciliter l'audit ;
+    \item sauvegarde et restauration des règles après redémarrage ;
+    \item prise en compte du trafic IPv4 et IPv6.
+\end{itemize}
+
+Les éléments hors périmètre sont les suivants :
+\begin{itemize}
+    \item la mise en place d'un pare-feu matériel dédié ;
+    \item l'administration centralisée de plusieurs nœuds ;
+    \item l'orchestration de politiques de sécurité à l'échelle du réseau complet ;
+    \item les mécanismes avancés de détection d'intrusion de type IDS/IPS.
+\end{itemize}
+
+\section{Parties prenantes et acteurs}
+
+Les acteurs impliqués dans le projet sont identifiés comme suit :
+\begin{itemize}
+    \item \textbf{Administrateur système} : configure, déploie et maintient les règles de filtrage ;
+    \item \textbf{Utilisateur légitime} : accède aux services autorisés, notamment SSH et les services web ;
+    \item \textbf{Attaquant potentiel} : source de trafic non autorisé, de scans ou de tentatives de brute force ;
+    \item \textbf{Encadrant pédagogique} : évalue la cohérence technique, la rigueur méthodologique et la qualité de la documentation.
+\end{itemize}
+
+\section{Objectif général}
+
+L'objectif général est de concevoir et de valider une politique de sécurité réseau robuste, fondée sur \texttt{iptables}, capable de protéger un serveur Linux contre les connexions non autorisées tout en préservant l'accès aux services légitimes.
+
+\section{Objectifs spécifiques}
+
+\subsection{Principe de filtrage}
+
+Le pare-feu doit appliquer une stratégie de type \emph{default deny}. À ce titre :
+\begin{itemize}
+    \item tout trafic est refusé par défaut ;
+    \item seules les communications explicitement autorisées sont acceptées ;
+    \item les règles doivent être lisibles, hiérarchisées et maintenables.
+\end{itemize}
+
+\subsection{Protection des accès d'administration}
+
+Le service SSH doit rester disponible pour l'administration légitime, tout en intégrant des mécanismes de réduction du risque :
+\begin{itemize}
+    \item limitation du nombre de tentatives de connexion ;
+    \item filtrage des sources abusives ;
+    \item préservation de la disponibilité du service pour les utilisateurs autorisés.
+\end{itemize}
+
+\subsection{Réduction de la surface d'attaque}
+
+Le système doit empêcher l'exposition des ports et services non nécessaires. Cela implique :
+\begin{itemize}
+    \item la fermeture de tous les ports inutilisés ;
+    \item l'autorisation explicite des services requis ;
+    \item le traitement différencié du trafic entrant, sortant et établi.
+\end{itemize}
+
+\subsection{Résilience face aux attaques courantes}
+
+Le pare-feu doit intégrer des mesures de défense contre des attaques usuelles de couche réseau :
+\begin{itemize}
+    \item limitation des paquets ICMP pour éviter les inondations ;
+    \item rejet des paquets TCP incohérents ou invalides ;
+    \item filtrage des paquets fragmentés susceptibles de servir à des techniques d'évasion ;
+    \item protection contre les scans automatisés et les tentatives de reconnaissance.
+\end{itemize}
+
+\subsection{Maintien des services essentiels}
+
+Le système doit préserver le fonctionnement normal des services indispensables, notamment :
+\begin{itemize}
+    \item l'interface loopback ;
+    \item les connexions déjà établies ;
+    \item les services web éventuellement exposés ;
+    \item les échanges nécessaires aux mises à jour système.
+\end{itemize}
+
+\subsection{Persistance et auditabilité}
+
+Les règles doivent être sauvegardées et rechargées automatiquement après redémarrage. Par ailleurs, les événements de rejet doivent être consignés dans les journaux système afin de permettre une analyse a posteriori.
+
+\section{Exigences fonctionnelles}
+
+Les exigences fonctionnelles sont formulées de manière structurée dans le tableau suivant.
+
+\begin{table}[H]
+\centering
+\caption{Exigences fonctionnelles du pare-feu}
+\begin{tabularx}{\textwidth}{|>{\raggedright\arraybackslash}p{2.4cm}|X|}
+\hline
+\rowcolor{gray!20}
+\textbf{Référence} & \textbf{Exigence} \\
+\hline
+F01 & Appliquer une politique de refus par défaut sur les chaînes principales du pare-feu. \\
+\hline
+F02 & Autoriser le trafic de l'interface loopback et les connexions déjà établies. \\
+\hline
+F03 & Autoriser l'accès SSH pour les utilisateurs légitimes avec limitation des abus. \\
+\hline
+F04 & Autoriser explicitement les services web requis, le cas échéant. \\
+\hline
+F05 & Journaliser les paquets rejetés tout en évitant une saturation des logs. \\
+\hline
+F06 & Garantir la persistance des règles après redémarrage du système. \\
+\hline
+F07 & Étendre la politique de sécurité au trafic IPv6. \\
+\hline
+\end{tabularx}
+\end{table}
+
+\section{Exigences non fonctionnelles}
+
+\begin{table}[H]
+\centering
+\caption{Exigences non fonctionnelles}
+\begin{tabularx}{\textwidth}{|>{\raggedright\arraybackslash}p{3cm}|X|}
+\hline
+\rowcolor{gray!20}
+\textbf{Critère} & \textbf{Niveau attendu} \\
+\hline
+Sécurité & Réduction significative de la surface d'attaque et conformité au principe du moindre privilège. \\
+\hline
+Disponibilité & Maintien des services autorisés sans interruption induite par le pare-feu. \\
+\hline
+Performance & Impact minimal sur la latence et le débit des communications légitimes. \\
+\hline
+Maintenabilité & Règles lisibles, commentées et facilement modifiables. \\
+\hline
+Traçabilité & Journalisation exploitable pour l'analyse d'incidents. \\
+\hline
+Portabilité & Compatibilité avec un environnement Linux standard. \\
+\hline
+\end{tabularx}
+\end{table}
+
+\section{Contraintes techniques et organisationnelles}
+
+La réalisation du projet est encadrée par les contraintes suivantes :
+\begin{itemize}
+    \item utilisation d'un environnement Linux compatible avec \texttt{iptables} ;
+    \item absence de dépendance à une solution propriétaire de filtrage ;
+    \item délai de réalisation court, imposant une implémentation pragmatique et vérifiable ;
+    \item nécessité de documenter les choix techniques et les procédures de validation.
+\end{itemize}
+
+\section{Livrables attendus}
+
+Les livrables du projet comprennent :
+\begin{enumerate}
+    \item un script de configuration du pare-feu ;
+    \item une procédure d'installation et de restauration des règles ;
+    \item des captures de tests avant et après déploiement ;
+    \item les journaux ou extraits de logs pertinents ;
+    \item le présent rapport académique ;
+    \item les annexes contenant les règles finales et les éléments de preuve.
+\end{enumerate}
+
+\section{Critères d'acceptation}
+
+Le projet sera considéré comme validé si les conditions suivantes sont satisfaites :
+\begin{enumerate}
+    \item les règles s'appliquent correctement et sans erreur de syntaxe ;
+    \item les ports non autorisés apparaissent comme filtrés lors des tests de validation ;
+    \item les services essentiels restent accessibles ;
+    \item les règles persistent après redémarrage ;
+    \item la documentation permet une reproduction fidèle de la configuration.
+\end{enumerate}
+
+\section{Méthodologie de réalisation}
+
+La démarche retenue repose sur les étapes suivantes :
+\begin{enumerate}
+    \item analyse du besoin et définition du périmètre ;
+    \item conception de la politique de sécurité ;
+    \item implémentation progressive des règles ;
+    \item tests unitaires de connectivité et de filtrage ;
+    \item validation empirique par \texttt{nmap} et observation des journaux ;
+    \item stabilisation, documentation et préparation des livrables finaux.
+\end{enumerate}
+
+\section{Planification prévisionnelle}
+
+\begin{table}[H]
+\centering
+\caption{Planification synthétique du projet}
+\begin{tabularx}{\textwidth}{|p{2.5cm}|X|}
+\hline
+\rowcolor{gray!20}
+\textbf{Phase} & \textbf{Contenu} \\
+\hline
+Phase 1 & Étude du contexte, formalisation des besoins et définition des objectifs. \\
+\hline
+Phase 2 & Conception des règles de filtrage et structuration du script. \\
+\hline
+Phase 3 & Mise en œuvre sur serveur Linux et ajustements techniques. \\
+\hline
+Phase 4 & Vérifications fonctionnelles, tests de sécurité et journalisation. \\
+\hline
+Phase 5 & Rédaction du rapport et finalisation des annexes. \\
+\hline
+\end{tabularx}
+\end{table}
+
+\section{Synthèse}
+
+Ce cahier des charges formalise un cadre de travail rigoureux pour le déploiement d'un pare-feu \texttt{iptables} dans une perspective académique. Il précise les besoins à satisfaire, les contraintes à respecter et les critères permettant d'évaluer la qualité de la solution produite. Cette formalisation constitue une base solide pour la phase de conception, puis pour la mise en œuvre et la validation expérimentale du système.

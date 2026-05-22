@@ -1,0 +1,46 @@
+\chapter{Résultats}
+\section{Comparaison Avant et Après}
+\subsection{Avant (sans pare-feu)}
+\begin{lstlisting}
+Nmap scan report for 192.168.1.111
+Not shown: 1023 closed tcp ports (reset)
+PORT STATE SERVICE
+22/tcp open ssh
+Scan time: 0.22 seconds
+\end{lstlisting}
+All 1023 blocked ports responded with a TCP RST packet, revealing that no service was listening.
+
+\subsection{Après (avec pare-feu)}
+\begin{lstlisting}
+Nmap scan report for 192.168.1.111
+Not shown: 1021 filtered tcp ports (no-response)
+PORT STATE SERVICE
+22/tcp open ssh
+80/tcp closed http
+443/tcp closed https
+Scan time: 4.79 seconds
+\end{lstlisting}
+
+\section{Analyse des Résultats}
+\begin{table}[h!]
+\centering
+\begin{tabular}{|l|l|l|}
+\hline
+\textbf{Métrique} & \textbf{Avant} & \textbf{Après} \\
+\hline
+État des ports bloqués & closed & filtered \\
+Durée du scan & 0.22 seconds & 4.79 seconds \\
+Ports visibles & 1 (SSH) & 3 (SSH, HTTP, HTTPS) \\
+Réponse des sondes & Paquet RST envoyé & Aucune réponse \\
+\hline
+\end{tabular}
+\caption{Comparaison des scans nmap}
+\label{tab:nmap_comparison}
+\end{table}
+
+L'explication de \texttt{closed} vs \texttt{filtered} :
+\begin{itemize}
+    \item \texttt{closed} — le serveur a répondu avec un paquet TCP RST.
+    \item \texttt{filtered} — le pare-feu a silencieusement rejeté le paquet. Cela a forcé nmap à attendre des délais d'attente, augmentant considérablement la durée du scan.
+\end{itemize}
+\lipsum[8]
