@@ -2,31 +2,39 @@ package com.Groupe15.SocialApp
 
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
+import androidx.navigation.fragment.NavHostFragment
+import androidx.navigation.ui.setupWithNavController
+import com.Groupe15.SocialApp.databinding.ActivityMainBinding
 import dagger.hilt.android.AndroidEntryPoint
-import com.google.firebase.firestore.FirebaseFirestore
 
 @AndroidEntryPoint
 class MainActivity : AppCompatActivity() {
+
+    private lateinit var binding: ActivityMainBinding
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        
-        // Comme vous utilisez des Fragments (LoginFragment, FeedFragment) et un NavGraph XML,
-        // vous devez utiliser setContentView pour charger activity_main.xml.
-        setContentView(R.layout.activity_main)
-    }
+        binding = ActivityMainBinding.inflate(layoutInflater)
+        setContentView(binding.root)
 
-    //test de feed
-    private fun createTestPost(){
+        val navHostFragment = supportFragmentManager
+            .findFragmentById(R.id.navHostFragment) as NavHostFragment
+        val navController = navHostFragment.navController
 
-        val db = FirebaseFirestore.getInstance()
+        // Connecte la BottomNav au NavController
+        binding.bottomNavigationView.setupWithNavController(navController)
 
-        val post = hashMapOf(
-            "text" to "hello social media",
-            "username" to "Soukaina"
-        )
-
-        db.collection("posts")
-            .add(post)
-
+        // Cache la BottomNav sur les écrans Login/Register
+        navController.addOnDestinationChangedListener { _, destination, _ ->
+            when (destination.id) {
+                R.id.loginFragment,
+                R.id.registerFragment -> {
+                    binding.bottomNavigationView.visibility = android.view.View.GONE
+                }
+                else -> {
+                    binding.bottomNavigationView.visibility = android.view.View.VISIBLE
+                }
+            }
+        }
     }
 }
