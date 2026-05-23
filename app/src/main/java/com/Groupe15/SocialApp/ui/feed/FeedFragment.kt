@@ -32,7 +32,10 @@ class FeedFragment : Fragment(R.layout.fragment_feed) {
 
         adapter = PostAdapter(
             onLike    = { post -> viewModel.toggleLike(post.postId) },
-            onComment = { },
+            onComment = { post ->
+                CommentsBottomSheet.newInstance(post.postId)
+                    .show(parentFragmentManager, "comments")
+            },
             onProfile = { }
         )
 
@@ -46,6 +49,9 @@ class FeedFragment : Fragment(R.layout.fragment_feed) {
         viewModel.posts.observe(viewLifecycleOwner) { posts ->
             adapter.submitList(posts)
             tvEmpty.isVisible = posts.isEmpty()
+        }
+        fabCreatePost.setOnClickListener {
+            viewModel.createPost("Mon premier vrai post !")
         }
     }
 }

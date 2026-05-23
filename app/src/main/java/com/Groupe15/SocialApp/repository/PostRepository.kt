@@ -7,6 +7,7 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
+import com.google.firebase.firestore.SetOptions
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
@@ -61,7 +62,39 @@ class PostRepository @Inject constructor(
     }
 
     // Sera complété au Jour 3
-    suspend fun toggleLike(postId: String) {
-        // TODO Jour 3 : transaction Firestore
+    suspend fun toggleLike(postId: String): Result<Unit> {
+        return try {
+            val uid = auth.currentUser?.uid
+                ?: return Result.failure(Exception("Non connecté"))
+
+            val postRef = firestore.collection("posts").document(postId)
+            val likeRef = postRef.collection("likes").document(uid)
+
+            firestore.runTransaction { transaction ->
+                val likeSnap = transaction.get(likeRef)
+                if (likeSnap.exists()) {
+                    transaction.delete(likeRef)
+                    transaction.set(
+                        postRef,
+                        mapOf("likesCount" to FieldValue.increment(-1)),
+                        SetOptions.merge()
+                    )
+                } else {
+                    transaction.set(
+                        likeRef,
+                        mapOf("uid" to uid, "likedAt" to System.currentTimeMillis())
+                    )
+                    transaction.set(
+                        postRef,
+                        mapOf("likesCount" to FieldValue.increment(1)),
+                        SetOptions.merge()
+                    )
+                }
+            }.await()
+
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
     }
 }

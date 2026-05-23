@@ -56,6 +56,10 @@ class PostAdapter(
             btnComment.setOnClickListener { onComment(post) }
             tvUsername.setOnClickListener { onProfile(post.authorUid) }
             ivAvatar.setOnClickListener { onProfile(post.authorUid) }
+            btnLike.setOnClickListener {
+                android.util.Log.d("LIKE_DEBUG", "postId cliqué: '${post.postId}'")
+                onLike(post)
+            }
         }
     }
 
