@@ -1,17 +1,313 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout
+<androidx.coordinatorlayout.widget.CoordinatorLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:background="@color/background_dark">
 
-    <TextView
-        android:layout_width="wrap_content"
+    <com.google.android.material.appbar.AppBarLayout
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="@string/profile_title"        android:textSize="24sp"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent" />
+        android:background="@color/background_dark"
+        app:elevation="0dp">
 
-</androidx.constraintlayout.widget.ConstraintLayout>
+        <!-- TOP BAR -->
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:paddingHorizontal="16dp">
+
+            <TextView
+                android:id="@+id/tvAppName"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="CreatorHub"
+                android:textColor="@color/purple_primary"
+                android:textSize="18sp"
+                android:fontFamily="@font/nunito_bold"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintBottom_toBottomOf="parent"/>
+
+            <ImageView
+                android:id="@+id/ivNotificationTop"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:src="@drawable/ic_notification"
+                android:tint="@color/text_primary"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintBottom_toBottomOf="parent"/>
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
+
+    </com.google.android.material.appbar.AppBarLayout>
+
+    <androidx.core.widget.NestedScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        app:layout_behavior="@string/appbar_scrolling_view_behavior">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <!-- COVER IMAGE -->
+            <FrameLayout
+                android:layout_width="match_parent"
+                android:layout_height="120dp">
+
+                <ImageView
+                    android:id="@+id/ivCoverImage"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:scaleType="centerCrop"
+                    android:src="@drawable/placeholder_cover"/>
+
+                <!-- Dark overlay -->
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:background="@color/scrim_dark"/>
+
+            </FrameLayout>
+
+            <!-- PROFILE INFO SECTION -->
+            <androidx.constraintlayout.widget.ConstraintLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingHorizontal="16dp"
+                android:layout_marginTop="-30dp">
+
+                <!-- Avatar -->
+                <de.hdodenhof.circleimageview.CircleImageView
+                    android:id="@+id/ivProfilePic"
+                    android:layout_width="72dp"
+                    android:layout_height="72dp"
+                    android:src="@drawable/ic_default_avatar"
+                    app:civ_border_color="@color/background_dark"
+                    app:civ_border_width="3dp"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toTopOf="parent"/>
+
+                <!-- Edit / Settings buttons -->
+                <ImageButton
+                    android:id="@+id/ibSettings"
+                    android:layout_width="36dp"
+                    android:layout_height="36dp"
+                    android:src="@drawable/ic_settings"
+                    android:tint="@color/text_primary"
+                    android:background="@drawable/bg_icon_button"
+                    android:layout_marginTop="36dp"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintTop_toTopOf="parent"/>
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnEditProfile"
+                    android:layout_width="wrap_content"
+                    android:layout_height="36dp"
+                    android:text="Edit Profile"
+                    android:textSize="13sp"
+                    android:fontFamily="@font/nunito_semibold"
+                    android:paddingHorizontal="16dp"
+                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                    app:strokeColor="@color/text_secondary"
+                    android:textColor="@color/text_primary"
+                    android:layout_marginEnd="8dp"
+                    android:layout_marginTop="36dp"
+                    app:layout_constraintEnd_toStartOf="@id/ibSettings"
+                    app:layout_constraintTop_toTopOf="parent"/>
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnFollow"
+                    android:layout_width="wrap_content"
+                    android:layout_height="36dp"
+                    android:text="Follow"
+                    android:textSize="13sp"
+                    android:fontFamily="@font/nunito_bold"
+                    android:paddingHorizontal="24dp"
+                    android:backgroundTint="@color/purple_primary"
+                    android:textColor="@color/white"
+                    android:layout_marginEnd="8dp"
+                    android:layout_marginTop="36dp"
+                    android:visibility="gone"
+                    app:layout_constraintEnd_toStartOf="@id/ibSettings"
+                    app:layout_constraintTop_toTopOf="parent"/>
+
+            </androidx.constraintlayout.widget.ConstraintLayout>
+
+            <!-- NAME, BIO, WEBSITE -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:paddingHorizontal="16dp"
+                android:layout_marginTop="8dp">
+
+                <TextView
+                    android:id="@+id/tvDisplayName"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Alex Rivers"
+                    android:textColor="@color/text_primary"
+                    android:textSize="18sp"
+                    android:fontFamily="@font/nunito_bold"/>
+
+                <TextView
+                    android:id="@+id/tvUsername"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@alex_creates"
+                    android:textColor="@color/purple_primary"
+                    android:textSize="13sp"
+                    android:fontFamily="@font/nunito_regular"
+                    android:layout_marginTop="2dp"/>
+
+                <TextView
+                    android:id="@+id/tvBio"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Digital Artist &amp; Motion Designer. Exploring the intersection of human emotion and generative algorithms. Let's build something beautiful. ✨"
+                    android:textColor="@color/text_primary"
+                    android:textSize="13sp"
+                    android:fontFamily="@font/nunito_regular"
+                    android:layout_marginTop="8dp"
+                    android:lineSpacingMultiplier="1.4"/>
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:layout_marginTop="6dp"
+                    android:gravity="center_vertical">
+
+                    <ImageView
+                        android:layout_width="14dp"
+                        android:layout_height="14dp"
+                        android:src="@drawable/ic_link"
+                        android:tint="@color/purple_primary"/>
+
+                    <TextView
+                        android:id="@+id/tvWebsite"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="alexrivers.design"
+                        android:textColor="@color/purple_primary"
+                        android:textSize="13sp"
+                        android:fontFamily="@font/nunito_regular"
+                        android:layout_marginStart="4dp"/>
+                </LinearLayout>
+
+            </LinearLayout>
+
+            <!-- STATS: Posts / Followers / Following -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="72dp"
+                android:orientation="horizontal"
+                android:gravity="center"
+                android:layout_marginTop="16dp"
+                android:paddingHorizontal="16dp">
+
+                <!-- Posts -->
+                <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
+                    android:layout_weight="1" android:orientation="vertical" android:gravity="center">
+                    <TextView android:id="@+id/tvPostsCount" android:layout_width="wrap_content"
+                        android:layout_height="wrap_content" android:text="142"
+                        android:textColor="@color/text_primary" android:textSize="18sp"
+                        android:fontFamily="@font/nunito_bold"/>
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="Posts" android:textColor="@color/text_secondary"
+                        android:textSize="12sp" android:fontFamily="@font/nunito_regular"/>
+                </LinearLayout>
+
+                <!-- Divider -->
+                <View android:layout_width="1dp" android:layout_height="32dp"
+                    android:background="@color/divider"/>
+
+                <!-- Followers -->
+                <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
+                    android:layout_weight="1" android:orientation="vertical" android:gravity="center">
+                    <TextView android:id="@+id/tvFollowersCount" android:layout_width="wrap_content"
+                        android:layout_height="wrap_content" android:text="12.8k"
+                        android:textColor="@color/text_primary" android:textSize="18sp"
+                        android:fontFamily="@font/nunito_bold"/>
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="Followers" android:textColor="@color/text_secondary"
+                        android:textSize="12sp" android:fontFamily="@font/nunito_regular"/>
+                </LinearLayout>
+
+                <!-- Divider -->
+                <View android:layout_width="1dp" android:layout_height="32dp"
+                    android:background="@color/divider"/>
+
+                <!-- Following -->
+                <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
+                    android:layout_weight="1" android:orientation="vertical" android:gravity="center">
+                    <TextView android:id="@+id/tvFollowingCount" android:layout_width="wrap_content"
+                        android:layout_height="wrap_content" android:text="842"
+                        android:textColor="@color/text_primary" android:textSize="18sp"
+                        android:fontFamily="@font/nunito_bold"/>
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="Following" android:textColor="@color/text_secondary"
+                        android:textSize="12sp" android:fontFamily="@font/nunito_regular"/>
+                </LinearLayout>
+
+            </LinearLayout>
+
+            <!-- TABS: Posts / Reels / Tagged -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="44dp"
+                android:orientation="horizontal"
+                android:layout_marginTop="8dp">
+
+                <!-- Posts Tab -->
+                <LinearLayout android:layout_width="0dp" android:layout_height="match_parent"
+                    android:layout_weight="1" android:orientation="vertical" android:gravity="center">
+                    <ImageView android:layout_width="22dp" android:layout_height="22dp"
+                        android:src="@drawable/ic_grid" android:tint="@color/purple_primary"
+                        android:id="@+id/tvTabPosts"/>
+                    <View android:id="@+id/viewIndicatorPosts" android:layout_width="match_parent"
+                        android:layout_height="2dp" android:background="@color/purple_primary"
+                        android:layout_marginTop="4dp"/>
+                </LinearLayout>
+
+                <!-- Reels Tab -->
+                <LinearLayout android:layout_width="0dp" android:layout_height="match_parent"
+                    android:layout_weight="1" android:orientation="vertical" android:gravity="center">
+                    <ImageView android:layout_width="22dp" android:layout_height="22dp"
+                        android:src="@drawable/ic_reels" android:tint="@color/text_secondary"
+                        android:id="@+id/tvTabReels"/>
+                    <View android:id="@+id/viewIndicatorReels" android:layout_width="match_parent"
+                        android:layout_height="2dp" android:background="@color/purple_primary"
+                        android:layout_marginTop="4dp" android:visibility="invisible"/>
+                </LinearLayout>
+
+                <!-- Tagged Tab -->
+                <LinearLayout android:layout_width="0dp" android:layout_height="match_parent"
+                    android:layout_weight="1" android:orientation="vertical" android:gravity="center">
+                    <ImageView android:layout_width="22dp" android:layout_height="22dp"
+                        android:src="@drawable/ic_tag" android:tint="@color/text_secondary"
+                        android:id="@+id/tvTabTagged"/>
+                    <View android:id="@+id/viewIndicatorTagged" android:layout_width="match_parent"
+                        android:layout_height="2dp" android:background="@color/purple_primary"
+                        android:layout_marginTop="4dp" android:visibility="invisible"/>
+                </LinearLayout>
+
+            </LinearLayout>
+
+            <!-- POSTS GRID -->
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/rvProfilePosts"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:nestedScrollingEnabled="false"
+                android:paddingBottom="80dp"/>
+
+        </LinearLayout>
+    </androidx.core.widget.NestedScrollView>
+
+</androidx.coordinatorlayout.widget.CoordinatorLayout>

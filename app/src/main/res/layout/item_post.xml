@@ -1,105 +1,170 @@
 <?xml version="1.0" encoding="utf-8"?>
-<com.google.android.material.card.MaterialCardView
+<androidx.cardview.widget.CardView
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_margin="8dp"
-    app:cardCornerRadius="12dp"
-    app:cardElevation="2dp">
+    android:layout_marginBottom="8dp"
+    app:cardBackgroundColor="@color/card_background"
+    app:cardCornerRadius="16dp"
+    app:cardElevation="0dp">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:padding="12dp">
+        android:orientation="vertical">
 
-        <LinearLayout
+        <!-- POST HEADER -->
+        <androidx.constraintlayout.widget.ConstraintLayout
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical"
-            android:layout_marginBottom="10dp">
+            android:layout_height="56dp"
+            android:paddingHorizontal="12dp">
 
-            <ImageView
-                android:id="@+id/ivAvatar"
-                android:layout_width="44dp"
-                android:layout_height="44dp"
-                android:src="@mipmap/ic_launcher_round" />
+            <!-- Profile pic with gradient ring (story-style) -->
+            <com.Groupe15.SocialApp.ui.custom.StoryRingImageView
+                android:id="@+id/ivProfilePic"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintBottom_toBottomOf="parent"/>
 
             <LinearLayout
+                android:id="@+id/llUserInfo"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
                 android:orientation="vertical"
-                android:layout_marginStart="10dp">
+                android:layout_marginStart="10dp"
+                app:layout_constraintStart_toEndOf="@id/ivProfilePic"
+                app:layout_constraintEnd_toStartOf="@id/ivMore"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintBottom_toBottomOf="parent">
 
                 <TextView
                     android:id="@+id/tvUsername"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:textStyle="bold"
-                    android:textSize="14sp" />
+                    android:text="ariachen"
+                    android:textColor="@color/text_primary"
+                    android:textSize="14sp"
+                    android:fontFamily="@font/nunito_bold"/>
 
                 <TextView
-                    android:id="@+id/tvTimestamp"
+                    android:id="@+id/tvLocation"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:textSize="12sp"
-                    android:textColor="#9E9E9E" />
+                    android:text="San Francisco, CA"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="11sp"
+                    android:fontFamily="@font/nunito_regular"/>
             </LinearLayout>
-        </LinearLayout>
 
-        <TextView
-            android:id="@+id/tvContent"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:textSize="14sp"
-            android:layout_marginBottom="10dp" />
+            <ImageView
+                android:id="@+id/ivMore"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:src="@drawable/ic_more_horizontal"
+                android:tint="@color/text_secondary"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintBottom_toBottomOf="parent"/>
 
+        </androidx.constraintlayout.widget.ConstraintLayout>
+
+        <!-- POST IMAGE -->
         <ImageView
             android:id="@+id/ivPostImage"
             android:layout_width="match_parent"
-            android:layout_height="220dp"
+            android:layout_height="300dp"
             android:scaleType="centerCrop"
-            android:visibility="gone"
-            android:layout_marginBottom="10dp" />
+            android:background="@color/surface_dark"/>
 
+        <!-- ACTION BUTTONS -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:orientation="horizontal"
+            android:paddingHorizontal="12dp"
+            android:gravity="center_vertical">
+
+            <ImageView
+                android:id="@+id/ivLike"
+                android:layout_width="28dp"
+                android:layout_height="28dp"
+                android:src="@drawable/ic_heart_outline"
+                android:tint="@color/text_primary"
+                android:padding="2dp"/>
+
+            <ImageView
+                android:id="@+id/ivComment"
+                android:layout_width="28dp"
+                android:layout_height="28dp"
+                android:src="@drawable/ic_comment"
+                android:tint="@color/text_primary"
+                android:layout_marginStart="16dp"
+                android:padding="2dp"/>
+
+            <ImageView
+                android:id="@+id/ivShare"
+                android:layout_width="28dp"
+                android:layout_height="28dp"
+                android:src="@drawable/ic_send"
+                android:tint="@color/text_primary"
+                android:layout_marginStart="16dp"
+                android:padding="2dp"/>
+
+            <Space android:layout_width="0dp"
+                android:layout_height="1dp"
+                android:layout_weight="1"/>
+
+            <ImageView
+                android:id="@+id/ivBookmark"
+                android:layout_width="28dp"
+                android:layout_height="28dp"
+                android:src="@drawable/ic_bookmark_outline"
+                android:tint="@color/text_primary"
+                android:padding="2dp"/>
+
+        </LinearLayout>
+
+        <!-- LIKES & CAPTION -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal">
-
-            <ImageButton
-                android:id="@+id/btnLike"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:src="@android:drawable/btn_star_big_off"
-                android:background="?attr/selectableItemBackgroundBorderless" />
+            android:orientation="vertical"
+            android:paddingHorizontal="12dp"
+            android:paddingBottom="12dp">
 
             <TextView
                 android:id="@+id/tvLikesCount"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="0"
-                android:layout_marginStart="4dp"
-                android:layout_marginEnd="16dp"
-                android:layout_gravity="center_vertical" />
+                android:text="1,284 likes"
+                android:textColor="@color/text_primary"
+                android:textSize="13sp"
+                android:fontFamily="@font/nunito_bold"/>
 
-            <ImageButton
-                android:id="@+id/btnComment"
+            <TextView
+                android:id="@+id/tvCaption"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:src="@android:drawable/ic_menu_send"
-                android:background="?attr/selectableItemBackgroundBorderless" />
+                android:text="Late night coding sessions in the new studio. The vibe is immaculate. ✨ #setup #creator"
+                android:textColor="@color/text_primary"
+                android:textSize="13sp"
+                android:fontFamily="@font/nunito_regular"
+                android:layout_marginTop="2dp"
+                android:lineSpacingMultiplier="1.3"/>
 
             <TextView
                 android:id="@+id/tvCommentsCount"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="0"
-                android:layout_marginStart="4dp"
-                android:layout_gravity="center_vertical" />
+                android:text="View all 42 comments"
+                android:textColor="@color/text_secondary"
+                android:textSize="12sp"
+                android:fontFamily="@font/nunito_regular"
+                android:layout_marginTop="4dp"/>
+
         </LinearLayout>
     </LinearLayout>
-</com.google.android.material.card.MaterialCardView>
+</androidx.cardview.widget.CardView>
