@@ -30,32 +30,29 @@ class StoryAdapter(
     ) : RecyclerView.ViewHolder(binding.root) {
 
         fun bind(story: Story) {
-            with(binding) {
-                tvStoryUsername.text = story.username
+            binding.tvStoryUsername.text =
+                if (story.isCurrentUser) "Your Story" else story.username
 
-                if (story.isCurrentUser) {
-                    tvStoryUsername.text = "Your Story"
-                    ivAddStory.visibility = android.view.View.VISIBLE
-                } else {
-                    ivAddStory.visibility = android.view.View.GONE
-                }
+            binding.ivAddStory.visibility =
+                if (story.isCurrentUser) android.view.View.VISIBLE
+                else android.view.View.GONE
 
-                // Gradient ring for unseen stories
-                storyRing.setViewed(story.isViewed)
-
-                Glide.with(ivStoryAvatar)
+            if (story.userProfileUrl.isNotEmpty()) {
+                Glide.with(binding.ivStoryAvatar)
                     .load(story.userProfileUrl)
                     .placeholder(R.drawable.ic_default_avatar)
                     .circleCrop()
-                    .into(ivStoryAvatar)
-
-                root.setOnClickListener { onStoryClick(story) }
+                    .into(binding.ivStoryAvatar)
             }
+
+            binding.root.setOnClickListener { onStoryClick(story) }
         }
     }
 
     class StoryDiffCallback : DiffUtil.ItemCallback<Story>() {
-        override fun areItemsTheSame(oldItem: Story, newItem: Story) = oldItem.userId == newItem.userId
-        override fun areContentsTheSame(oldItem: Story, newItem: Story) = oldItem == newItem
+        override fun areItemsTheSame(oldItem: Story, newItem: Story) =
+            oldItem.userId == newItem.userId
+        override fun areContentsTheSame(oldItem: Story, newItem: Story) =
+            oldItem == newItem
     }
 }

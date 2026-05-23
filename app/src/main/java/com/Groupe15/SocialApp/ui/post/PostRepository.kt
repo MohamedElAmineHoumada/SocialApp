@@ -43,12 +43,12 @@ class PostRepository @Inject constructor(
         firestore.collection("posts").document(postId).set(post).await()
 
         return Post(
-            id           = postId,
-            userId       = uid,
-            caption      = caption,
-            imageUrls    = imageUrls,
-            likesCount   = 0,
-            commentsCount = 0
+            postId          = postId,
+            authorUid       = uid,
+            content         = caption,
+            imageUrl        = imageUrls.firstOrNull() ?: "",
+            likesCount      = 0,
+            commentsCount   = 0
         )
     }
 }

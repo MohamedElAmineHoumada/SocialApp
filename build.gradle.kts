@@ -3,7 +3,6 @@ plugins {
     alias(libs.plugins.android.application) apply false
     alias(libs.plugins.kotlinAndroidPlugin) apply false
     alias(libs.plugins.kotlinComposePlugin) apply false
-
     alias(libs.plugins.googleServicesPlugin) apply false
     alias(libs.plugins.hiltPlugin) apply false
     alias(libs.plugins.kspPlugin) apply false

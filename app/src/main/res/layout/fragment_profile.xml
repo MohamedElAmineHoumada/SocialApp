@@ -12,7 +12,6 @@
         android:background="@color/background_dark"
         app:elevation="0dp">
 
-        <!-- TOP BAR -->
         <androidx.constraintlayout.widget.ConstraintLayout
             android:layout_width="match_parent"
             android:layout_height="48dp"
@@ -64,35 +63,34 @@
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
                     android:scaleType="centerCrop"
-                    android:src="@drawable/placeholder_cover"/>
+                    android:background="@color/surface_dark"/>
 
-                <!-- Dark overlay -->
                 <View
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
-                    android:background="@color/scrim_dark"/>
+                    android:background="#66000000"/>
 
             </FrameLayout>
 
-            <!-- PROFILE INFO SECTION -->
+            <!-- PROFILE INFO -->
             <androidx.constraintlayout.widget.ConstraintLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:paddingHorizontal="16dp"
                 android:layout_marginTop="-30dp">
 
-                <!-- Avatar -->
-                <de.hdodenhof.circleimageview.CircleImageView
+                <!-- Avatar : ImageView simple avec forme ronde via background -->
+                <ImageView
                     android:id="@+id/ivProfilePic"
                     android:layout_width="72dp"
                     android:layout_height="72dp"
                     android:src="@drawable/ic_default_avatar"
-                    app:civ_border_color="@color/background_dark"
-                    app:civ_border_width="3dp"
+                    android:scaleType="centerCrop"
+                    android:background="@drawable/bg_avatar_border"
+                    android:padding="3dp"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toTopOf="parent"/>
 
-                <!-- Edit / Settings buttons -->
                 <ImageButton
                     android:id="@+id/ibSettings"
                     android:layout_width="36dp"
@@ -110,7 +108,7 @@
                     android:layout_height="36dp"
                     android:text="Edit Profile"
                     android:textSize="13sp"
-                    android:fontFamily="@font/nunito_semibold"
+                    android:fontFamily="@font/nunito_bold"
                     android:paddingHorizontal="16dp"
                     style="@style/Widget.MaterialComponents.Button.OutlinedButton"
                     app:strokeColor="@color/text_secondary"
@@ -162,17 +160,17 @@
                     android:text="@alex_creates"
                     android:textColor="@color/purple_primary"
                     android:textSize="13sp"
-                    android:fontFamily="@font/nunito_regular"
+                    android:fontFamily="@font/nunito_bold"
                     android:layout_marginTop="2dp"/>
 
                 <TextView
                     android:id="@+id/tvBio"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Digital Artist &amp; Motion Designer. Exploring the intersection of human emotion and generative algorithms. Let's build something beautiful. ✨"
+                    android:text="Digital Artist &amp; Motion Designer."
                     android:textColor="@color/text_primary"
                     android:textSize="13sp"
-                    android:fontFamily="@font/nunito_regular"
+                    android:fontFamily="@font/nunito_bold"
                     android:layout_marginTop="8dp"
                     android:lineSpacingMultiplier="1.4"/>
 
@@ -196,13 +194,13 @@
                         android:text="alexrivers.design"
                         android:textColor="@color/purple_primary"
                         android:textSize="13sp"
-                        android:fontFamily="@font/nunito_regular"
+                        android:fontFamily="@font/nunito_bold"
                         android:layout_marginStart="4dp"/>
                 </LinearLayout>
 
             </LinearLayout>
 
-            <!-- STATS: Posts / Followers / Following -->
+            <!-- STATS -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="72dp"
@@ -211,7 +209,6 @@
                 android:layout_marginTop="16dp"
                 android:paddingHorizontal="16dp">
 
-                <!-- Posts -->
                 <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
                     android:layout_weight="1" android:orientation="vertical" android:gravity="center">
                     <TextView android:id="@+id/tvPostsCount" android:layout_width="wrap_content"
@@ -220,14 +217,12 @@
                         android:fontFamily="@font/nunito_bold"/>
                     <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
                         android:text="Posts" android:textColor="@color/text_secondary"
-                        android:textSize="12sp" android:fontFamily="@font/nunito_regular"/>
+                        android:textSize="12sp" android:fontFamily="@font/nunito_bold"/>
                 </LinearLayout>
 
-                <!-- Divider -->
                 <View android:layout_width="1dp" android:layout_height="32dp"
                     android:background="@color/divider"/>
 
-                <!-- Followers -->
                 <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
                     android:layout_weight="1" android:orientation="vertical" android:gravity="center">
                     <TextView android:id="@+id/tvFollowersCount" android:layout_width="wrap_content"
@@ -236,14 +231,12 @@
                         android:fontFamily="@font/nunito_bold"/>
                     <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
                         android:text="Followers" android:textColor="@color/text_secondary"
-                        android:textSize="12sp" android:fontFamily="@font/nunito_regular"/>
+                        android:textSize="12sp" android:fontFamily="@font/nunito_bold"/>
                 </LinearLayout>
 
-                <!-- Divider -->
                 <View android:layout_width="1dp" android:layout_height="32dp"
                     android:background="@color/divider"/>
 
-                <!-- Following -->
                 <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
                     android:layout_weight="1" android:orientation="vertical" android:gravity="center">
                     <TextView android:id="@+id/tvFollowingCount" android:layout_width="wrap_content"
@@ -252,49 +245,48 @@
                         android:fontFamily="@font/nunito_bold"/>
                     <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
                         android:text="Following" android:textColor="@color/text_secondary"
-                        android:textSize="12sp" android:fontFamily="@font/nunito_regular"/>
+                        android:textSize="12sp" android:fontFamily="@font/nunito_bold"/>
                 </LinearLayout>
 
             </LinearLayout>
 
-            <!-- TABS: Posts / Reels / Tagged -->
+            <!-- TABS -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="44dp"
                 android:orientation="horizontal"
                 android:layout_marginTop="8dp">
 
-                <!-- Posts Tab -->
                 <LinearLayout android:layout_width="0dp" android:layout_height="match_parent"
                     android:layout_weight="1" android:orientation="vertical" android:gravity="center">
-                    <ImageView android:layout_width="22dp" android:layout_height="22dp"
-                        android:src="@drawable/ic_grid" android:tint="@color/purple_primary"
-                        android:id="@+id/tvTabPosts"/>
-                    <View android:id="@+id/viewIndicatorPosts" android:layout_width="match_parent"
-                        android:layout_height="2dp" android:background="@color/purple_primary"
-                        android:layout_marginTop="4dp"/>
+                    <ImageView android:id="@+id/tvTabPosts"
+                        android:layout_width="22dp" android:layout_height="22dp"
+                        android:src="@drawable/ic_grid" android:tint="@color/purple_primary"/>
+                    <View android:id="@+id/viewIndicatorPosts"
+                        android:layout_width="match_parent" android:layout_height="2dp"
+                        android:background="@color/purple_primary" android:layout_marginTop="4dp"/>
                 </LinearLayout>
 
-                <!-- Reels Tab -->
                 <LinearLayout android:layout_width="0dp" android:layout_height="match_parent"
                     android:layout_weight="1" android:orientation="vertical" android:gravity="center">
-                    <ImageView android:layout_width="22dp" android:layout_height="22dp"
-                        android:src="@drawable/ic_reels" android:tint="@color/text_secondary"
-                        android:id="@+id/tvTabReels"/>
-                    <View android:id="@+id/viewIndicatorReels" android:layout_width="match_parent"
-                        android:layout_height="2dp" android:background="@color/purple_primary"
-                        android:layout_marginTop="4dp" android:visibility="invisible"/>
+                    <ImageView android:id="@+id/tvTabReels"
+                        android:layout_width="22dp" android:layout_height="22dp"
+                        android:src="@drawable/ic_reels" android:tint="@color/text_secondary"/>
+                    <View android:id="@+id/viewIndicatorReels"
+                        android:layout_width="match_parent" android:layout_height="2dp"
+                        android:background="@color/purple_primary" android:layout_marginTop="4dp"
+                        android:visibility="invisible"/>
                 </LinearLayout>
 
-                <!-- Tagged Tab -->
                 <LinearLayout android:layout_width="0dp" android:layout_height="match_parent"
                     android:layout_weight="1" android:orientation="vertical" android:gravity="center">
-                    <ImageView android:layout_width="22dp" android:layout_height="22dp"
-                        android:src="@drawable/ic_tag" android:tint="@color/text_secondary"
-                        android:id="@+id/tvTabTagged"/>
-                    <View android:id="@+id/viewIndicatorTagged" android:layout_width="match_parent"
-                        android:layout_height="2dp" android:background="@color/purple_primary"
-                        android:layout_marginTop="4dp" android:visibility="invisible"/>
+                    <ImageView android:id="@+id/tvTabTagged"
+                        android:layout_width="22dp" android:layout_height="22dp"
+                        android:src="@drawable/ic_tag" android:tint="@color/text_secondary"/>
+                    <View android:id="@+id/viewIndicatorTagged"
+                        android:layout_width="match_parent" android:layout_height="2dp"
+                        android:background="@color/purple_primary" android:layout_marginTop="4dp"
+                        android:visibility="invisible"/>
                 </LinearLayout>
 
             </LinearLayout>
@@ -305,7 +297,8 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:nestedScrollingEnabled="false"
-                android:paddingBottom="80dp"/>
+                android:paddingBottom="80dp"
+                android:clipToPadding="false"/>
 
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>

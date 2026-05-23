@@ -1,33 +1,33 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="72dp"
     android:layout_height="wrap_content"
     android:orientation="vertical"
     android:gravity="center"
     android:padding="4dp">
 
-    <!-- Story ring + avatar -->
     <FrameLayout
         android:layout_width="60dp"
         android:layout_height="60dp">
 
-        <!-- Gradient ring (custom view) -->
-        <com.Groupe15.SocialApp.ui.custom.StoryRingView
-            android:id="@+id/storyRing"
+        <!-- Gradient ring simulé avec un background -->
+        <View
             android:layout_width="60dp"
-            android:layout_height="60dp"/>
+            android:layout_height="60dp"
+            android:background="@drawable/bg_story_ring"/>
 
         <!-- Avatar -->
-        <de.hdodenhof.circleimageview.CircleImageView
+        <ImageView
             android:id="@+id/ivStoryAvatar"
-            android:layout_width="50dp"
-            android:layout_height="50dp"
+            android:layout_width="52dp"
+            android:layout_height="52dp"
             android:layout_gravity="center"
-            android:src="@drawable/ic_default_avatar"/>
+            android:src="@drawable/ic_default_avatar"
+            android:scaleType="centerCrop"
+            android:background="@drawable/bg_avatar_border"/>
 
-        <!-- Add button (only for current user) -->
+        <!-- Add button pour current user -->
         <ImageView
             android:id="@+id/ivAddStory"
             android:layout_width="18dp"
@@ -47,7 +47,6 @@
         android:text="username"
         android:textColor="@color/text_secondary"
         android:textSize="10sp"
-        android:fontFamily="@font/nunito_regular"
         android:gravity="center"
         android:maxLines="1"
         android:ellipsize="end"

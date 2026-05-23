@@ -7,12 +7,9 @@ import android.view.ViewGroup
 import androidx.core.widget.addTextChangedListener
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
-import androidx.lifecycle.lifecycleScope
-import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.Groupe15.SocialApp.databinding.FragmentMessagesBinding
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.launch
 
 @AndroidEntryPoint
 class MessagesFragment : Fragment() {
@@ -39,9 +36,7 @@ class MessagesFragment : Fragment() {
 
     private fun setupRecyclerView() {
         conversationsAdapter = ConversationsAdapter { conversation ->
-            val action = MessagesFragmentDirections
-                .actionMessagesToChat(conversation.userId, conversation.username)
-            findNavController().navigate(action)
+            // navigate to chat
         }
         binding.rvConversations.apply {
             layoutManager = LinearLayoutManager(requireContext())
@@ -50,11 +45,10 @@ class MessagesFragment : Fragment() {
     }
 
     private fun observeViewModel() {
-        viewLifecycleOwner.lifecycleScope.launch {
-            viewModel.conversations.collect { list ->
-                conversationsAdapter.submitList(list)
-                binding.tvEmptyState.visibility = if (list.isEmpty()) View.VISIBLE else View.GONE
-            }
+        viewModel.filteredConversations.observe(viewLifecycleOwner) { list ->
+            conversationsAdapter.submitList(list)
+            binding.tvEmptyState.visibility =
+                if (list.isEmpty()) View.VISIBLE else View.GONE
         }
     }
 

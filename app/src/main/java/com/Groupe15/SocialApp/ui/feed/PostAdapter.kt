@@ -11,7 +11,7 @@ import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import coil.load
 import com.Groupe15.SocialApp.R
-import com.Groupe15.SocialApp.data.model.Post
+import com.Groupe15.SocialApp.models.Post
 
 class PostAdapter(
     private val onLike: (Post) -> Unit,
