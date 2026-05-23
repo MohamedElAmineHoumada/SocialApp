@@ -1,0 +1,129 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="@drawable/bg_bottom_sheet"
+    android:paddingBottom="32dp">
+
+    <!-- Handle -->
+    <View
+        android:layout_width="40dp"
+        android:layout_height="4dp"
+        android:background="@drawable/bg_bottom_sheet_handle"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginTop="12dp"
+        android:layout_marginBottom="16dp"/>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Who can see your post?"
+        android:textColor="@color/text_primary"
+        android:textSize="16sp"
+        android:fontFamily="@font/nunito_bold"
+        android:paddingHorizontal="20dp"
+        android:layout_marginBottom="16dp"/>
+
+    <!-- Public -->
+    <LinearLayout
+        android:id="@+id/optionPublic"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingHorizontal="20dp"
+        android:background="?attr/selectableItemBackground">
+
+        <ImageView
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:src="@drawable/ic_globe"
+            android:tint="@color/purple_primary"
+            android:background="@drawable/bg_icon_soft"
+            android:padding="8dp"/>
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:layout_marginStart="12dp">
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="Public" android:textColor="@color/text_primary"
+                android:textSize="15sp" android:fontFamily="@font/nunito_semibold"/>
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="Anyone can see this post" android:textColor="@color/text_secondary"
+                android:textSize="12sp" android:fontFamily="@font/nunito_regular"/>
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- Friends -->
+    <LinearLayout
+        android:id="@+id/optionFriends"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingHorizontal="20dp"
+        android:background="?attr/selectableItemBackground">
+
+        <ImageView
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:src="@drawable/ic_people"
+            android:tint="@color/purple_primary"
+            android:background="@drawable/bg_icon_soft"
+            android:padding="8dp"/>
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:layout_marginStart="12dp">
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="Friends" android:textColor="@color/text_primary"
+                android:textSize="15sp" android:fontFamily="@font/nunito_semibold"/>
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="Only your followers" android:textColor="@color/text_secondary"
+                android:textSize="12sp" android:fontFamily="@font/nunito_regular"/>
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- Only Me -->
+    <LinearLayout
+        android:id="@+id/optionOnlyMe"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingHorizontal="20dp"
+        android:background="?attr/selectableItemBackground">
+
+        <ImageView
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:src="@drawable/ic_lock"
+            android:tint="@color/purple_primary"
+            android:background="@drawable/bg_icon_soft"
+            android:padding="8dp"/>
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:layout_marginStart="12dp">
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="Only Me" android:textColor="@color/text_primary"
+                android:textSize="15sp" android:fontFamily="@font/nunito_semibold"/>
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="Only you can see this" android:textColor="@color/text_secondary"
+                android:textSize="12sp" android:fontFamily="@font/nunito_regular"/>
+        </LinearLayout>
+    </LinearLayout>
+
+</LinearLayout>

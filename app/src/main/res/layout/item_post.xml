@@ -1,31 +1,36 @@
 <?xml version="1.0" encoding="utf-8"?>
-<com.google.android.material.card.MaterialCardView
+<androidx.cardview.widget.CardView
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_margin="8dp"
-    app:cardCornerRadius="12dp"
-    app:cardElevation="2dp">
+    android:layout_marginBottom="8dp"
+    android:layout_marginHorizontal="8dp"
+    app:cardBackgroundColor="@color/card_background"
+    app:cardCornerRadius="16dp"
+    app:cardElevation="0dp">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:padding="12dp">
+        android:orientation="vertical">
 
+        <!-- HEADER -->
         <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
+            android:layout_height="56dp"
             android:orientation="horizontal"
             android:gravity="center_vertical"
-            android:layout_marginBottom="10dp">
+            android:paddingHorizontal="12dp">
 
+            <!-- id: ivAvatar -->
             <ImageView
                 android:id="@+id/ivAvatar"
-                android:layout_width="44dp"
-                android:layout_height="44dp"
-                android:src="@mipmap/ic_launcher_round" />
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:src="@drawable/ic_default_avatar"
+                android:scaleType="centerCrop"
+                android:background="@drawable/bg_avatar_border"/>
 
             <LinearLayout
                 android:layout_width="0dp"
@@ -34,72 +39,118 @@
                 android:orientation="vertical"
                 android:layout_marginStart="10dp">
 
+                <!-- id: tvUsername -->
                 <TextView
                     android:id="@+id/tvUsername"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:textStyle="bold"
-                    android:textSize="14sp" />
+                    android:text="username"
+                    android:textColor="@color/text_primary"
+                    android:textSize="14sp"
+                    android:fontFamily="@font/nunito_bold"/>
 
+                <!-- id: tvTimestamp -->
                 <TextView
                     android:id="@+id/tvTimestamp"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:textSize="12sp"
-                    android:textColor="#9E9E9E" />
+                    android:text="à l'instant"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="11sp"
+                    android:fontFamily="@font/nunito_bold"/>
+
             </LinearLayout>
+
+            <ImageView
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:src="@drawable/ic_more_horizontal"
+                android:tint="@color/text_secondary"/>
+
         </LinearLayout>
 
+        <!-- id: tvContent -->
         <TextView
             android:id="@+id/tvContent"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:text="Post content..."
+            android:textColor="@color/text_primary"
             android:textSize="14sp"
-            android:layout_marginBottom="10dp" />
+            android:fontFamily="@font/nunito_bold"
+            android:paddingHorizontal="12dp"
+            android:paddingBottom="8dp"
+            android:lineSpacingMultiplier="1.4"/>
 
+        <!-- id: ivPostImage -->
         <ImageView
             android:id="@+id/ivPostImage"
             android:layout_width="match_parent"
-            android:layout_height="220dp"
+            android:layout_height="280dp"
             android:scaleType="centerCrop"
-            android:visibility="gone"
-            android:layout_marginBottom="10dp" />
+            android:visibility="gone"/>
 
+        <!-- ACTIONS -->
         <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal">
+            android:layout_height="48dp"
+            android:orientation="horizontal"
+            android:paddingHorizontal="8dp"
+            android:gravity="center_vertical">
 
+            <!-- id: btnLike -->
             <ImageButton
                 android:id="@+id/btnLike"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:src="@android:drawable/btn_star_big_off"
-                android:background="?attr/selectableItemBackgroundBorderless" />
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:src="@drawable/ic_heart_outline"
+                android:tint="@color/text_primary"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:padding="8dp"/>
 
+            <!-- id: tvLikesCount -->
             <TextView
                 android:id="@+id/tvLikesCount"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="0"
-                android:layout_marginStart="4dp"
-                android:layout_marginEnd="16dp"
-                android:layout_gravity="center_vertical" />
+                android:textColor="@color/text_primary"
+                android:textSize="13sp"
+                android:fontFamily="@font/nunito_bold"/>
 
+            <!-- id: btnComment -->
             <ImageButton
                 android:id="@+id/btnComment"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:src="@android:drawable/ic_menu_send"
-                android:background="?attr/selectableItemBackgroundBorderless" />
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:src="@drawable/ic_comment"
+                android:tint="@color/text_primary"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:padding="8dp"
+                android:layout_marginStart="8dp"/>
 
+            <!-- id: tvCommentsCount -->
             <TextView
                 android:id="@+id/tvCommentsCount"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="0"
-                android:layout_marginStart="4dp"
-                android:layout_gravity="center_vertical" />
+                android:textColor="@color/text_primary"
+                android:textSize="13sp"
+                android:fontFamily="@font/nunito_bold"/>
+
+            <Space android:layout_width="0dp" android:layout_height="1dp" android:layout_weight="1"/>
+
+            <ImageButton
+                android:id="@+id/btnBookmark"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:src="@drawable/ic_bookmark_outline"
+                android:tint="@color/text_primary"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:padding="8dp"/>
+
         </LinearLayout>
+
     </LinearLayout>
-</com.google.android.material.card.MaterialCardView>
+</androidx.cardview.widget.CardView>
