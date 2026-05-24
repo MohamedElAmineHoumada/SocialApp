@@ -1,10 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="Theme.SocialApp" parent="Theme.AppCompat.Light.NoActionBar">
-        <item name="colorPrimary">#3F51B5</item>
-        <item name="colorPrimaryDark">#303F9F</item>
-        <item name="colorAccent">#FF6F00</item>
+    <style name="Theme.SocialApp" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="colorPrimary">#6C47FF</item>
+        <item name="colorPrimaryDark">#5835E0</item>
+        <item name="colorAccent">#6C47FF</item>
     </style>
+
     <style name="BottomSheetDialogTheme" parent="Theme.MaterialComponents.BottomSheetDialog">
         <item name="bottomSheetStyle">@style/BottomSheetStyle</item>
     </style>
