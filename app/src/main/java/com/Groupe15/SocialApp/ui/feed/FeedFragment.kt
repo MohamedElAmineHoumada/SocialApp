@@ -28,8 +28,11 @@ class FeedFragment : Fragment(R.layout.fragment_feed) {
         val fabCreatePost = view.findViewById<FloatingActionButton>(R.id.fabCreatePost)
 
         adapter = PostAdapter(
-            onLike = { post -> viewModel.toggleLike(post.postId) },
-            onComment = { },
+            onLike    = { post -> viewModel.toggleLike(post.postId) },
+            onComment = { post ->
+                CommentsBottomSheet.newInstance(post.postId)
+                    .show(parentFragmentManager, "comments")
+            },
             onProfile = { }
         )
 
