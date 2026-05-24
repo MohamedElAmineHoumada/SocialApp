@@ -1,9 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout
+<LinearLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:orientation="vertical"
     android:background="@color/background_dark">
 
     <!-- TOP BAR -->
@@ -11,10 +12,8 @@
         android:id="@+id/topBar"
         android:layout_width="match_parent"
         android:layout_height="56dp"
-        android:paddingHorizontal="16dp"
-        app:layout_constraintTop_toTopOf="parent">
+        android:paddingHorizontal="16dp">
 
-        <!-- id: ibClose -->
         <ImageButton
             android:id="@+id/ibClose"
             android:layout_width="36dp"
@@ -47,22 +46,21 @@
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintBottom_toBottomOf="parent"/>
+
     </androidx.constraintlayout.widget.ConstraintLayout>
 
     <View
         android:id="@+id/dividerTop"
         android:layout_width="match_parent"
         android:layout_height="1dp"
-        android:background="@color/divider"
-        app:layout_constraintTop_toBottomOf="@id/topBar"/>
+        android:background="@color/divider"/>
 
-    <!-- SCROLL CONTENT -->
+    <!-- SCROLL CONTENT avec layout_weight=1 pour prendre tout l'espace disponible -->
     <androidx.core.widget.NestedScrollView
         android:id="@+id/scrollContent"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        app:layout_constraintTop_toBottomOf="@id/dividerTop"
-        app:layout_constraintBottom_toTopOf="@id/bottomBar">
+        android:layout_weight="1">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -99,7 +97,6 @@
                         android:textSize="15sp"
                         android:fontFamily="@font/nunito_bold"/>
 
-                    <!-- id: chipAudience -->
                     <com.google.android.material.chip.Chip
                         android:id="@+id/chipAudience"
                         android:layout_width="wrap_content"
@@ -141,7 +138,7 @@
                 android:layout_marginTop="12dp"
                 android:visibility="gone"/>
 
-            <!-- id: layoutAddMedia  +  id: ivAddMediaIcon -->
+            <!-- Add Media -->
             <LinearLayout
                 android:id="@+id/layoutAddMedia"
                 android:layout_width="match_parent"
@@ -179,7 +176,6 @@
                 android:fontFamily="@font/nunito_bold"
                 android:layout_marginTop="24dp"/>
 
-            <!-- Tag Friends -->
             <androidx.constraintlayout.widget.ConstraintLayout
                 android:layout_width="match_parent"
                 android:layout_height="52dp"
@@ -210,7 +206,7 @@
                     app:layout_constraintBottom_toBottomOf="parent">
                     <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
                         android:text="Tag Friends" android:textColor="@color/text_primary"
-                        android:textSize="14sp" android:fontFamily="@font/nunito_semibold"/>
+                        android:textSize="14sp" android:fontFamily="@font/nunito_bold"/>
                     <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
                         android:text="Mention people in your post"
                         android:textColor="@color/text_secondary"
@@ -232,7 +228,7 @@
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>
 
-    <!-- BOTTOM BAR -->
+    <!-- BOTTOM BAR - toujours visible en bas -->
     <LinearLayout
         android:id="@+id/bottomBar"
         android:layout_width="match_parent"
@@ -240,11 +236,11 @@
         android:orientation="horizontal"
         android:paddingHorizontal="16dp"
         android:gravity="center_vertical"
-        android:background="@color/card_background"
-        app:layout_constraintBottom_toBottomOf="parent">
+        android:background="@color/card_background">
 
         <ImageView android:layout_width="36dp" android:layout_height="36dp"
-            android:src="@drawable/ic_person_add" android:tint="@color/text_secondary" android:padding="6dp"/>
+            android:src="@drawable/ic_person_add" android:tint="@color/text_secondary"
+            android:padding="6dp"/>
         <ImageView android:layout_width="36dp" android:layout_height="36dp"
             android:src="@drawable/ic_location_pin" android:tint="@color/text_secondary"
             android:padding="6dp" android:layout_marginStart="8dp"/>
@@ -254,7 +250,6 @@
 
         <Space android:layout_width="0dp" android:layout_height="1dp" android:layout_weight="1"/>
 
-        <!-- id: progressBar -->
         <ProgressBar
             android:id="@+id/progressBar"
             style="?android:attr/progressBarStyleSmall"
@@ -263,7 +258,6 @@
             android:layout_marginEnd="12dp"
             android:visibility="gone"/>
 
-        <!-- id: btnPost -->
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnPost"
             android:layout_width="wrap_content"
@@ -275,6 +269,7 @@
             android:backgroundTint="@color/purple_primary"
             android:textColor="@color/white"
             app:cornerRadius="12dp"/>
+
     </LinearLayout>
 
-</androidx.constraintlayout.widget.ConstraintLayout>
+</LinearLayout>

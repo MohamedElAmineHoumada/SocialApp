@@ -1,6 +1,7 @@
 package com.Groupe15.SocialApp
 
 import android.os.Bundle
+import android.view.View
 import androidx.appcompat.app.AppCompatActivity
 import androidx.navigation.fragment.NavHostFragment
 import androidx.navigation.ui.setupWithNavController
@@ -21,18 +22,17 @@ class MainActivity : AppCompatActivity() {
             .findFragmentById(R.id.navHostFragment) as NavHostFragment
         val navController = navHostFragment.navController
 
-        // Connecte la BottomNav au NavController
         binding.bottomNavigationView.setupWithNavController(navController)
 
-        // Cache la BottomNav sur les écrans Login/Register
         navController.addOnDestinationChangedListener { _, destination, _ ->
             when (destination.id) {
                 R.id.loginFragment,
-                R.id.registerFragment -> {
-                    binding.bottomNavigationView.visibility = android.view.View.GONE
+                R.id.registerFragment,
+                R.id.createPostFragment -> {
+                    binding.bottomNavigationView.visibility = View.GONE
                 }
                 else -> {
-                    binding.bottomNavigationView.visibility = android.view.View.VISIBLE
+                    binding.bottomNavigationView.visibility = View.VISIBLE
                 }
             }
         }
