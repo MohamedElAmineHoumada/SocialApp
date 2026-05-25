@@ -1,7 +1,7 @@
-package com.Groupe15.SocialApp.ui.auth
+package com.Groupe15.SocialApp.viewmodel
 
 import androidx.lifecycle.ViewModel
-import com.Groupe15.SocialApp.data.repository.AuthRepository
+import com.Groupe15.SocialApp.repository.AuthRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 

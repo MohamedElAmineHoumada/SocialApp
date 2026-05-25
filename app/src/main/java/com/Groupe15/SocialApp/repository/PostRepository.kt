@@ -1,27 +1,29 @@
-// app/src/main/java/com/Groupe15/SocialApp/data/repository/PostRepository.kt
-
 package com.Groupe15.SocialApp.repository
 
-import com.Groupe15.SocialApp.data.model.Post
-import com.google.firebase.auth.FirebaseAuth
+import android.net.Uri
+import com.Groupe15.SocialApp.models.Post
 import com.google.firebase.Timestamp
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
+import com.google.firebase.storage.FirebaseStorage
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
+import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
 class PostRepository @Inject constructor(
     private val firestore: FirebaseFirestore,
+    private val storage: FirebaseStorage,
     private val auth: FirebaseAuth
 ) {
 
-    // Écoute en temps réel les 50 derniers posts (Firestore snapshot listener)
+    // Écoute en temps réel les 50 derniers posts
     fun getLivePosts(): Flow<List<Post>> = callbackFlow {
         val listener = firestore.collection("posts")
             .orderBy("createdAt", Query.Direction.DESCENDING)
@@ -37,32 +39,50 @@ class PostRepository @Inject constructor(
         awaitClose { listener.remove() }
     }
 
-    // Crée un nouveau post dans Firestore
-    suspend fun createPost(content: String, imageUrl: String = ""): Result<Unit> {
+    // Crée un post avec images uploadées dans Storage
+    suspend fun createPost(caption: String, imageUris: List<Uri> = emptyList()): Result<Unit> {
         return try {
-            val uid = auth.currentUser?.uid ?: return Result.failure(Exception("Non connecté"))
+            val uid = auth.currentUser?.uid
+                ?: return Result.failure(Exception("Non connecté"))
             val username = auth.currentUser?.displayName ?: "Anonyme"
 
+            // Upload images si présentes
+            val imageUrls = imageUris.map { uri ->
+                val ref = storage.reference.child("posts/$uid/${UUID.randomUUID()}.jpg")
+                ref.putFile(uri).await()
+                ref.downloadUrl.await().toString()
+            }
+
+            val postId = firestore.collection("posts").document().id
             val post = Post(
-                postId     = firestore.collection("posts").document().id,
-                authorUid  = uid,
+                postId         = postId,
+                authorUid      = uid,
                 authorUsername = username,
-                content    = content,
-                imageUrls  = if (imageUrl.isNotEmpty()) listOf(imageUrl) else emptyList(),
-                createdAt  = Timestamp.now()
+                content        = caption,
+                imageUrls      = imageUrls,
+                createdAt      = Timestamp.now()
             )
-            firestore.collection("posts")
-                .document(post.postId)
-                .set(post)
-                .await()
+            firestore.collection("posts").document(postId).set(post).await()
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
         }
     }
 
-    // Sera complété au Jour 3
     suspend fun toggleLike(postId: String) {
-        // TODO Jour 3 : transaction Firestore
+        val uid = auth.currentUser?.uid ?: return
+        val postRef = firestore.collection("posts").document(postId)
+        val likeRef = postRef.collection("likes").document(uid)
+
+        firestore.runTransaction { transaction ->
+            val likeDoc = transaction.get(likeRef)
+            if (likeDoc.exists()) {
+                transaction.delete(likeRef)
+                transaction.update(postRef, "likesCount", FieldValue.increment(-1))
+            } else {
+                transaction.set(likeRef, mapOf("userId" to uid))
+                transaction.update(postRef, "likesCount", FieldValue.increment(1))
+            }
+        }.await()
     }
 }

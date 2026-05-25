@@ -1,10 +1,11 @@
-package com.Groupe15.SocialApp.ui.post
+package com.Groupe15.SocialApp.viewmodel
 
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.Groupe15.SocialApp.models.User
-import com.Groupe15.SocialApp.ui.auth.AuthRepository
+import com.Groupe15.SocialApp.repository.PostRepository
+import com.Groupe15.SocialApp.repository.AuthRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
