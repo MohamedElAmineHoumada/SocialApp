@@ -1,10 +1,11 @@
-package com.Groupe15.SocialApp.ui.feed
+package com.Groupe15.SocialApp.viewmodel
 
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.Groupe15.SocialApp.data.model.Post
+import com.Groupe15.SocialApp.models.Post
+import com.Groupe15.SocialApp.repository.FeedRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
 import javax.inject.Inject

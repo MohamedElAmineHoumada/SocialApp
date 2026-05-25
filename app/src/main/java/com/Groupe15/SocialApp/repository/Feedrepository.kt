@@ -1,8 +1,9 @@
-package com.Groupe15.SocialApp.ui.feed
+package com.Groupe15.SocialApp.repository
 
-import com.Groupe15.SocialApp.data.model.Post
+import com.Groupe15.SocialApp.models.Post
 import com.Groupe15.SocialApp.models.Story
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
 import kotlinx.coroutines.channels.awaitClose
@@ -52,11 +53,11 @@ class FeedRepository @Inject constructor(
             if (likeDoc.exists()) {
                 transaction.delete(likeRef)
                 transaction.update(postRef, "likesCount",
-                    com.google.firebase.firestore.FieldValue.increment(-1))
+                    FieldValue.increment(-1))
             } else {
                 transaction.set(likeRef, mapOf("userId" to uid))
                 transaction.update(postRef, "likesCount",
-                    com.google.firebase.firestore.FieldValue.increment(1))
+                    FieldValue.increment(1))
             }
         }.await()
     }

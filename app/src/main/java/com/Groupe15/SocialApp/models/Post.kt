@@ -1,4 +1,4 @@
-package com.Groupe15.SocialApp.data.model
+package com.Groupe15.SocialApp.models
 
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.PropertyName
@@ -23,6 +23,6 @@ data class Post(
     }
 
     // Keep compatibility with existing code expecting 'imageUrl'
-    val imageUrl: String 
+    val imageUrl: String
         get() = imageUrls.firstOrNull() ?: ""
 }

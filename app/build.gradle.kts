@@ -47,8 +47,7 @@ kotlin {
 
 dependencies {
     implementation("de.hdodenhof:circleimageview:3.1.0")
-    implementation( "com.google.dagger:hilt-android:2.56.1")
-    ksp ("com.google.dagger:hilt-compiler:2.56.1")
+
     // Android Core
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)

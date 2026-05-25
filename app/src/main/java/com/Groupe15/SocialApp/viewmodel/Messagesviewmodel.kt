@@ -1,4 +1,4 @@
-package com.Groupe15.SocialApp.ui.messages
+package com.Groupe15.SocialApp.viewmodel
 
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
