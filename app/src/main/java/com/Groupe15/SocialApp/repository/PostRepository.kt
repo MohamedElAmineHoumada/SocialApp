@@ -2,8 +2,9 @@
 
 package com.Groupe15.SocialApp.repository
 
-import com.Groupe15.SocialApp.models.Post
+import com.Groupe15.SocialApp.data.model.Post
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.Timestamp
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
@@ -47,8 +48,8 @@ class PostRepository @Inject constructor(
                 authorUid  = uid,
                 authorUsername = username,
                 content    = content,
-                imageUrl   = imageUrl,
-                createdAt  = System.currentTimeMillis()
+                imageUrls  = if (imageUrl.isNotEmpty()) listOf(imageUrl) else emptyList(),
+                createdAt  = Timestamp.now()
             )
             firestore.collection("posts")
                 .document(post.postId)

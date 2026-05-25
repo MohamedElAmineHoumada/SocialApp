@@ -1,6 +1,6 @@
 package com.Groupe15.SocialApp.ui.feed
 
-import com.Groupe15.SocialApp.models.Post
+import com.Groupe15.SocialApp.data.model.Post
 import com.Groupe15.SocialApp.models.Story
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore

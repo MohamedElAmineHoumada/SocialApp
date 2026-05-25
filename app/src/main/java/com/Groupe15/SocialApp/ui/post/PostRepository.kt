@@ -1,8 +1,10 @@
 package com.Groupe15.SocialApp.ui.post
 
 import android.net.Uri
-import com.Groupe15.SocialApp.models.Post
+import com.Groupe15.SocialApp.data.model.Post
+import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.storage.FirebaseStorage
 import kotlinx.coroutines.tasks.await
@@ -38,7 +40,7 @@ class PostRepository @Inject constructor(
             "imageUrls"   to imageUrls,
             "likesCount"  to 0,
             "commentsCount" to 0,
-            "createdAt"   to com.google.firebase.Timestamp.now()
+            "createdAt"   to FieldValue.serverTimestamp()
         )
         firestore.collection("posts").document(postId).set(post).await()
 
@@ -46,9 +48,10 @@ class PostRepository @Inject constructor(
             postId          = postId,
             authorUid       = uid,
             content         = caption,
-            imageUrl        = imageUrls.firstOrNull() ?: "",
+            imageUrls       = imageUrls,
             likesCount      = 0,
-            commentsCount   = 0
+            commentsCount   = 0,
+            createdAt       = Timestamp.now()
         )
     }
 }
