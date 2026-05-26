@@ -1,5 +1,5 @@
 package com.Groupe15.SocialApp.ui.post
-import com.Groupe15.SocialApp.ui.post.CreatePostViewModel
+import com.Groupe15.SocialApp.viewmodel.CreatePostViewModel
 import android.net.Uri
 import android.os.Bundle
 import android.view.LayoutInflater

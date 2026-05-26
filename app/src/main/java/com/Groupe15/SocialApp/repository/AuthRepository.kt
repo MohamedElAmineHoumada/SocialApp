@@ -1,7 +1,8 @@
-package com.Groupe15.SocialApp.ui.auth
+package com.Groupe15.SocialApp.repository
 
 import com.Groupe15.SocialApp.models.User
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.GoogleAuthProvider
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
@@ -15,6 +16,8 @@ class AuthRepository @Inject constructor(
     private val auth: FirebaseAuth,
     private val firestore: FirebaseFirestore
 ) {
+
+    fun isLoggedIn(): Boolean = auth.currentUser != null
 
     fun getCurrentUser(): Flow<User?> = callbackFlow {
         val uid = auth.currentUser?.uid
@@ -45,15 +48,15 @@ class AuthRepository @Inject constructor(
             val result = auth.createUserWithEmailAndPassword(email, password).await()
             val uid = result.user?.uid ?: throw Exception("UID null")
             val user = hashMapOf(
-                "id"             to uid,
-                "email"          to email,
-                "displayName"    to displayName,
-                "username"       to displayName.lowercase().replace(" ", "_"),
-                "bio"            to "",
+                "id"              to uid,
+                "email"           to email,
+                "displayName"     to displayName,
+                "username"        to displayName.lowercase().replace(" ", "_"),
+                "bio"             to "",
                 "profileImageUrl" to "",
-                "followersCount" to 0,
-                "followingCount" to 0,
-                "postsCount"     to 0
+                "followersCount"  to 0,
+                "followingCount"  to 0,
+                "postsCount"      to 0
             )
             firestore.collection("users").document(uid).set(user).await()
             Result.success(Unit)
@@ -62,7 +65,15 @@ class AuthRepository @Inject constructor(
         }
     }
 
-    fun logout() = auth.signOut()
+    suspend fun signInWithGoogle(idToken: String): Result<Unit> {
+        return try {
+            val credential = GoogleAuthProvider.getCredential(idToken, null)
+            auth.signInWithCredential(credential).await()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
 
-    fun isLoggedIn() = auth.currentUser != null
+    fun logout() = auth.signOut()
 }

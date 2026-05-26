@@ -1,5 +1,6 @@
 package com.Groupe15.SocialApp.ui.feed
 
+import android.text.format.DateUtils
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -36,7 +37,15 @@ class PostAdapter(
             tvContent.text = post.content
             tvLikesCount.text = post.likesCount.toString()
             tvCommentsCount.text = post.commentsCount.toString()
-            tvTimestamp.text = "à l'instant"
+
+            // Formatage de la date
+            tvTimestamp.text = if (post.createdAt != null) {
+                DateUtils.getRelativeTimeSpanString(
+                    post.getCreatedAtMillis(),
+                    System.currentTimeMillis(),
+                    DateUtils.MINUTE_IN_MILLIS
+                )
+            } else "à l'instant"
 
             // Avatar
             if (post.authorProfileUrl.isNotEmpty()) {

@@ -8,6 +8,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.Groupe15.SocialApp.databinding.ItemConversationBinding
 import com.bumptech.glide.Glide
 import com.Groupe15.SocialApp.R
+import com.Groupe15.SocialApp.viewmodel.Conversation
 
 class ConversationsAdapter(
     private val onClick: (Conversation) -> Unit

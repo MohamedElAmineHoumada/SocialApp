@@ -1,26 +1,28 @@
 package com.Groupe15.SocialApp.models
 
-data class Post(
-    val postId: String           = "",
-    val authorUid: String        = "",
-    val authorUsername: String   = "",
-    val authorProfileUrl: String = "",
-    val content: String          = "",
-    val imageUrl: String         = "",
-    val likesCount: Int          = 0,
-    val commentsCount: Int       = 0,
-    val createdAt: Long          = 0L,
-    val location: String?        = null,
-    val isLikedByCurrentUser: Boolean = false
-) {
-    // Constructeur vide requis par Firestore
-    constructor() : this("")
+import com.google.firebase.Timestamp
+import com.google.firebase.firestore.PropertyName
 
-    // Aliases pour l'UI
-    val id: String get() = postId
-    val userId: String get() = authorUid
-    val username: String get() = authorUsername
-    val userProfileUrl: String get() = authorProfileUrl
-    val caption: String get() = content
-    val imageUrls: List<String> get() = if (imageUrl.isNotEmpty()) listOf(imageUrl) else emptyList()
+data class Post(
+    @get:PropertyName("id") @set:PropertyName("id") var postId: String = "",
+    @get:PropertyName("userId") @set:PropertyName("userId") var authorUid: String = "",
+    var authorUsername: String = "",
+    var authorProfileUrl: String = "",
+    @get:PropertyName("caption") @set:PropertyName("caption") var content: String = "",
+    @get:PropertyName("imageUrls") @set:PropertyName("imageUrls") var imageUrls: List<String> = emptyList(),
+    var likesCount: Int = 0,
+    var commentsCount: Int = 0,
+    var createdAt: Any? = null
+) {
+    fun getCreatedAtMillis(): Long {
+        return when (val date = createdAt) {
+            is Timestamp -> date.toDate().time
+            is Long -> date
+            else -> System.currentTimeMillis()
+        }
+    }
+
+    // Keep compatibility with existing code expecting 'imageUrl'
+    val imageUrl: String
+        get() = imageUrls.firstOrNull() ?: ""
 }
