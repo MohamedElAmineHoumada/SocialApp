@@ -7,11 +7,10 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
-<<<<<<< HEAD
+
 import com.google.firebase.firestore.SetOptions
-=======
 import com.google.firebase.storage.FirebaseStorage
->>>>>>> 881725f13a08dec842a589b7c6c1fcd5f702283f
+
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow

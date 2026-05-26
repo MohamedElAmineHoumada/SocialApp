@@ -17,14 +17,9 @@ playServicesAuth = "21.2.0"
 cardview = "1.0.0"
 swiperefreshlayout = "1.1.0"
 coil = "2.5.0"
-<<<<<<< HEAD
-hilt = "2.56.1"
-ksp = "2.3.2"
-=======
+
 hilt = "2.59.2"
 ksp = "2.1.0-1.0.29"
->>>>>>> 881725f13a08dec842a589b7c6c1fcd5f702283f
-
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
@@ -58,9 +53,6 @@ android-application = { id = "com.android.application", version.ref = "agp" }
 kotlinAndroidPlugin = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 kotlinComposePlugin = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 googleServicesPlugin = { id = "com.google.gms.google-services", version = "4.4.4" }
-<<<<<<< HEAD
+
 hiltPlugin = { id = "com.google.dagger.hilt.android", version = "2.56.1"}
-=======
-hiltPlugin = { id = "com.google.dagger.hilt.android", version.ref = "hilt"}
->>>>>>> 881725f13a08dec842a589b7c6c1fcd5f702283f
 kspPlugin = { id = "com.google.devtools.ksp", version.ref="ksp"}
