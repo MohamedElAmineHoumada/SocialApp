@@ -10,7 +10,7 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:scaleType="centerCrop"
-        android:background="@color/surface_dark"/>
+        android:background="@color/app_surface"/>
 
     <!-- Bouton supprimer (X) en haut à droite -->
     <ImageButton

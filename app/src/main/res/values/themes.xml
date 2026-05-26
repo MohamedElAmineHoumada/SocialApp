@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <style name="Theme.SocialApp" parent="Theme.MaterialComponents.DayNight.NoActionBar">
-        <item name="colorPrimary">#6C47FF</item>
-        <item name="colorPrimaryDark">#5835E0</item>
-        <item name="colorAccent">#6C47FF</item>
+        <item name="colorPrimary">@color/purple_primary</item>
+        <item name="colorPrimaryDark">@color/purple_700</item>
+        <item name="colorAccent">@color/purple_primary</item>
     </style>
 
     <style name="BottomSheetDialogTheme" parent="Theme.MaterialComponents.BottomSheetDialog">
@@ -11,7 +11,7 @@
     </style>
 
     <style name="BottomSheetStyle" parent="Widget.MaterialComponents.BottomSheet">
-        <item name="backgroundTint">@color/card_background</item>
+        <item name="backgroundTint">@color/app_card</item>
         <item name="shapeAppearance">@style/BottomSheetShapeAppearance</item>
     </style>
 
