@@ -1,0 +1,13 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="16dp">
+    <!--  Titre  -->
+    <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Commentaires" android:textSize="18sp" android:textStyle="bold" android:paddingBottom="12dp"/>
+    <!--  Liste des commentaires  -->
+    <androidx.recyclerview.widget.RecyclerView android:id="@+id/rvComments" android:layout_width="match_parent" android:layout_height="300dp"/>
+    <!--  Séparateur  -->
+    <View android:layout_width="match_parent" android:layout_height="1dp" android:background="@color/gray" android:layout_marginVertical="8dp"/>
+    <!--  Zone de saisie  -->
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical">
+        <EditText android:id="@+id/etComment" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:hint="Ajouter un commentaire..." android:maxLines="3" android:inputType="textMultiLine"/>
+        <ImageButton android:id="@+id/btnSend" android:layout_width="48dp" android:layout_height="48dp" android:src="@android:drawable/ic_menu_send" android:background="?attr/selectableItemBackgroundBorderless" android:contentDescription="Envoyer"/>
+    </LinearLayout>
+</LinearLayout>

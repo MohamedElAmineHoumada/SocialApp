@@ -10,4 +10,7 @@
     <string name="go_login">Déjà un compte ? Se connecter</string>
     <!-- TODO: Remove or change this placeholder text -->
     <string name="hello_blank_fragment">Hello blank fragment</string>
+    <item name="tvCommentUsername" type="id" />
+    <item name="tvCommentText" type="id" />
+    <item name="tvCommentTimestamp" type="id" />
 </resources>
