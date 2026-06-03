@@ -10,6 +10,7 @@ import android.widget.Toast
 import androidx.fragment.app.activityViewModels
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+
 import com.Groupe15.SocialApp.R
 import com.Groupe15.SocialApp.viewmodel.FeedViewModel
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
