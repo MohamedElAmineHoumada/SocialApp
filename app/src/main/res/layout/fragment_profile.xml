@@ -4,12 +4,12 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/background_dark">
+    android:background="@color/app_background">
 
     <com.google.android.material.appbar.AppBarLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="@color/background_dark"
+        android:background="@color/app_background"
         app:elevation="0dp">
 
         <androidx.constraintlayout.widget.ConstraintLayout
@@ -29,12 +29,29 @@
                 app:layout_constraintTop_toTopOf="parent"
                 app:layout_constraintBottom_toBottomOf="parent"/>
 
+            <ImageButton
+                android:id="@+id/ibThemeToggle"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:layout_marginEnd="16dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:clickable="true"
+                android:contentDescription="Toggle theme"
+                android:focusable="true"
+                android:padding="12dp"
+                android:scaleType="fitCenter"
+                android:src="@drawable/ic_dark_mode"
+                android:tint="@color/app_text_primary"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintEnd_toStartOf="@id/ivNotificationTop"
+                app:layout_constraintTop_toTopOf="parent" />
+
             <ImageView
                 android:id="@+id/ivNotificationTop"
                 android:layout_width="24dp"
                 android:layout_height="24dp"
                 android:src="@drawable/ic_notification"
-                android:tint="@color/text_primary"
+                android:tint="@color/app_text_primary"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintTop_toTopOf="parent"
                 app:layout_constraintBottom_toBottomOf="parent"/>
@@ -63,12 +80,12 @@
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
                     android:scaleType="centerCrop"
-                    android:background="@color/surface_dark"/>
+                    android:background="@color/app_surface"/>
 
                 <View
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
-                    android:background="#66000000"/>
+                    android:background="@color/scrim_dark"/>
 
             </FrameLayout>
 
@@ -79,7 +96,6 @@
                 android:paddingHorizontal="16dp"
                 android:layout_marginTop="-30dp">
 
-                <!-- Avatar : ImageView simple avec forme ronde via background -->
                 <ImageView
                     android:id="@+id/ivProfilePic"
                     android:layout_width="72dp"
@@ -89,14 +105,15 @@
                     android:background="@drawable/bg_avatar_border"
                     android:padding="3dp"
                     app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toTopOf="parent"/>
+                    app:layout_constraintTop_toTopOf="parent"
+                    android:backgroundTint="@color/app_background"/>
 
                 <ImageButton
                     android:id="@+id/ibSettings"
                     android:layout_width="36dp"
                     android:layout_height="36dp"
                     android:src="@drawable/ic_settings"
-                    android:tint="@color/text_primary"
+                    android:tint="@color/app_text_primary"
                     android:background="@drawable/bg_icon_button"
                     android:layout_marginTop="36dp"
                     app:layout_constraintEnd_toEndOf="parent"
@@ -111,8 +128,8 @@
                     android:fontFamily="@font/nunito_bold"
                     android:paddingHorizontal="16dp"
                     style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-                    app:strokeColor="@color/text_secondary"
-                    android:textColor="@color/text_primary"
+                    app:strokeColor="@color/app_text_secondary"
+                    android:textColor="@color/app_text_primary"
                     android:layout_marginEnd="8dp"
                     android:layout_marginTop="36dp"
                     app:layout_constraintEnd_toStartOf="@id/ibSettings"
@@ -149,7 +166,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Alex Rivers"
-                    android:textColor="@color/text_primary"
+                    android:textColor="@color/app_text_primary"
                     android:textSize="18sp"
                     android:fontFamily="@font/nunito_bold"/>
 
@@ -168,7 +185,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="Digital Artist &amp; Motion Designer."
-                    android:textColor="@color/text_primary"
+                    android:textColor="@color/app_text_primary"
                     android:textSize="13sp"
                     android:fontFamily="@font/nunito_bold"
                     android:layout_marginTop="8dp"
@@ -213,38 +230,38 @@
                     android:layout_weight="1" android:orientation="vertical" android:gravity="center">
                     <TextView android:id="@+id/tvPostsCount" android:layout_width="wrap_content"
                         android:layout_height="wrap_content" android:text="142"
-                        android:textColor="@color/text_primary" android:textSize="18sp"
+                        android:textColor="@color/app_text_primary" android:textSize="18sp"
                         android:fontFamily="@font/nunito_bold"/>
                     <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                        android:text="Posts" android:textColor="@color/text_secondary"
+                        android:text="Posts" android:textColor="@color/app_text_secondary"
                         android:textSize="12sp" android:fontFamily="@font/nunito_bold"/>
                 </LinearLayout>
 
                 <View android:layout_width="1dp" android:layout_height="32dp"
-                    android:background="@color/divider"/>
+                    android:background="@color/app_divider"/>
 
                 <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
                     android:layout_weight="1" android:orientation="vertical" android:gravity="center">
                     <TextView android:id="@+id/tvFollowersCount" android:layout_width="wrap_content"
                         android:layout_height="wrap_content" android:text="12.8k"
-                        android:textColor="@color/text_primary" android:textSize="18sp"
+                        android:textColor="@color/app_text_primary" android:textSize="18sp"
                         android:fontFamily="@font/nunito_bold"/>
                     <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                        android:text="Followers" android:textColor="@color/text_secondary"
+                        android:text="Followers" android:textColor="@color/app_text_secondary"
                         android:textSize="12sp" android:fontFamily="@font/nunito_bold"/>
                 </LinearLayout>
 
                 <View android:layout_width="1dp" android:layout_height="32dp"
-                    android:background="@color/divider"/>
+                    android:background="@color/app_divider"/>
 
                 <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
                     android:layout_weight="1" android:orientation="vertical" android:gravity="center">
                     <TextView android:id="@+id/tvFollowingCount" android:layout_width="wrap_content"
                         android:layout_height="wrap_content" android:text="842"
-                        android:textColor="@color/text_primary" android:textSize="18sp"
+                        android:textColor="@color/app_text_primary" android:textSize="18sp"
                         android:fontFamily="@font/nunito_bold"/>
                     <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                        android:text="Following" android:textColor="@color/text_secondary"
+                        android:text="Following" android:textColor="@color/app_text_secondary"
                         android:textSize="12sp" android:fontFamily="@font/nunito_bold"/>
                 </LinearLayout>
 
@@ -271,7 +288,7 @@
                     android:layout_weight="1" android:orientation="vertical" android:gravity="center">
                     <ImageView android:id="@+id/tvTabReels"
                         android:layout_width="22dp" android:layout_height="22dp"
-                        android:src="@drawable/ic_reels" android:tint="@color/text_secondary"/>
+                        android:src="@drawable/ic_reels" android:tint="@color/app_text_secondary"/>
                     <View android:id="@+id/viewIndicatorReels"
                         android:layout_width="match_parent" android:layout_height="2dp"
                         android:background="@color/purple_primary" android:layout_marginTop="4dp"
@@ -282,7 +299,7 @@
                     android:layout_weight="1" android:orientation="vertical" android:gravity="center">
                     <ImageView android:id="@+id/tvTabTagged"
                         android:layout_width="22dp" android:layout_height="22dp"
-                        android:src="@drawable/ic_tag" android:tint="@color/text_secondary"/>
+                        android:src="@drawable/ic_tag" android:tint="@color/app_text_secondary"/>
                     <View android:id="@+id/viewIndicatorTagged"
                         android:layout_width="match_parent" android:layout_height="2dp"
                         android:background="@color/purple_primary" android:layout_marginTop="4dp"

@@ -7,7 +7,8 @@ import androidx.navigation.fragment.NavHostFragment
 import androidx.navigation.ui.setupWithNavController
 import com.Groupe15.SocialApp.databinding.ActivityMainBinding
 import dagger.hilt.android.AndroidEntryPoint
-
+import androidx.appcompat.app.AppCompatDelegate
+import android.content.Context.MODE_PRIVATE
 @AndroidEntryPoint
 class MainActivity : AppCompatActivity() {
 

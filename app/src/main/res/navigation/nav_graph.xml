@@ -61,4 +61,8 @@
         android:name="com.Groupe15.SocialApp.ui.messages.MessagesFragment"
         android:label="Messages"/>
 
+    <fragment
+        android:id="@+id/editProfileFragment"
+        android:name="com.Groupe15.SocialApp.ui.profile.EditProfileFragment"
+        android:label="Edit Profile"/>
 </navigation>

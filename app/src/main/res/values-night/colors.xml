@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Dark Mode Colors -->
+    <color name="app_background">#0F0F0F</color>
+    <color name="app_surface">#1E1E1E</color>
+    <color name="app_card">#1A1A1A</color>
+    <color name="app_text_primary">#FFFFFF</color>
+    <color name="app_text_secondary">#9E9E9E</color>
+    <color name="app_divider">#2A2A2A</color>
+
+    <!-- Semantic Colors -->
+    <color name="social_button_bg">#1E1E1E</color>
+    <color name="social_button_text">#FFFFFF</color>
+    <color name="splash_bg">#0F0F0F</color>
+    <color name="splash_text">#FFFFFF</color>
+    <color name="splash_text_secondary">#9E9E9E</color>
+</resources>

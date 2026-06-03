@@ -5,7 +5,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:background="@color/background_dark">
+    android:background="@color/app_background">
 
     <!-- TOP BAR -->
     <androidx.constraintlayout.widget.ConstraintLayout
@@ -19,7 +19,7 @@
             android:layout_width="36dp"
             android:layout_height="36dp"
             android:src="@drawable/ic_close"
-            android:tint="@color/text_primary"
+            android:tint="@color/app_text_primary"
             android:background="?attr/selectableItemBackgroundBorderless"
             android:contentDescription="Fermer"
             app:layout_constraintStart_toStartOf="parent"
@@ -42,7 +42,7 @@
             android:layout_width="24dp"
             android:layout_height="24dp"
             android:src="@drawable/ic_notification"
-            android:tint="@color/text_primary"
+            android:tint="@color/app_text_primary"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintBottom_toBottomOf="parent"/>
@@ -53,7 +53,7 @@
         android:id="@+id/dividerTop"
         android:layout_width="match_parent"
         android:layout_height="1dp"
-        android:background="@color/divider"/>
+        android:background="@color/app_divider"/>
 
     <!-- SCROLL CONTENT avec layout_weight=1 pour prendre tout l'espace disponible -->
     <androidx.core.widget.NestedScrollView
@@ -93,7 +93,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="Alex Rivera"
-                        android:textColor="@color/text_primary"
+                        android:textColor="@color/app_text_primary"
                         android:textSize="15sp"
                         android:fontFamily="@font/nunito_bold"/>
 
@@ -103,12 +103,12 @@
                         android:layout_height="28dp"
                         android:text="Public"
                         android:textSize="11sp"
-                        android:textColor="@color/text_primary"
-                        app:chipBackgroundColor="@color/surface_dark"
-                        app:chipStrokeColor="@color/divider"
+                        android:textColor="@color/app_text_primary"
+                        app:chipBackgroundColor="@color/app_surface"
+                        app:chipStrokeColor="@color/app_divider"
                         app:chipStrokeWidth="1dp"
                         app:chipIcon="@drawable/ic_globe"
-                        app:chipIconTint="@color/text_secondary"
+                        app:chipIconTint="@color/app_text_secondary"
                         android:layout_marginTop="4dp"/>
                 </LinearLayout>
             </LinearLayout>
@@ -119,8 +119,8 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:hint="What's on your mind?"
-                android:textColorHint="@color/text_secondary"
-                android:textColor="@color/text_primary"
+                android:textColorHint="@color/app_text_secondary"
+                android:textColor="@color/app_text_primary"
                 android:textSize="15sp"
                 android:fontFamily="@font/nunito_regular"
                 android:background="@null"
@@ -153,14 +153,14 @@
                     android:layout_width="32dp"
                     android:layout_height="32dp"
                     android:src="@drawable/ic_image_add"
-                    android:tint="@color/text_secondary"
+                    android:tint="@color/app_text_secondary"
                     android:contentDescription="Ajouter media"/>
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Add Media"
-                    android:textColor="@color/text_secondary"
+                    android:textColor="@color/app_text_secondary"
                     android:textSize="13sp"
                     android:fontFamily="@font/nunito_regular"
                     android:layout_marginTop="6dp"/>
@@ -171,7 +171,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Post Settings"
-                android:textColor="@color/text_primary"
+                android:textColor="@color/app_text_primary"
                 android:textSize="15sp"
                 android:fontFamily="@font/nunito_bold"
                 android:layout_marginTop="24dp"/>
@@ -205,11 +205,11 @@
                     app:layout_constraintTop_toTopOf="parent"
                     app:layout_constraintBottom_toBottomOf="parent">
                     <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                        android:text="Tag Friends" android:textColor="@color/text_primary"
+                        android:text="Tag Friends" android:textColor="@color/app_text_primary"
                         android:textSize="14sp" android:fontFamily="@font/nunito_bold"/>
                     <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
                         android:text="Mention people in your post"
-                        android:textColor="@color/text_secondary"
+                        android:textColor="@color/app_text_secondary"
                         android:textSize="11sp" android:fontFamily="@font/nunito_regular"/>
                 </LinearLayout>
 
@@ -218,7 +218,7 @@
                     android:layout_width="16dp"
                     android:layout_height="16dp"
                     android:src="@drawable/ic_chevron_right"
-                    android:tint="@color/text_secondary"
+                    android:tint="@color/app_text_secondary"
                     android:layout_marginEnd="12dp"
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintTop_toTopOf="parent"
@@ -236,16 +236,16 @@
         android:orientation="horizontal"
         android:paddingHorizontal="16dp"
         android:gravity="center_vertical"
-        android:background="@color/card_background">
+        android:background="@color/app_card">
 
         <ImageView android:layout_width="36dp" android:layout_height="36dp"
-            android:src="@drawable/ic_person_add" android:tint="@color/text_secondary"
+            android:src="@drawable/ic_person_add" android:tint="@color/app_text_secondary"
             android:padding="6dp"/>
         <ImageView android:layout_width="36dp" android:layout_height="36dp"
-            android:src="@drawable/ic_location_pin" android:tint="@color/text_secondary"
+            android:src="@drawable/ic_location_pin" android:tint="@color/app_text_secondary"
             android:padding="6dp" android:layout_marginStart="8dp"/>
         <ImageView android:layout_width="36dp" android:layout_height="36dp"
-            android:src="@drawable/ic_emoji" android:tint="@color/text_secondary"
+            android:src="@drawable/ic_emoji" android:tint="@color/app_text_secondary"
             android:padding="6dp" android:layout_marginStart="8dp"/>
 
         <Space android:layout_width="0dp" android:layout_height="1dp" android:layout_weight="1"/>

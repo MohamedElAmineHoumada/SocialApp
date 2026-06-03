@@ -21,7 +21,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Who can see your post?"
-        android:textColor="@color/text_primary"
+        android:textColor="@color/app_text_primary"
         android:textSize="16sp"
         android:fontFamily="@font/nunito_bold"
         android:paddingHorizontal="20dp"
@@ -52,10 +52,10 @@
             android:orientation="vertical"
             android:layout_marginStart="12dp">
             <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                android:text="Public" android:textColor="@color/text_primary"
+                android:text="Public" android:textColor="@color/app_text_primary"
                 android:textSize="15sp" android:fontFamily="@font/nunito_semibold"/>
             <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                android:text="Anyone can see this post" android:textColor="@color/text_secondary"
+                android:text="Anyone can see this post" android:textColor="@color/app_text_secondary"
                 android:textSize="12sp" android:fontFamily="@font/nunito_regular"/>
         </LinearLayout>
     </LinearLayout>
@@ -85,10 +85,10 @@
             android:orientation="vertical"
             android:layout_marginStart="12dp">
             <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                android:text="Friends" android:textColor="@color/text_primary"
+                android:text="Friends" android:textColor="@color/app_text_primary"
                 android:textSize="15sp" android:fontFamily="@font/nunito_semibold"/>
             <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                android:text="Only your followers" android:textColor="@color/text_secondary"
+                android:text="Only your followers" android:textColor="@color/app_text_secondary"
                 android:textSize="12sp" android:fontFamily="@font/nunito_regular"/>
         </LinearLayout>
     </LinearLayout>
@@ -118,10 +118,10 @@
             android:orientation="vertical"
             android:layout_marginStart="12dp">
             <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                android:text="Only Me" android:textColor="@color/text_primary"
+                android:text="Only Me" android:textColor="@color/app_text_primary"
                 android:textSize="15sp" android:fontFamily="@font/nunito_semibold"/>
             <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                android:text="Only you can see this" android:textColor="@color/text_secondary"
+                android:text="Only you can see this" android:textColor="@color/app_text_secondary"
                 android:textSize="12sp" android:fontFamily="@font/nunito_regular"/>
         </LinearLayout>
     </LinearLayout>
