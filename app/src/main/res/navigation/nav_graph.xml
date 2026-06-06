@@ -65,4 +65,21 @@
         android:id="@+id/editProfileFragment"
         android:name="com.Groupe15.SocialApp.ui.profile.EditProfileFragment"
         android:label="Edit Profile"/>
+
+    <fragment
+        android:id="@+id/discoverFragment"
+        android:name="com.Groupe15.SocialApp.ui.discover.DiscoverFragment"
+        android:label="Discover" />
+
+    <fragment
+        android:id="@+id/chatFragment"
+        android:name="com.Groupe15.SocialApp.ui.messages.ChatFragment"
+        android:label="Chat">
+        <argument
+            android:name="chatId"
+            app:argType="string" />
+        <argument
+            android:name="userName"
+            app:argType="string" />
+    </fragment>
 </navigation>

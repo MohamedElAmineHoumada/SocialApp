@@ -12,6 +12,9 @@ import com.Groupe15.SocialApp.databinding.FragmentMessagesBinding
 import com.Groupe15.SocialApp.viewmodel.MessagesViewModel
 import dagger.hilt.android.AndroidEntryPoint
 
+import androidx.navigation.fragment.findNavController
+import com.Groupe15.SocialApp.R
+
 @AndroidEntryPoint
 class MessagesFragment : Fragment() {
 
@@ -37,7 +40,11 @@ class MessagesFragment : Fragment() {
 
     private fun setupRecyclerView() {
         conversationsAdapter = ConversationsAdapter { conversation ->
-            // navigate to chat
+            val bundle = Bundle().apply {
+                putString("chatId", conversation.userId)
+                putString("userName", conversation.username)
+            }
+            findNavController().navigate(R.id.chatFragment, bundle)
         }
         binding.rvConversations.apply {
             layoutManager = LinearLayoutManager(requireContext())
