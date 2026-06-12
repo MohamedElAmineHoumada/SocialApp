@@ -4,6 +4,9 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Toast
+import androidx.core.widget.addTextChangedListener
+import com.google.android.material.bottomnavigation.BottomNavigationView
 import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -38,13 +41,65 @@ class ChatFragment : Fragment() {
         setupHeader()
         setupRecyclerView()
         loadDummyMessages()
+        setupInputBar()
         
         binding.ivBack.setOnClickListener {
             findNavController().navigateUp()
         }
+    }
 
-        // Change l'icône du FAB en micro comme sur l'image
-        binding.btnSend.setImageResource(R.drawable.ic_mic)
+    private fun setupInputBar() {
+        // Gérer le changement d'icône (Micro vs Envoyer) en temps réel
+        binding.etMessage.addTextChangedListener { text ->
+            if (text.toString().trim().isNotEmpty()) {
+                binding.btnSend.setImageResource(R.drawable.ic_send)
+            } else {
+                binding.btnSend.setImageResource(R.drawable.ic_mic)
+            }
+        }
+
+        // Action du bouton Envoyer / Micro
+        binding.btnSend.setOnClickListener {
+            val messageText = binding.etMessage.text.toString().trim()
+            if (messageText.isNotEmpty()) {
+                // Créer un nouveau message
+                val newMessage = Message(
+                    id = System.currentTimeMillis().toString(),
+                    senderId = currentUserId,
+                    text = messageText,
+                    timestamp = Timestamp.now(),
+                    type = MessageType.TEXT
+                )
+                
+                // Ajouter à la liste et vider le champ
+                val currentList = chatAdapter.currentList.toMutableList()
+                currentList.add(newMessage)
+                chatAdapter.submitList(currentList) {
+                    binding.rvMessages.scrollToPosition(chatAdapter.itemCount - 1)
+                }
+                
+                binding.etMessage.text.clear()
+            } else {
+                // Action pour l'audio
+                Toast.makeText(context, "Maintenez pour enregistrer un message audio", Toast.LENGTH_SHORT).show()
+            }
+        }
+
+        // Action du bouton Photo (+)
+        binding.ivAdd.setOnClickListener {
+            Toast.makeText(context, "Ouverture de la galerie photo...", Toast.LENGTH_SHORT).show()
+        }
+
+        // Action du bouton Emoji
+        binding.ivEmoji.setOnClickListener {
+            Toast.makeText(context, "Affichage du clavier Emoji", Toast.LENGTH_SHORT).show()
+        }
+        
+        // S'assurer que les icônes sont cliquables
+        binding.ivAdd.isClickable = true
+        binding.ivEmoji.isClickable = true
+        binding.ivAdd.isFocusable = true
+        binding.ivEmoji.isFocusable = true
     }
 
     private fun setupHeader() {

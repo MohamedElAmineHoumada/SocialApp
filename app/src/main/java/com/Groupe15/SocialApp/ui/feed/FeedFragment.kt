@@ -40,7 +40,9 @@ class FeedFragment : Fragment(R.layout.fragment_feed) {
         recyclerView.adapter = adapter
         recyclerView.layoutManager = LinearLayoutManager(requireContext())
 
+        swipeRefresh.setColorSchemeResources(R.color.purple_primary)
         swipeRefresh.setOnRefreshListener {
+            viewModel.loadFeed()
             swipeRefresh.isRefreshing = false
         }
 
