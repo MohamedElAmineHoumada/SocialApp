@@ -49,13 +49,21 @@ class PostAdapter(
 
             // Avatar
             if (post.authorProfileUrl.isNotEmpty()) {
-                ivAvatar.load(post.authorProfileUrl)
+                ivAvatar.load(post.authorProfileUrl) {
+                    crossfade(true)
+                    placeholder(R.drawable.ic_default_avatar)
+                    error(R.drawable.ic_default_avatar)
+                }
+            } else {
+                ivAvatar.setImageResource(R.drawable.ic_default_avatar)
             }
 
             // Image du post
             if (post.imageUrl.isNotEmpty()) {
                 ivPostImage.visibility = View.VISIBLE
-                ivPostImage.load(post.imageUrl)
+                ivPostImage.load(post.imageUrl) {
+                    crossfade(true)
+                }
             } else {
                 ivPostImage.visibility = View.GONE
             }

@@ -45,13 +45,25 @@ class AuthRepository @Inject constructor(
 
     suspend fun register(email: String, password: String, displayName: String): Result<Unit> {
         return try {
+            val username = displayName.lowercase().replace(" ", "_")
+            
+            // Vérifier si le nom d'utilisateur existe déjà
+            val existingUser = firestore.collection("users")
+                .whereEqualTo("username", username)
+                .get()
+                .await()
+            
+            if (!existingUser.isEmpty) {
+                return Result.failure(Exception("Ce nom d'utilisateur est déjà pris."))
+            }
+
             val result = auth.createUserWithEmailAndPassword(email, password).await()
             val uid = result.user?.uid ?: throw Exception("UID null")
             val user = hashMapOf(
                 "id"              to uid,
                 "email"           to email,
                 "displayName"     to displayName,
-                "username"        to displayName.lowercase().replace(" ", "_"),
+                "username"        to username,
                 "bio"             to "",
                 "profileImageUrl" to "",
                 "followersCount"  to 0,

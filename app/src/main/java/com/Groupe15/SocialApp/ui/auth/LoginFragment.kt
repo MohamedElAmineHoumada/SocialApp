@@ -48,6 +48,11 @@ class LoginFragment : Fragment(R.layout.fragment_login) {
         val btnGoogle = view.findViewById<Button>(R.id.btnGoogle)
         val progressBar = view.findViewById<ProgressBar>(R.id.progressBar)
         val tvGoRegister = view.findViewById<TextView>(R.id.tvGoRegister)
+        val tvForgotPassword = view.findViewById<TextView>(R.id.tvForgotPassword)
+
+        tvForgotPassword?.setOnClickListener {
+            findNavController().navigate(R.id.action_login_to_forgotPassword)
+        }
 
         btnLogin.setOnClickListener {
             val email = etEmail.text.toString().trim()

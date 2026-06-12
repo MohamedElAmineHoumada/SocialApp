@@ -60,7 +60,14 @@ class RegisterFragment : Fragment(R.layout.fragment_register) {
 
             when (state) {
                 is AuthState.Success -> findNavController().navigate(R.id.action_register_to_feed)
-                is AuthState.Error -> Toast.makeText(requireContext(), state.message, Toast.LENGTH_LONG).show()
+                is AuthState.Error -> {
+                    if (state.message.contains("utilisateur", ignoreCase = true)) {
+                        etUsername.error = state.message
+                        etUsername.requestFocus()
+                    } else {
+                        Toast.makeText(requireContext(), state.message, Toast.LENGTH_LONG).show()
+                    }
+                }
                 else -> {}
             }
         }
