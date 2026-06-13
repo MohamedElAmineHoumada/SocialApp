@@ -40,7 +40,11 @@ class ProfileFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        targetUid = arguments?.getString("targetUid") ?: ""
+//        targetUid = arguments?.getString("targetUid") ?: ""
+        targetUid = arguments?.getString("uid") ?: ""
+
+        val currentUid = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid ?: ""
+        viewModel.loadProfile(targetUid.ifEmpty { currentUid }, currentUid)
 
         setupThemeToggle()
         setupClickListeners()

@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.Groupe15.SocialApp.models.User
 import com.Groupe15.SocialApp.repository.AuthRepository
+import com.Groupe15.SocialApp.repository.FollowRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -13,7 +14,8 @@ import javax.inject.Inject
 
 @HiltViewModel
 class ProfileViewModel @Inject constructor(
-    private val authRepository: AuthRepository
+    private val authRepository: AuthRepository,
+    private val followRepository: FollowRepository
 ) : ViewModel() {
 
     private val _currentUser = MutableStateFlow<User?>(null)
@@ -37,10 +39,18 @@ class ProfileViewModel @Inject constructor(
         }
     }
 
-    fun toggleFollow() {
+    fun loadProfile(targetUid: String, currentUid: String) {
+        _isOwnProfile.value = targetUid == currentUid || targetUid.isEmpty()
+    }
+
+    fun toggleFollow(targetUid: String) {
         viewModelScope.launch {
+            if (_isFollowing.value) {
+                followRepository.unfollowUser(targetUid)
+            } else {
+                followRepository.followUser(targetUid)
+            }
             _isFollowing.value = !_isFollowing.value
-            // TODO: appeler le repository d'Amine pour persister
         }
     }
 }
