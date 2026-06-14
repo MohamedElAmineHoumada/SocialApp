@@ -59,7 +59,7 @@ class RegisterFragment : Fragment(R.layout.fragment_register) {
             btnRegister.isEnabled = state !is AuthState.Loading
 
             when (state) {
-                is AuthState.Success -> findNavController().navigate(R.id.action_register_to_feed)
+                is AuthState.Success -> findNavController().navigate(R.id.action_register_to_onboardingWelcome)
                 is AuthState.Error -> {
                     if (state.message.contains("utilisateur", ignoreCase = true)) {
                         etUsername.error = state.message
