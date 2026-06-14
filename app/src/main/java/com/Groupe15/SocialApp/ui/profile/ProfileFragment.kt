@@ -119,12 +119,12 @@ class ProfileFragment : Fragment() {
                         binding.btnFollow.isEnabled = true
                         if (state.isFollowing) {
                             binding.btnFollow.text = "Unfollow"
-                            // 👇 Lone mlli y-koun m-abonne (Rmadi / Grey)
+                            
                             binding.btnFollow.setBackgroundColor(android.graphics.Color.parseColor("#E0E0E0"))
                             binding.btnFollow.setTextColor(android.graphics.Color.parseColor("#000000"))
                         } else {
                             binding.btnFollow.text = "Follow"
-                            // 👇 Lone asli mlli y-koun mazal ma m-abonne (Azraq / Blue)
+
                             binding.btnFollow.setBackgroundColor(android.graphics.Color.parseColor("#0095F6"))
                             binding.btnFollow.setTextColor(android.graphics.Color.parseColor("#FFFFFF"))
                         }
