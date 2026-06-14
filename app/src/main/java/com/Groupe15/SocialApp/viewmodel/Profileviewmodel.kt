@@ -27,20 +27,19 @@ class ProfileViewModel @Inject constructor(
     private val _isFollowing = MutableStateFlow(false)
     val isFollowing: StateFlow<Boolean> = _isFollowing.asStateFlow()
 
-    init {
-        loadCurrentUser()
-    }
-
-    private fun loadCurrentUser() {
-        viewModelScope.launch {
-            authRepository.getCurrentUser().collect { user ->
-                _currentUser.value = user
-            }
-        }
-    }
-
     fun loadProfile(targetUid: String, currentUid: String) {
         _isOwnProfile.value = targetUid == currentUid || targetUid.isEmpty()
+        viewModelScope.launch {
+            if (targetUid.isEmpty() || targetUid == currentUid) {
+                authRepository.getCurrentUser().collect { user ->
+                    _currentUser.value = user
+                }
+            } else {
+                authRepository.getUserById(targetUid).collect { user ->
+                    _currentUser.value = user
+                }
+            }
+        }
     }
 
     fun toggleFollow(targetUid: String) {

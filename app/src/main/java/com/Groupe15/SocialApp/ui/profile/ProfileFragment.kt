@@ -14,6 +14,7 @@ import androidx.navigation.fragment.findNavController
 import com.Groupe15.SocialApp.R
 import com.Groupe15.SocialApp.databinding.FragmentProfileBinding
 import com.bumptech.glide.Glide
+import com.google.firebase.auth.FirebaseAuth
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 
@@ -23,7 +24,6 @@ class ProfileFragment : Fragment() {
     private var _binding: FragmentProfileBinding? = null
     private val binding get() = _binding!!
 
-    // ViewModels
     private val viewModel: ProfileViewModel by viewModels()
     private val followViewModel: FollowViewModel by viewModels()
 
@@ -40,28 +40,28 @@ class ProfileFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-//        targetUid = arguments?.getString("targetUid") ?: ""
         targetUid = arguments?.getString("uid") ?: ""
+        val currentUid = FirebaseAuth.getInstance().currentUser?.uid ?: ""
 
-        val currentUid = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid ?: ""
-        viewModel.loadProfile(targetUid.ifEmpty { currentUid }, currentUid)
+        viewModel.loadProfile(
+            targetUid = targetUid.ifEmpty { currentUid },
+            currentUid = currentUid
+        )
+
+        if (targetUid.isNotEmpty() && targetUid != currentUid) {
+            followViewModel.checkIsFollowing(targetUid)
+        }
 
         setupThemeToggle()
         setupClickListeners()
         setupTabs()
         observeProfileViewModel()
         observeFollowViewModel()
-
-        if (targetUid.isNotEmpty()) {
-            followViewModel.checkIsFollowing(targetUid)
-        }
     }
 
-    // ── Theme Toggle (ta fonctionnalité) ─────────────────────────────────
     private fun setupThemeToggle() {
         val prefs = requireContext().getSharedPreferences("settings", Context.MODE_PRIVATE)
         updateThemeIcon(prefs.getBoolean("dark_mode", false))
-
         binding.ibThemeToggle.setOnClickListener {
             val isDarkMode = prefs.getBoolean("dark_mode", false)
             val newMode = !isDarkMode
@@ -80,7 +80,6 @@ class ProfileFragment : Fragment() {
         )
     }
 
-    // ── Observer profil (ta fonctionnalité) ──────────────────────────────
     private fun observeProfileViewModel() {
         viewLifecycleOwner.lifecycleScope.launch {
             viewModel.currentUser.collect { user ->
@@ -92,7 +91,6 @@ class ProfileFragment : Fragment() {
                 binding.tvPostsCount.text = user.postsCount.toString()
                 binding.tvFollowersCount.text = formatCount(user.followersCount)
                 binding.tvFollowingCount.text = user.followingCount.toString()
-
                 if (user.profileImageUrl.isNotEmpty()) {
                     Glide.with(this@ProfileFragment)
                         .load(user.profileImageUrl)
@@ -112,7 +110,6 @@ class ProfileFragment : Fragment() {
         }
     }
 
-    // ── Observer Follow/Unfollow (fonctionnalité d'Amine) ────────────────
     private fun observeFollowViewModel() {
         viewLifecycleOwner.lifecycleScope.launch {
             followViewModel.followState.collect { state ->
@@ -120,16 +117,29 @@ class ProfileFragment : Fragment() {
                     is FollowState.Loading -> binding.btnFollow.isEnabled = false
                     is FollowState.IsFollowing -> {
                         binding.btnFollow.isEnabled = true
-                        binding.btnFollow.text =
-                            if (state.isFollowing) "Se désabonner" else "Suivre"
+                        if (state.isFollowing) {
+                            binding.btnFollow.text = "Unfollow"
+                            // 👇 Lone mlli y-koun m-abonne (Rmadi / Grey)
+                            binding.btnFollow.setBackgroundColor(android.graphics.Color.parseColor("#E0E0E0"))
+                            binding.btnFollow.setTextColor(android.graphics.Color.parseColor("#000000"))
+                        } else {
+                            binding.btnFollow.text = "Follow"
+                            // 👇 Lone asli mlli y-koun mazal ma m-abonne (Azraq / Blue)
+                            binding.btnFollow.setBackgroundColor(android.graphics.Color.parseColor("#0095F6"))
+                            binding.btnFollow.setTextColor(android.graphics.Color.parseColor("#FFFFFF"))
+                        }
                     }
                     is FollowState.FollowSuccess -> {
-                        binding.btnFollow.text = "Se désabonner"
+                        binding.btnFollow.text = "Unfollow"
+                        binding.btnFollow.setBackgroundColor(android.graphics.Color.parseColor("#E0E0E0"))
+                        binding.btnFollow.setTextColor(android.graphics.Color.parseColor("#000000"))
                         binding.btnFollow.isEnabled = true
                         followViewModel.checkIsFollowing(targetUid)
                     }
                     is FollowState.UnfollowSuccess -> {
-                        binding.btnFollow.text = "Suivre"
+                        binding.btnFollow.text = "Follow"
+                        binding.btnFollow.setBackgroundColor(android.graphics.Color.parseColor("#0095F6"))
+                        binding.btnFollow.setTextColor(android.graphics.Color.parseColor("#FFFFFF"))
                         binding.btnFollow.isEnabled = true
                         followViewModel.checkIsFollowing(targetUid)
                     }
@@ -142,13 +152,10 @@ class ProfileFragment : Fragment() {
             }
         }
     }
-
-    // ── Click listeners ───────────────────────────────────────────────────
     private fun setupClickListeners() {
         binding.btnEditProfile.setOnClickListener {
             findNavController().navigate(R.id.editProfileFragment)
         }
-
         binding.btnFollow.setOnClickListener {
             val currentState = followViewModel.followState.value
             if (currentState is FollowState.IsFollowing) {
@@ -161,7 +168,6 @@ class ProfileFragment : Fragment() {
         }
     }
 
-    // ── Tabs ──────────────────────────────────────────────────────────────
     private fun setupTabs() {
         binding.tvTabPosts.setOnClickListener { switchTab(0) }
         binding.tvTabReels.setOnClickListener { switchTab(1) }

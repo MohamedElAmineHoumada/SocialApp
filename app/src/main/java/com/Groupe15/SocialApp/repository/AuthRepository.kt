@@ -16,7 +16,6 @@ class AuthRepository @Inject constructor(
     private val auth: FirebaseAuth,
     private val firestore: FirebaseFirestore
 ) {
-
     fun isLoggedIn(): Boolean = auth.currentUser != null
 
     fun getCurrentUser(): Flow<User?> = callbackFlow {
@@ -28,8 +27,15 @@ class AuthRepository @Inject constructor(
         }
         val listener = firestore.collection("users").document(uid)
             .addSnapshotListener { snapshot, _ ->
-                val user = snapshot?.toObject(User::class.java)
-                trySend(user)
+                trySend(snapshot?.toObject(User::class.java))
+            }
+        awaitClose { listener.remove() }
+    }
+
+    fun getUserById(uid: String): Flow<User?> = callbackFlow {
+        val listener = firestore.collection("users").document(uid)
+            .addSnapshotListener { snapshot, _ ->
+                trySend(snapshot?.toObject(User::class.java))
             }
         awaitClose { listener.remove() }
     }
@@ -46,17 +52,13 @@ class AuthRepository @Inject constructor(
     suspend fun register(email: String, password: String, displayName: String): Result<Unit> {
         return try {
             val username = displayName.lowercase().replace(" ", "_")
-            
-            // Vérifier si le nom d'utilisateur existe déjà
             val existingUser = firestore.collection("users")
                 .whereEqualTo("username", username)
                 .get()
                 .await()
-            
             if (!existingUser.isEmpty) {
                 return Result.failure(Exception("Ce nom d'utilisateur est déjà pris."))
             }
-
             val result = auth.createUserWithEmailAndPassword(email, password).await()
             val uid = result.user?.uid ?: throw Exception("UID null")
             val user = hashMapOf(
