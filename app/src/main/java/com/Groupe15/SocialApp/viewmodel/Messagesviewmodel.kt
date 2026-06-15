@@ -4,8 +4,13 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.Groupe15.SocialApp.repository.MessageRepository
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 
 data class Conversation(
@@ -19,7 +24,12 @@ data class Conversation(
 )
 
 @HiltViewModel
-class MessagesViewModel @Inject constructor() : ViewModel() {
+class MessagesViewModel @Inject constructor(
+    private val messageRepository: MessageRepository,
+    private val firestore: FirebaseFirestore
+) : ViewModel() {
+
+    private val currentUserId = FirebaseAuth.getInstance().currentUser?.uid ?: ""
 
     private val _conversations = MutableLiveData<List<Conversation>>(emptyList())
     val conversations: LiveData<List<Conversation>> = _conversations
@@ -30,21 +40,45 @@ class MessagesViewModel @Inject constructor() : ViewModel() {
     private var allConversations = listOf<Conversation>()
 
     init {
-        loadConversations()
+        if (currentUserId.isNotEmpty()) {
+            loadConversations()
+        }
     }
 
     private fun loadConversations() {
         viewModelScope.launch {
-            // Mock data — à remplacer par Firebase
-            allConversations = listOf(
-                Conversation("1", "Alex Rivera", "", "Hey! The design proposal...", "2m ago", true, true),
-                Conversation("2", "Jordan Smith", "", "That's amazing! Can't wait...", "1h ago", false, false),
-                Conversation("3", "Elena Vance", "", "Check out this new collaboration...", "3h ago", true, true),
-                Conversation("4", "Marcus Chen", "", "The meeting has been rescheduled...", "Yesterday", false, false),
-                Conversation("5", "Sasha Gray", "", "I loved your latest post! Truly inspir...", "Oct 12", false, false)
-            )
-            _conversations.value = allConversations
-            _filteredConversations.value = allConversations
+            messageRepository.getConversations(currentUserId)
+                .catch { /* ignorer les erreurs réseau temporaires */ }
+                .collect { summaries ->
+                    // Pour chaque conversation, récupérer le profil de l'autre utilisateur
+                    val conversations = summaries.mapNotNull { summary ->
+                        try {
+                            val userDoc = firestore
+                                .collection("users")
+                                .document(summary.otherUserId)
+                                .get()
+                                .await()
+
+                            val username = userDoc.getString("username") ?: "Utilisateur"
+                            val profileImageUrl = userDoc.getString("profileImageUrl") ?: ""
+
+                            Conversation(
+                                userId = summary.otherUserId,
+                                username = username,
+                                profileImageUrl = profileImageUrl,
+                                lastMessage = summary.lastMessage,
+                                timestamp = formatTimestamp(summary.lastMessageTimestamp.toDate().time),
+                                isOnline = false,
+                                hasUnread = false
+                            )
+                        } catch (e: Exception) {
+                            null
+                        }
+                    }
+                    allConversations = conversations
+                    _conversations.value = allConversations
+                    _filteredConversations.value = allConversations
+                }
         }
     }
 
@@ -55,6 +89,20 @@ class MessagesViewModel @Inject constructor() : ViewModel() {
             _filteredConversations.value = allConversations.filter {
                 it.username.contains(query, ignoreCase = true) ||
                         it.lastMessage.contains(query, ignoreCase = true)
+            }
+        }
+    }
+
+    private fun formatTimestamp(time: Long): String {
+        val now = System.currentTimeMillis()
+        val diff = now - time
+        return when {
+            diff < 60_000 -> "À l'instant"
+            diff < 3_600_000 -> "${diff / 60_000}m"
+            diff < 86_400_000 -> "${diff / 3_600_000}h"
+            else -> {
+                val sdf = java.text.SimpleDateFormat("dd/MM", java.util.Locale.getDefault())
+                sdf.format(java.util.Date(time))
             }
         }
     }

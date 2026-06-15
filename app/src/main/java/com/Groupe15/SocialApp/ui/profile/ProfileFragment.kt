@@ -105,6 +105,7 @@ class ProfileFragment : Fragment() {
             viewModel.isOwnProfile.collect { isOwn ->
                 binding.btnEditProfile.visibility = if (isOwn) View.VISIBLE else View.GONE
                 binding.btnFollow.visibility = if (isOwn) View.GONE else View.VISIBLE
+                binding.btnMessage.visibility = if (isOwn) View.GONE else View.VISIBLE
                 binding.ibSettings.visibility = if (isOwn) View.VISIBLE else View.GONE
             }
         }
@@ -165,6 +166,13 @@ class ProfileFragment : Fragment() {
                     followViewModel.followUser(targetUid)
                 }
             }
+        }
+        binding.btnMessage.setOnClickListener {
+            val bundle = Bundle().apply {
+                putString("chatId", targetUid)
+                putString("userName", binding.tvDisplayName.text.toString())
+            }
+            findNavController().navigate(R.id.action_profile_to_chat, bundle)
         }
     }
 

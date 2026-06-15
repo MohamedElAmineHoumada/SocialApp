@@ -6,7 +6,7 @@ import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.firestore.Query
+import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.storage.FirebaseStorage
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
@@ -23,30 +23,71 @@ class PostRepository @Inject constructor(
     private val auth: FirebaseAuth
 ) {
 
-    // Écoute en temps réel les 50 derniers posts
-    fun getLivePosts(): Flow<List<Post>> = callbackFlow {
-        val listener = firestore.collection("posts")
-            .orderBy("createdAt", Query.Direction.DESCENDING)
-            .limit(50)
-            .addSnapshotListener { snapshot, error ->
-                if (error != null) {
-                    close(error)
-                    return@addSnapshotListener
-                }
-                val posts = snapshot?.toObjects(Post::class.java) ?: emptyList()
-                trySend(posts)
-            }
-        awaitClose { listener.remove() }
+    private suspend fun getFollowingUids(currentUid: String): List<String> {
+        return try {
+            firestore.collection("users")
+                .document(currentUid)
+                .collection("following")
+                .get()
+                .await()
+                .documents.map { it.id }
+        } catch (e: Exception) {
+            emptyList()
+        }
     }
 
-    // Crée un post avec images uploadées dans Storage
+    /**
+     * Posts des utilisateurs suivis + ses propres posts.
+     * PAS d'orderBy dans la query pour éviter les index composites Firestore.
+     * Le tri se fait côté client après réception.
+     */
+    fun getLivePosts(): Flow<List<Post>> = callbackFlow {
+        val currentUid = auth.currentUser?.uid ?: run {
+            trySend(emptyList())
+            close()
+            return@callbackFlow
+        }
+
+        val followingUids = getFollowingUids(currentUid)
+        val authorUids = (followingUids + currentUid).distinct()
+
+        val listeners = mutableListOf<ListenerRegistration>()
+        val chunkResults = mutableMapOf<Int, List<Post>>()
+
+        val chunks = authorUids.chunked(30)
+
+        chunks.forEachIndexed { index, chunk ->
+            val listener = firestore.collection("posts")
+                .whereIn("userId", chunk)   // pas d'orderBy → pas d'index requis
+                .limit(100)
+                .addSnapshotListener { snapshot, error ->
+                    if (error != null) return@addSnapshotListener
+                    chunkResults[index] = snapshot?.toObjects(Post::class.java) ?: emptyList()
+                    // Tri côté client : du plus récent au plus ancien
+                    val merged = chunkResults.values.flatten()
+                        .sortedByDescending { it.getCreatedAtMillis() }
+                        .take(50)
+                    trySend(merged)
+                }
+            listeners.add(listener)
+        }
+
+        awaitClose { listeners.forEach { it.remove() } }
+    }
+
     suspend fun createPost(caption: String, imageUris: List<Uri> = emptyList()): Result<Unit> {
         return try {
             val uid = auth.currentUser?.uid
                 ?: return Result.failure(Exception("Non connecté"))
-            val username = auth.currentUser?.displayName ?: "Anonyme"
 
-            // Upload images si présentes
+            // Lire le vrai username depuis Firestore
+            val userDoc = firestore.collection("users").document(uid).get().await()
+            val username = userDoc.getString("username")
+                ?: userDoc.getString("displayName")
+                ?: auth.currentUser?.displayName
+                ?: "Utilisateur"
+            val profileImageUrl = userDoc.getString("profileImageUrl") ?: ""
+
             val imageUrls = imageUris.map { uri ->
                 val ref = storage.reference.child("posts/$uid/${UUID.randomUUID()}.jpg")
                 ref.putFile(uri).await()
@@ -55,12 +96,13 @@ class PostRepository @Inject constructor(
 
             val postId = firestore.collection("posts").document().id
             val post = Post(
-                postId         = postId,
-                authorUid      = uid,
-                authorUsername = username,
-                content        = caption,
-                imageUrls      = imageUrls,
-                createdAt      = Timestamp.now()
+                postId           = postId,
+                authorUid        = uid,
+                authorUsername   = username,
+                authorProfileUrl = profileImageUrl,
+                content          = caption,
+                imageUrls        = imageUrls,
+                createdAt        = Timestamp.now()
             )
             firestore.collection("posts").document(postId).set(post).await()
             Result.success(Unit)

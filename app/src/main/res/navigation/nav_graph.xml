@@ -43,52 +43,14 @@
         android:name="com.Groupe15.SocialApp.ui.auth.RegisterFragment"
         android:label="Inscription">
         <action
-            android:id="@+id/action_register_to_onboardingWelcome"
-            app:destination="@id/onboardingWelcomeFragment"
+            android:id="@+id/action_register_to_feed"
+            app:destination="@id/feedFragment"
             app:enterAnim="@anim/slide_in_right"
             app:exitAnim="@anim/slide_out_left"
             app:popEnterAnim="@anim/slide_in_left"
             app:popExitAnim="@anim/slide_out_right"
             app:popUpTo="@id/loginFragment"
             app:popUpToInclusive="true"/>
-    </fragment>
-
-    <fragment
-        android:id="@+id/onboardingWelcomeFragment"
-        android:name="com.Groupe15.SocialApp.ui.auth.OnboardingWelcomeFragment"
-        android:label="Welcome">
-        <action
-            android:id="@+id/action_onboardingWelcome_to_dob"
-            app:destination="@id/onboardingDobFragment" />
-    </fragment>
-
-    <fragment
-        android:id="@+id/onboardingDobFragment"
-        android:name="com.Groupe15.SocialApp.ui.auth.OnboardingDobFragment"
-        android:label="Date of Birth">
-        <action
-            android:id="@+id/action_onboardingDob_to_gender"
-            app:destination="@id/onboardingGenderFragment" />
-    </fragment>
-
-    <fragment
-        android:id="@+id/onboardingGenderFragment"
-        android:name="com.Groupe15.SocialApp.ui.auth.OnboardingGenderFragment"
-        android:label="Gender">
-        <action
-            android:id="@+id/action_onboardingGender_to_interests"
-            app:destination="@id/onboardingInterestsFragment" />
-    </fragment>
-
-    <fragment
-        android:id="@+id/onboardingInterestsFragment"
-        android:name="com.Groupe15.SocialApp.ui.auth.OnboardingInterestsFragment"
-        android:label="Interests">
-        <action
-            android:id="@+id/action_interests_to_feed"
-            app:destination="@id/feedFragment"
-            app:popUpTo="@id/nav_graph"
-            app:popUpToInclusive="true" />
     </fragment>
 
     <fragment
