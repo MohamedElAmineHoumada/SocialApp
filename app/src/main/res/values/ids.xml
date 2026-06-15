@@ -1,4 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <item name="action_profile_to_chat" type="id" />
+    <item name="action_onboardingDob_to_gender" type="id" />
+    <item name="action_onboardingGender_to_interests" type="id" />
+    <item name="action_onboardingWelcome_to_dob" type="id" />
+    <item name="action_register_to_onboardingWelcome" type="id" />
 </resources>
