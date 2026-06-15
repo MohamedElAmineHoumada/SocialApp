@@ -36,10 +36,7 @@ class OnboardingInterestsFragment : Fragment() {
         }
 
         binding.btnFinish.setOnClickListener {
-            // Logique pour terminer l'onboarding (ex: sauvegarder dans Firestore)
-            // findNavController().navigate(R.id.action_global_discoverFragment)
-            // Pour l'instant on retourne au login ou home selon le flow
-            activity?.finish()
+            findNavController().navigate(R.id.action_interests_to_feed)
         }
 
         updateFinishButton(0)

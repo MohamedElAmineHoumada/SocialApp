@@ -9,7 +9,6 @@ import androidx.fragment.app.viewModels
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
-import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.Groupe15.SocialApp.R
 import com.Groupe15.SocialApp.viewmodel.FeedViewModel
 import dagger.hilt.android.AndroidEntryPoint
@@ -20,21 +19,36 @@ class FeedFragment : Fragment(R.layout.fragment_feed) {
 
     private val viewModel: FeedViewModel by viewModels()
     private lateinit var adapter: PostAdapter
+    private lateinit var storyAdapter: StoryAdapter
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
         val recyclerView = view.findViewById<RecyclerView>(R.id.recyclerView)
+        val rvStories = view.findViewById<RecyclerView>(R.id.rvStories)
         val swipeRefresh = view.findViewById<SwipeRefreshLayout>(R.id.swipeRefresh)
         val tvEmpty = view.findViewById<TextView>(R.id.tvEmpty)
-        val fabCreatePost = view.findViewById<FloatingActionButton>(R.id.fabCreatePost)
+        val ivSearch = view.findViewById<View>(R.id.ivSearch)
+        val ivNotification = view.findViewById<View>(R.id.ivNotification)
 
+        ivSearch.setOnClickListener {
+            findNavController().navigate(R.id.discoverFragment)
+        }
+
+        ivNotification.setOnClickListener {
+            // Action pour les notifications
+        }
+
+        // Configuration adapter Posts
         adapter = PostAdapter(
+            currentUserId = viewModel.currentUserId,
             onLike    = { post -> viewModel.toggleLike(post.postId) },
             onComment = { post ->
                 CommentsBottomSheet.newInstance(post.postId)
                     .show(parentFragmentManager, "comments")
             },
+            onShare = { post -> viewModel.sharePost(requireContext(), post) },
+            onFollow = { uid -> viewModel.followUser(uid) },
             onProfile = { authorUid ->
                 val bundle = Bundle().apply {
                     putString("uid", authorUid)
@@ -43,8 +57,20 @@ class FeedFragment : Fragment(R.layout.fragment_feed) {
             }
         )
 
+        // Configuration adapter Stories
+        storyAdapter = StoryAdapter { story ->
+            // Action au clic sur une story
+        }
+
         recyclerView.adapter = adapter
         recyclerView.layoutManager = LinearLayoutManager(requireContext())
+
+        // Correction pour le défilement fluide dans le SwipeRefreshLayout ou NestedScrollView
+        recyclerView.isNestedScrollingEnabled = true
+
+        rvStories.adapter = storyAdapter
+        val storyLayoutManager = LinearLayoutManager(requireContext(), LinearLayoutManager.HORIZONTAL, false)
+        rvStories.layoutManager = storyLayoutManager
 
         swipeRefresh.setColorSchemeResources(R.color.purple_primary)
         swipeRefresh.setOnRefreshListener {
@@ -55,6 +81,10 @@ class FeedFragment : Fragment(R.layout.fragment_feed) {
         viewModel.posts.observe(viewLifecycleOwner) { posts ->
             adapter.submitList(posts)
             tvEmpty.isVisible = posts.isEmpty()
+        }
+
+        viewModel.stories.observe(viewLifecycleOwner) { stories ->
+            storyAdapter.submitList(stories)
         }
     }
 }

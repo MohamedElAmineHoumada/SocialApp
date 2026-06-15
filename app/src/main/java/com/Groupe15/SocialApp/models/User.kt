@@ -11,7 +11,8 @@ data class User(
     val website: String = "",
     val followersCount: Int = 0,
     val followingCount: Int = 0,
-    val postsCount: Int = 0
+    val postsCount: Int = 0,
+    val isPrivate: Boolean = false
 ) {
     // Constructeur vide requis par Firestore
     constructor() : this("")

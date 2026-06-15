@@ -82,7 +82,7 @@
         android:layout_height="wrap_content"
         android:layout_marginHorizontal="24dp"
         android:layout_marginTop="8dp"
-        android:text="Nous avons besoin de votre âge pour personnaliser votre expérience sur CreatorHub."
+        android:text="Nous avons besoin de votre âge pour personnaliser votre expérience sur AFN."
         android:textColor="@color/app_text_secondary"
         android:textSize="14sp"
         app:layout_constraintEnd_toEndOf="parent"

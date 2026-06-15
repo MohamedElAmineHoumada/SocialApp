@@ -15,8 +15,11 @@ import com.Groupe15.SocialApp.R
 import com.Groupe15.SocialApp.models.Post
 
 class PostAdapter(
+    private val currentUserId: String?,
     private val onLike: (Post) -> Unit,
     private val onComment: (Post) -> Unit,
+    private val onShare: (Post) -> Unit,
+    private val onFollow: (String) -> Unit,
     private val onProfile: (String) -> Unit
 ) : ListAdapter<Post, PostAdapter.PostViewHolder>(PostDiffCallback()) {
 
@@ -26,17 +29,15 @@ class PostAdapter(
         private val tvUsername = itemView.findViewById<TextView>(R.id.tvUsername)
         private val tvContent = itemView.findViewById<TextView>(R.id.tvContent)
         private val tvTimestamp = itemView.findViewById<TextView>(R.id.tvTimestamp)
-        private val tvLikesCount = itemView.findViewById<TextView>(R.id.tvLikesCount)
-        private val tvCommentsCount = itemView.findViewById<TextView>(R.id.tvCommentsCount)
         private val btnLike = itemView.findViewById<ImageButton>(R.id.btnLike)
         private val btnComment = itemView.findViewById<ImageButton>(R.id.btnComment)
+        private val btnShare = itemView.findViewById<ImageButton>(R.id.btnShare)
+        private val btnFollow = itemView.findViewById<TextView>(R.id.btnFollow)
         private val ivPostImage = itemView.findViewById<ImageView>(R.id.ivPostImage)
 
         fun bind(post: Post) {
             tvUsername.text = post.authorUsername
             tvContent.text = post.content
-            tvLikesCount.text = post.likesCount.toString()
-            tvCommentsCount.text = post.commentsCount.toString()
 
             // Formatage de la date
             tvTimestamp.text = if (post.createdAt != null) {
@@ -45,34 +46,34 @@ class PostAdapter(
                     System.currentTimeMillis(),
                     DateUtils.MINUTE_IN_MILLIS
                 )
-            } else "à l'instant"
+            } else itemView.context.getString(R.string.no_posts) // Ou un placeholder
 
             // Avatar
-            if (post.authorProfileUrl.isNotEmpty()) {
-                ivAvatar.load(post.authorProfileUrl) {
-                    crossfade(true)
-                    placeholder(R.drawable.ic_default_avatar)
-                    error(R.drawable.ic_default_avatar)
-                }
-            } else {
-                ivAvatar.setImageResource(R.drawable.ic_default_avatar)
+            ivAvatar.load(post.authorProfileUrl.ifEmpty { null }) {
+                crossfade(true)
+                placeholder(R.drawable.ic_default_avatar)
+                error(R.drawable.ic_default_avatar)
             }
 
-            // Image du post
-            if (post.imageUrl.isNotEmpty()) {
-                ivPostImage.visibility = View.VISIBLE
-                ivPostImage.load(post.imageUrl) {
-                    crossfade(true)
-                }
-            } else {
-                ivPostImage.visibility = View.GONE
+            // Image du post (Fond de carte)
+            ivPostImage.load(post.imageUrl.ifEmpty { null }) {
+                crossfade(true)
+                placeholder(R.drawable.placeholder_cover)
+                error(R.drawable.placeholder_cover)
             }
 
-            // Clics
+            // Actions
             btnLike.setOnClickListener { onLike(post) }
             btnComment.setOnClickListener { onComment(post) }
-            tvUsername.setOnClickListener { onProfile(post.authorUid) }
-            ivAvatar.setOnClickListener { onProfile(post.authorUid) }
+            btnShare.setOnClickListener { onShare(post) }
+            
+            // Masquer Follow si c'est notre propre post
+            btnFollow.visibility = if (post.authorUid == currentUserId) View.GONE else View.VISIBLE
+            btnFollow.setOnClickListener { onFollow(post.authorUid) }
+            
+            val toProfile = View.OnClickListener { onProfile(post.authorUid) }
+            tvUsername.setOnClickListener(toProfile)
+            ivAvatar.setOnClickListener(toProfile)
         }
     }
 

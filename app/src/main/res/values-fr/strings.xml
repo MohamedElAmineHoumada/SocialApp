@@ -25,12 +25,6 @@
     <string name="language_arabic">Arabe</string>
     <string name="language_chinese">Chinois</string>
     <string name="cancel">Annuler</string>
-    <string name="nav_home">Accueil</string>
-    <string name="nav_messages">Messages</string>
-    <string name="nav_studio">Studio</string>
-    <string name="nav_network">Réseaux</string>
-    <string name="nav_profile">Profil</string>
-    <string name="discover">Découvrir</string>
     <string name="tab_subscriptions">Abonnements</string>
     <string name="tab_for_you">Pour vous</string>
     <string name="no_posts">Aucune publication</string>

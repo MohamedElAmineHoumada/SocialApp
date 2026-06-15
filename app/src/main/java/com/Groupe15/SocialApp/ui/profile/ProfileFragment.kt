@@ -120,12 +120,10 @@ class ProfileFragment : Fragment() {
                         binding.btnFollow.isEnabled = true
                         if (state.isFollowing) {
                             binding.btnFollow.text = "Unfollow"
-
                             binding.btnFollow.setBackgroundColor(android.graphics.Color.parseColor("#E0E0E0"))
                             binding.btnFollow.setTextColor(android.graphics.Color.parseColor("#000000"))
                         } else {
                             binding.btnFollow.text = "Follow"
-
                             binding.btnFollow.setBackgroundColor(android.graphics.Color.parseColor("#0095F6"))
                             binding.btnFollow.setTextColor(android.graphics.Color.parseColor("#FFFFFF"))
                         }
@@ -153,10 +151,16 @@ class ProfileFragment : Fragment() {
             }
         }
     }
+
     private fun setupClickListeners() {
         binding.btnEditProfile.setOnClickListener {
             findNavController().navigate(R.id.editProfileFragment)
         }
+
+        binding.ibSettings.setOnClickListener {
+            findNavController().navigate(R.id.action_profile_to_settings)
+        }
+
         binding.btnFollow.setOnClickListener {
             val currentState = followViewModel.followState.value
             if (currentState is FollowState.IsFollowing) {
@@ -167,6 +171,7 @@ class ProfileFragment : Fragment() {
                 }
             }
         }
+
         binding.btnMessage.setOnClickListener {
             val bundle = Bundle().apply {
                 putString("chatId", targetUid)

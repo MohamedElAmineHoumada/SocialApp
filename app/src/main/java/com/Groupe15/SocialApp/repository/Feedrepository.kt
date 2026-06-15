@@ -19,6 +19,7 @@ class FeedRepository @Inject constructor(
     private val firestore: FirebaseFirestore,
     private val auth: FirebaseAuth
 ) {
+    val currentUserId get() = auth.currentUser?.uid
 
     fun getFeedPosts(): Flow<List<Post>> = callbackFlow {
         val listener = firestore.collection("posts")

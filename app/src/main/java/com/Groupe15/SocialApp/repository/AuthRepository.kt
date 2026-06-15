@@ -90,4 +90,40 @@ class AuthRepository @Inject constructor(
     }
 
     fun logout() = auth.signOut()
+
+    suspend fun resetPassword(email: String): Result<Unit> {
+        return try {
+            auth.sendPasswordResetEmail(email).await()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun deleteAccount(): Result<Unit> {
+        return try {
+            val user = auth.currentUser ?: throw Exception("Aucun utilisateur connecté")
+            val uid = user.uid
+            
+            // Supprimer les données de l'utilisateur dans Firestore
+            firestore.collection("users").document(uid).delete().await()
+            
+            // Supprimer le compte Auth
+            user.delete().await()
+            
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun updatePrivacyStatus(isPrivate: Boolean): Result<Unit> {
+        return try {
+            val uid = auth.currentUser?.uid ?: throw Exception("Utilisateur non connecté")
+            firestore.collection("users").document(uid).update("isPrivate", isPrivate).await()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
 }

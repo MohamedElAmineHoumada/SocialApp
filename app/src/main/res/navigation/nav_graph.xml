@@ -95,7 +95,19 @@
             app:exitAnim="@anim/slide_out_left"
             app:popEnterAnim="@anim/slide_in_left"
             app:popExitAnim="@anim/slide_out_right"/>
+        <action
+            android:id="@+id/action_profile_to_settings"
+            app:destination="@id/settingsFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/slide_out_left"
+            app:popEnterAnim="@anim/slide_in_left"
+            app:popExitAnim="@anim/slide_out_right"/>
     </fragment>
+
+    <fragment
+        android:id="@+id/settingsFragment"
+        android:name="com.Groupe15.SocialApp.ui.profile.SettingsFragment"
+        android:label="Paramètres" />
 
     <fragment
         android:id="@+id/createPostFragment"
@@ -124,6 +136,11 @@
         android:id="@+id/discoverFragment"
         android:name="com.Groupe15.SocialApp.ui.discover.DiscoverFragment"
         android:label="Discover" />
+
+    <fragment
+        android:id="@+id/networkFragment"
+        android:name="com.Groupe15.SocialApp.ui.network.NetworkFragment"
+        android:label="Réseau" />
 
     <fragment
         android:id="@+id/chatFragment"
