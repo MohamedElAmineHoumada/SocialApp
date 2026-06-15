@@ -35,13 +35,55 @@ class FeedRepository @Inject constructor(
         awaitClose { listener.remove() }
     }
 
-    fun getStories(): Flow<List<Story>> = flow {
-        // Stories mock pour l'instant - à connecter à Firebase
-        val currentUid = auth.currentUser?.uid ?: ""
-        val mockStories = listOf(
-            Story(userId = currentUid, username = "Your Story", isCurrentUser = true),
-        )
-        emit(mockStories)
+    fun getStories(): Flow<List<Story>> = callbackFlow {
+        val listener = firestore.collection("stories")
+            .orderBy("timestamp", Query.Direction.DESCENDING)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) return@addSnapshotListener
+                val stories = snapshot?.documents?.mapNotNull { doc ->
+                    doc.toObject(Story::class.java)
+                } ?: emptyList()
+                trySend(stories)
+            }
+        awaitClose { listener.remove() }
+    }
+
+    suspend fun shareToStory(post: Post): Result<Unit> {
+        return try {
+            val uid = auth.currentUser?.uid ?: throw Exception("Non connecté")
+            val username = auth.currentUser?.displayName ?: "User"
+            
+            val story = hashMapOf(
+                "userId" to uid,
+                "username" to username,
+                "userProfileUrl" to (auth.currentUser?.photoUrl?.toString() ?: ""),
+                "imageUrl" to post.imageUrl,
+                "postId" to post.postId,
+                "timestamp" to FieldValue.serverTimestamp()
+            )
+            
+            firestore.collection("stories").add(story).await()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun toggleSavePost(postId: String): Result<Unit> {
+        return try {
+            val uid = auth.currentUser?.uid ?: throw Exception("Non connecté")
+            val saveRef = firestore.collection("users").document(uid).collection("savedPosts").document(postId)
+            
+            val doc = saveRef.get().await()
+            if (doc.exists()) {
+                saveRef.delete().await()
+            } else {
+                saveRef.set(mapOf("postId" to postId, "timestamp" to FieldValue.serverTimestamp())).await()
+            }
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
     }
 
     suspend fun toggleLike(postId: String) {

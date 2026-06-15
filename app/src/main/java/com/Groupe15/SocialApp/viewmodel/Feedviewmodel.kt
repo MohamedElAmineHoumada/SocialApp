@@ -35,6 +35,9 @@ class FeedViewModel @Inject constructor(
     private val _stories = MutableLiveData<List<Story>>(emptyList())
     val stories: LiveData<List<Story>> = _stories
 
+    private val _recentContacts = MutableLiveData<List<com.Groupe15.SocialApp.models.User>>(emptyList())
+    val recentContacts: LiveData<List<com.Groupe15.SocialApp.models.User>> = _recentContacts
+
     private val _selectedPostId = MutableStateFlow<String?>(null)
     val comments: LiveData<List<Comment>> = _selectedPostId
         .flatMapLatest { postId ->
@@ -51,6 +54,7 @@ class FeedViewModel @Inject constructor(
     init {
         loadFeed()
         loadStories()
+        loadRecentContacts()
     }
 
     fun selectPost(postId: String) {
@@ -95,6 +99,20 @@ class FeedViewModel @Inject constructor(
     fun followUser(targetUid: String) {
         viewModelScope.launch {
             followRepository.followUser(targetUid)
+        }
+    }
+
+    private fun loadRecentContacts() {
+        val uid = currentUserId ?: return
+        viewModelScope.launch {
+            val users = followRepository.getFollowingUsers(uid)
+            _recentContacts.value = users
+        }
+    }
+
+    fun toggleSavePost(postId: String) {
+        viewModelScope.launch {
+            feedRepository.toggleSavePost(postId)
         }
     }
 }

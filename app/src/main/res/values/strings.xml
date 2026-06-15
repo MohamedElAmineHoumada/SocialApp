@@ -41,4 +41,12 @@
     <string name="confirm">Confirmer</string>
     <string name="delete_account_warning">Êtes-vous sûr de vouloir supprimer votre compte ? Cette action est irréversible.</string>
     <string name="delete">Supprimer</string>
+    <string name="share_title">Partager</string>
+    <string name="share_to_story">Partager dans votre story</string>
+    <string name="send_in_message">Envoyer en message</string>
+    <string name="recent_contacts">CONTACTS RÉCENTS</string>
+    <string name="action_copy">Copier</string>
+    <string name="action_save">Enregistrer</string>
+    <string name="action_email">Email</string>
+    <string name="action_more">Plus</string>
 </resources>

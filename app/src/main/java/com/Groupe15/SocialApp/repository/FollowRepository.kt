@@ -127,4 +127,24 @@ class FollowRepository @Inject constructor(
             emptyList()
         }
     }
+
+    suspend fun getFollowingUsers(uid: String): List<com.Groupe15.SocialApp.models.User> {
+        return try {
+            val followingIds = getFollowing(uid)
+            if (followingIds.isEmpty()) return emptyList()
+
+            // Firestore 'in' query supports up to 10 IDs. For a simple implementation, we can fetch them individually or in chunks.
+            // For now, let's fetch individually to keep it simple, or use 'whereIn' if we expect a small number.
+            val users = mutableListOf<com.Groupe15.SocialApp.models.User>()
+            for (id in followingIds) {
+                val doc = usersCollection.document(id).get().await()
+                doc.toObject(com.Groupe15.SocialApp.models.User::class.java)?.let {
+                    users.add(it.copy(id = doc.id))
+                }
+            }
+            users
+        } catch (e: Exception) {
+            emptyList()
+        }
+    }
 }

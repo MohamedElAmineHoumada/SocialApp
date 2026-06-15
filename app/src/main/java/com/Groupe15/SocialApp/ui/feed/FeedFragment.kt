@@ -5,6 +5,7 @@ import android.view.View
 import android.widget.TextView
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.activityViewModels
 import androidx.fragment.app.viewModels
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -17,7 +18,7 @@ import androidx.navigation.fragment.findNavController
 @AndroidEntryPoint
 class FeedFragment : Fragment(R.layout.fragment_feed) {
 
-    private val viewModel: FeedViewModel by viewModels()
+    private val viewModel: FeedViewModel by activityViewModels()
     private lateinit var adapter: PostAdapter
     private lateinit var storyAdapter: StoryAdapter
 
@@ -47,7 +48,10 @@ class FeedFragment : Fragment(R.layout.fragment_feed) {
                 CommentsBottomSheet.newInstance(post.postId)
                     .show(parentFragmentManager, "comments")
             },
-            onShare = { post -> viewModel.sharePost(requireContext(), post) },
+            onShare = { post ->
+                ShareBottomSheet.newInstance(post.postId)
+                    .show(parentFragmentManager, "share")
+            },
             onFollow = { uid -> viewModel.followUser(uid) },
             onProfile = { authorUid ->
                 val bundle = Bundle().apply {
