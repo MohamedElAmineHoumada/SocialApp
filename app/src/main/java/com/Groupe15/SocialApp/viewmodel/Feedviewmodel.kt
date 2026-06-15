@@ -96,6 +96,12 @@ class FeedViewModel @Inject constructor(
         context.startActivity(Intent.createChooser(shareIntent, "Partager via"))
     }
 
+    fun shareToStory(post: Post) {
+        viewModelScope.launch {
+            feedRepository.shareToStory(post)
+        }
+    }
+
     fun followUser(targetUid: String) {
         viewModelScope.launch {
             followRepository.followUser(targetUid)
