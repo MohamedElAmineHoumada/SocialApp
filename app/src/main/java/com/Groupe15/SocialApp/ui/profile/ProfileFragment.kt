@@ -119,7 +119,7 @@ class ProfileFragment : Fragment() {
                         binding.btnFollow.isEnabled = true
                         if (state.isFollowing) {
                             binding.btnFollow.text = "Unfollow"
-                            
+
                             binding.btnFollow.setBackgroundColor(android.graphics.Color.parseColor("#E0E0E0"))
                             binding.btnFollow.setTextColor(android.graphics.Color.parseColor("#000000"))
                         } else {
