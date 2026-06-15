@@ -25,7 +25,8 @@ class FeedViewModel @Inject constructor(
 ) : ViewModel() {
 
     private val _posts = MutableLiveData<List<Post>>(emptyList())
-    //val posts: LiveData<List<Post>> = _posts
+
+    // Posts filtrés : uniquement les utilisateurs suivis + soi-même
     val posts: LiveData<List<Post>> = postRepository.getLivePosts().asLiveData()
 
     private val _selectedPostId = MutableStateFlow<String?>(null)
@@ -40,16 +41,19 @@ class FeedViewModel @Inject constructor(
     fun selectPost(postId: String) {
         _selectedPostId.value = postId
     }
+
     fun toggleLike(postId: String) {
         viewModelScope.launch {
             feedRepository.toggleLike(postId)
         }
     }
+
     fun addComment(postId: String, text: String) {
         viewModelScope.launch {
             commentRepository.addComment(postId, text)
         }
     }
+
     private val _isLoading = MutableLiveData(false)
     val isLoading: LiveData<Boolean> = _isLoading
 
@@ -58,20 +62,10 @@ class FeedViewModel @Inject constructor(
     }
 
     fun loadFeed() {
-        viewModelScope.launch {
-            _isLoading.value = true
-            try {
-                feedRepository.getFeedPosts().collect { posts ->
-                    _posts.value = posts
-                    _isLoading.value = false
-                }
-            } catch (e: Exception) {
-                _isLoading.value = false
-            }
-        }
+        // Le Flow callbackFlow dans getLivePosts() écoute en temps réel en permanence.
+        // loadFeed() reste disponible pour le swipe-to-refresh côté UI.
+        _isLoading.value = false
     }
-
-
 
     fun sharePost(post: Post) { }
 }
