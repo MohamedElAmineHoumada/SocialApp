@@ -13,6 +13,7 @@ import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.Groupe15.SocialApp.R
 import com.Groupe15.SocialApp.viewmodel.FeedViewModel
 import dagger.hilt.android.AndroidEntryPoint
+import androidx.navigation.fragment.findNavController
 
 @AndroidEntryPoint
 class FeedFragment : Fragment(R.layout.fragment_feed) {
@@ -34,7 +35,12 @@ class FeedFragment : Fragment(R.layout.fragment_feed) {
                 CommentsBottomSheet.newInstance(post.postId)
                     .show(parentFragmentManager, "comments")
             },
-            onProfile = { }
+            onProfile = { authorUid ->
+                val bundle = Bundle().apply {
+                    putString("uid", authorUid)
+                }
+                findNavController().navigate(R.id.action_feed_to_profile, bundle)
+            }
         )
 
         recyclerView.adapter = adapter
