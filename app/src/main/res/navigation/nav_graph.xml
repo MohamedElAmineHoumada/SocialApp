@@ -153,4 +153,59 @@
             android:name="userName"
             app:argType="string" />
     </fragment>
+    <!-- ONBOARDING FLOW -->
+    <fragment
+        android:id="@+id/onboardingWelcomeFragment"
+        android:name="com.Groupe15.SocialApp.ui.auth.OnboardingWelcomeFragment"
+        android:label="Welcome">
+        <action
+            android:id="@+id/action_welcome_to_dob"
+            app:destination="@id/onboardingDobFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/slide_out_left"
+            app:popEnterAnim="@anim/slide_in_left"
+            app:popExitAnim="@anim/slide_out_right"/>
+    </fragment>
+
+    <fragment
+        android:id="@+id/onboardingDobFragment"
+        android:name="com.Groupe15.SocialApp.ui.auth.OnboardingDobFragment"
+        android:label="Date of Birth">
+        <action
+            android:id="@+id/action_dob_to_gender"
+            app:destination="@id/onboardingGenderFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/slide_out_left"
+            app:popEnterAnim="@anim/slide_in_left"
+            app:popExitAnim="@anim/slide_out_right"/>
+    </fragment>
+
+    <fragment
+        android:id="@+id/onboardingGenderFragment"
+        android:name="com.Groupe15.SocialApp.ui.auth.OnboardingGenderFragment"
+        android:label="Gender">
+        <action
+            android:id="@+id/action_gender_to_interests"
+            app:destination="@id/onboardingInterestsFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/slide_out_left"
+            app:popEnterAnim="@anim/slide_in_left"
+            app:popExitAnim="@anim/slide_out_right"/>
+    </fragment>
+
+    <fragment
+        android:id="@+id/onboardingInterestsFragment"
+        android:name="com.Groupe15.SocialApp.ui.auth.OnboardingInterestsFragment"
+        android:label="Interests">
+        <action
+            android:id="@+id/action_interests_to_feed"
+            app:destination="@id/feedFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/slide_out_left"
+            app:popEnterAnim="@anim/slide_in_left"
+            app:popExitAnim="@anim/slide_out_right"
+            app:popUpTo="@id/onboardingWelcomeFragment"
+            app:popUpToInclusive="true"/>
+    </fragment>
+
 </navigation>

@@ -30,7 +30,7 @@ class FeedViewModel @Inject constructor(
 ) : ViewModel() {
 
     // Posts filtrés : uniquement les utilisateurs suivis + soi-même
-    val posts: LiveData<List<Post>> = feedRepository.getLivePosts().asLiveData()
+    val posts: LiveData<List<Post>> = feedRepository.getFeedPosts().asLiveData()
 
     private val _stories = MutableLiveData<List<Story>>(emptyList())
     val stories: LiveData<List<Story>> = _stories
