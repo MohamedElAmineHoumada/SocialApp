@@ -30,6 +30,7 @@ import androidx.fragment.app.activityViewModels
 import coil.compose.AsyncImage
 import com.Groupe15.SocialApp.R
 import com.Groupe15.SocialApp.models.Comment
+import com.Groupe15.SocialApp.ui.theme.SocialAppTheme
 import com.Groupe15.SocialApp.viewmodel.FeedViewModel
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import dagger.hilt.android.AndroidEntryPoint
@@ -65,12 +66,17 @@ class CommentsBottomSheet : BottomSheetDialogFragment() {
     ): View {
         return ComposeView(requireContext()).apply {
             setContent {
-                MaterialTheme {
-                    CommentsScreen(
-                        viewModel = viewModel,
-                        postId = postId,
-                        onDismiss = { dismiss() }
-                    )
+                SocialAppTheme {
+                    Surface(
+                        color = MaterialTheme.colorScheme.surface,
+                        contentColor = MaterialTheme.colorScheme.onSurface
+                    ) {
+                        CommentsScreen(
+                            viewModel = viewModel,
+                            postId = postId,
+                            onDismiss = { dismiss() }
+                        )
+                    }
                 }
             }
         }
@@ -110,7 +116,10 @@ fun CommentsScreen(
             }
         }
 
-        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = Color.LightGray)
+        HorizontalDivider(
+            modifier = Modifier.padding(vertical = 8.dp),
+            color = MaterialTheme.colorScheme.outlineVariant
+        )
 
         Row(
             modifier = Modifier
@@ -122,13 +131,20 @@ fun CommentsScreen(
                 value = commentText,
                 onValueChange = { commentText = it },
                 modifier = Modifier.weight(1f),
-                placeholder = { Text("Ajouter un commentaire...", fontSize = 14.sp) },
+                placeholder = {
+                    Text(
+                        "Ajouter un commentaire...",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                },
                 colors = TextFieldDefaults.colors(
                     focusedContainerColor = Color.Transparent,
                     unfocusedContainerColor = Color.Transparent,
                     disabledContainerColor = Color.Transparent,
                     focusedIndicatorColor = Color.Transparent,
-                    unfocusedIndicatorColor = Color.Transparent
+                    unfocusedIndicatorColor = Color.Transparent,
+                    focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                    unfocusedTextColor = MaterialTheme.colorScheme.onSurface
                 ),
                 maxLines = 3
             )
@@ -140,7 +156,11 @@ fun CommentsScreen(
                     }
                 }
             ) {
-                Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Envoyer", tint = Color(0xFF6200EE))
+                Icon(
+                    Icons.AutoMirrored.Filled.Send,
+                    contentDescription = "Envoyer",
+                    tint = MaterialTheme.colorScheme.primary
+                )
             }
         }
     }
@@ -164,13 +184,13 @@ fun CommentItem(comment: Comment) {
         Column {
             Text(
                 text = comment.username.ifEmpty { "Utilisateur" },
-                fontWeight = FontWeight.Bold,
-                fontSize = 13.sp
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.Bold
             )
             Text(
                 text = comment.text,
-                fontSize = 14.sp,
-                color = Color.Black
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface
             )
         }
     }

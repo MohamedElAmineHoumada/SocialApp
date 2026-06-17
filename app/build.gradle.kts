@@ -39,27 +39,30 @@ android {
     }
     buildFeatures {
         compose = true
-        viewBinding = true
+        viewBinding = false
     }
 }
 
 dependencies {
     implementation(libs.androidx.appcompat)
     implementation(libs.androidx.core.ktx)
-    implementation(libs.androidx.navigation.fragment.ktx)
-    implementation(libs.androidx.navigation.ui.ktx)
+    implementation(libs.androidx.fragment.ktx)
+    implementation(libs.google.material)
     implementation(libs.hilt.android)
+    implementation(libs.androidx.hilt.navigation.compose)
     ksp(libs.hilt.compiler)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.lifecycle.livedata.ktx)
     implementation(libs.androidx.activity.compose)
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.compose.ui)
+    implementation(libs.androidx.navigation.fragment.ktx)
     implementation(libs.androidx.compose.ui.graphics)
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
     implementation(libs.androidx.compose.runtime.livedata)
-    
+    implementation(libs.androidx.navigation.compose)
+    implementation("androidx.compose.material:material-icons-extended:1.6.8")
     // Firebase
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.auth)

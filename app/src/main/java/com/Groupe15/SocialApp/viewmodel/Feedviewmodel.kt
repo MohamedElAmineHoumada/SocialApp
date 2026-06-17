@@ -102,6 +102,10 @@ class FeedViewModel @Inject constructor(
         }
     }
 
+    suspend fun createStory(mediaUri: android.net.Uri, text: String, filter: String): Result<Unit> {
+        return feedRepository.createStory(mediaUri, text, filter)
+    }
+
     fun followUser(targetUid: String) {
         viewModelScope.launch {
             followRepository.followUser(targetUid)

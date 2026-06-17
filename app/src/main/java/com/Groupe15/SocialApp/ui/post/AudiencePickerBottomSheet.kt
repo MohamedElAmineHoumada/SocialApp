@@ -22,6 +22,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.Groupe15.SocialApp.R
+import com.Groupe15.SocialApp.ui.theme.SocialAppTheme
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 
 class AudiencePickerBottomSheet : BottomSheetDialogFragment() {
@@ -38,13 +39,18 @@ class AudiencePickerBottomSheet : BottomSheetDialogFragment() {
     ): View {
         return ComposeView(requireContext()).apply {
             setContent {
-                MaterialTheme {
-                    AudiencePickerScreen(
-                        onSelected = {
-                            onAudienceSelected?.invoke(it)
-                            dismiss()
-                        }
-                    )
+                SocialAppTheme {
+                    Surface(
+                        color = MaterialTheme.colorScheme.surface,
+                        contentColor = MaterialTheme.colorScheme.onSurface
+                    ) {
+                        AudiencePickerScreen(
+                            onSelected = {
+                                onAudienceSelected?.invoke(it)
+                                dismiss()
+                            }
+                        )
+                    }
                 }
             }
         }
@@ -65,7 +71,7 @@ fun AudiencePickerScreen(onSelected: (String) -> Unit) {
             modifier = Modifier
                 .width(40.dp)
                 .height(4.dp)
-                .background(Color.LightGray, RoundedCornerShape(2.dp))
+                .background(MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(2.dp))
                 .align(Alignment.CenterHorizontally)
                 .padding(top = 12.dp, bottom = 16.dp)
         )
@@ -75,7 +81,6 @@ fun AudiencePickerScreen(onSelected: (String) -> Unit) {
         Text(
             text = "Who can see your post?",
             style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold,
             modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp)
         )
 
@@ -120,13 +125,13 @@ fun AudienceOption(
         Box(
             modifier = Modifier
                 .size(40.dp)
-                .background(Color(0xFFF0EFFF), CircleShape),
+                .background(MaterialTheme.colorScheme.primaryContainer, CircleShape),
             contentAlignment = Alignment.Center
         ) {
             Icon(
                 painter = painterResource(id = iconRes),
                 contentDescription = null,
-                tint = Color(0xFF6200EE),
+                tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.size(20.dp)
             )
         }
@@ -134,8 +139,16 @@ fun AudienceOption(
         Spacer(modifier = Modifier.width(16.dp))
 
         Column(modifier = Modifier.weight(1f)) {
-            Text(text = title, fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
-            Text(text = subtitle, color = Color.Gray, fontSize = 12.sp)
+            Text(
+                text = title,
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.SemiBold
+            )
+            Text(
+                text = subtitle,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }

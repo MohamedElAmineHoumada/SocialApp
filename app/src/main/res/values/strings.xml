@@ -52,4 +52,5 @@
     <string name="active_now">En ligne</string>
     <string name="type_message">Écrivez un message...</string>
     <string name="hold_to_record">Maintenez pour enregistrer</string>
+    <string name="splash_tagline">Connectez-vous avec le monde</string>
 </resources>

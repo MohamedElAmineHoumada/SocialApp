@@ -1,16 +1,19 @@
 package com.Groupe15.SocialApp.repository
 
+import android.net.Uri
 import com.Groupe15.SocialApp.models.Post
 import com.Groupe15.SocialApp.models.Story
+import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
+import com.google.firebase.storage.FirebaseStorage
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
-import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.tasks.await
+import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -48,6 +51,42 @@ class FeedRepository @Inject constructor(
         awaitClose { listener.remove() }
     }
 
+    suspend fun createStory(
+        mediaUri: Uri,
+        text: String?,
+        filter: String
+    ): Result<Unit> {
+        return try {
+            val uid = auth.currentUser?.uid ?: throw Exception("Non connecté")
+            val userDoc = firestore.collection("users").document(uid).get().await()
+            val username = userDoc.getString("username") ?: "User"
+            val profileUrl = userDoc.getString("profileImageUrl") ?: ""
+
+            // Upload image
+            val storageRef = FirebaseStorage.getInstance().reference
+                .child("stories/$uid/${UUID.randomUUID()}.jpg")
+            storageRef.putFile(mediaUri).await()
+            val downloadUrl = storageRef.downloadUrl.await().toString()
+
+            val storyId = firestore.collection("stories").document().id
+            val story = Story(
+                storyId = storyId,
+                userId = uid,
+                username = username,
+                userProfileUrl = profileUrl,
+                mediaUrl = downloadUrl,
+                text = text,
+                filter = filter,
+                timestamp = Timestamp.now()
+            )
+
+            firestore.collection("stories").document(storyId).set(story).await()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
     suspend fun shareToStory(post: Post): Result<Unit> {
         return try {
             val uid = auth.currentUser?.uid ?: throw Exception("Non connecté")
@@ -57,7 +96,7 @@ class FeedRepository @Inject constructor(
                 "userId" to uid,
                 "username" to username,
                 "userProfileUrl" to (auth.currentUser?.photoUrl?.toString() ?: ""),
-                "imageUrl" to post.imageUrl,
+                "mediaUrl" to post.imageUrl, // Correction: imageUrl -> mediaUrl
                 "postId" to post.postId,
                 "timestamp" to FieldValue.serverTimestamp()
             )

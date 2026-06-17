@@ -38,6 +38,7 @@ import androidx.fragment.app.activityViewModels
 import coil.compose.AsyncImage
 import com.Groupe15.SocialApp.R
 import com.Groupe15.SocialApp.models.User
+import com.Groupe15.SocialApp.ui.theme.SocialAppTheme
 import com.Groupe15.SocialApp.viewmodel.FeedViewModel
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import dagger.hilt.android.AndroidEntryPoint
@@ -60,12 +61,17 @@ class ShareBottomSheet : BottomSheetDialogFragment() {
     ): View {
         return ComposeView(requireContext()).apply {
             setContent {
-                MaterialTheme {
-                    ShareScreen(
-                        viewModel = viewModel,
-                        postId = postId,
-                        onDismiss = { dismiss() }
-                    )
+                SocialAppTheme {
+                    Surface(
+                        color = MaterialTheme.colorScheme.surface,
+                        contentColor = MaterialTheme.colorScheme.onSurface
+                    ) {
+                        ShareScreen(
+                            viewModel = viewModel,
+                            postId = postId,
+                            onDismiss = { dismiss() }
+                        )
+                    }
                 }
             }
         }
@@ -101,7 +107,7 @@ fun ShareScreen(
             modifier = Modifier
                 .width(40.dp)
                 .height(4.dp)
-                .background(Color.LightGray, RoundedCornerShape(2.dp))
+                .background(MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(2.dp))
                 .align(Alignment.CenterHorizontally)
         )
 
@@ -115,17 +121,21 @@ fun ShareScreen(
         ) {
             Text(
                 text = "Share",
-                fontSize = 22.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color.Black
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold
             )
             IconButton(
                 onClick = onDismiss,
                 modifier = Modifier
                     .size(32.dp)
-                    .background(Color(0xFFF5F5F5), CircleShape)
+                    .background(MaterialTheme.colorScheme.surfaceVariant, CircleShape)
             ) {
-                Icon(Icons.Default.Close, contentDescription = "Close", modifier = Modifier.size(18.dp))
+                Icon(
+                    Icons.Default.Close,
+                    contentDescription = "Close",
+                    modifier = Modifier.size(18.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         }
 
@@ -135,8 +145,8 @@ fun ShareScreen(
         ShareActionButton(
             title = "Share to Story",
             iconRes = R.drawable.ic_add_circle,
-            containerColor = Color(0xFF6200EE),
-            contentColor = Color.White,
+            containerColor = MaterialTheme.colorScheme.primary,
+            contentColor = MaterialTheme.colorScheme.onPrimary,
             onClick = {
                 val post = viewModel.posts.value?.find { it.postId == postId }
                 if (post != null) {
@@ -153,8 +163,8 @@ fun ShareScreen(
         ShareActionButton(
             title = "Send in Message",
             iconRes = R.drawable.ic_send,
-            containerColor = Color.White,
-            contentColor = Color.Black,
+            containerColor = MaterialTheme.colorScheme.surface,
+            contentColor = MaterialTheme.colorScheme.onSurface,
             border = true,
             onClick = {
                 Toast.makeText(context, "Opening messages...", Toast.LENGTH_SHORT).show()
@@ -166,9 +176,9 @@ fun ShareScreen(
 
         Text(
             text = "RECENT CONTACTS",
-            fontSize = 12.sp,
+            style = MaterialTheme.typography.labelMedium,
             fontWeight = FontWeight.Bold,
-            color = Color.Gray,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             letterSpacing = 0.5.sp
         )
 
@@ -225,7 +235,7 @@ fun ShareActionButton(
             .height(64.dp),
         shape = RoundedCornerShape(12.dp),
         color = containerColor,
-        border = if (border) androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFEEEEEE)) else null
+        border = if (border) androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant) else null
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 20.dp),
@@ -234,7 +244,7 @@ fun ShareActionButton(
             Icon(
                 painter = painterResource(id = iconRes),
                 contentDescription = null,
-                tint = if (containerColor == Color.White) Color(0xFF6200EE) else Color.White,
+                tint = if (containerColor == MaterialTheme.colorScheme.primary) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.primary,
                 modifier = Modifier.size(24.dp)
             )
             Text(
@@ -242,14 +252,14 @@ fun ShareActionButton(
                 modifier = Modifier
                     .weight(1f)
                     .padding(start = 16.dp),
-                fontSize = 16.sp,
+                style = MaterialTheme.typography.bodyLarge,
                 fontWeight = FontWeight.Bold,
                 color = contentColor
             )
             Icon(
                 painter = painterResource(id = R.drawable.ic_chevron_right),
                 contentDescription = null,
-                tint = if (contentColor == Color.White) Color.White else Color.Gray,
+                tint = if (contentColor == MaterialTheme.colorScheme.onPrimary) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(20.dp)
             )
         }
@@ -273,7 +283,7 @@ fun RecentContactItem(user: User, onClick: () -> Unit) {
         Spacer(modifier = Modifier.height(8.dp))
         Text(
             text = user.displayName,
-            fontSize = 12.sp,
+            style = MaterialTheme.typography.bodySmall,
             textAlign = TextAlign.Center,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
@@ -291,17 +301,21 @@ fun ActionIconItem(label: String, iconRes: Int, onClick: () -> Unit) {
         Box(
             modifier = Modifier
                 .size(56.dp)
-                .background(Color(0xFFF0F2FF), CircleShape),
+                .background(MaterialTheme.colorScheme.secondaryContainer, CircleShape),
             contentAlignment = Alignment.Center
         ) {
             Icon(
                 painter = painterResource(id = iconRes),
                 contentDescription = label,
-                tint = Color.Black,
+                tint = MaterialTheme.colorScheme.onSecondaryContainer,
                 modifier = Modifier.size(24.dp)
             )
         }
         Spacer(modifier = Modifier.height(8.dp))
-        Text(text = label, fontSize = 12.sp, color = Color.Gray)
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 }
