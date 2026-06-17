@@ -19,4 +19,8 @@
         <item name="cornerSizeTopLeft">24dp</item>
         <item name="cornerSizeTopRight">24dp</item>
     </style>
+
+    <style name="CircleAppearance">
+        <item name="cornerSize">50%</item>
+    </style>
 </resources>

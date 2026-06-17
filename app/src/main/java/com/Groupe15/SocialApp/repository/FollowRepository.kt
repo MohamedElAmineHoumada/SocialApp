@@ -1,6 +1,7 @@
 package com.Groupe15.SocialApp.repository
 
 
+import com.Groupe15.SocialApp.models.User
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
@@ -123,6 +124,26 @@ class FollowRepository @Inject constructor(
                 .get()
                 .await()
             snapshot.documents.map { it.id }
+        } catch (e: Exception) {
+            emptyList()
+        }
+    }
+
+    suspend fun getFollowingUsers(uid: String): List<User> {
+        return try {
+            val followingIds = getFollowing(uid)
+            if (followingIds.isEmpty()) return emptyList()
+
+            // Firestore 'in' query supports up to 10 IDs. For a simple implementation, we can fetch them individually or in chunks.
+            // For now, let's fetch individually to keep it simple, or use 'whereIn' if we expect a small number.
+            val users = mutableListOf<User>()
+            for (id in followingIds) {
+                val doc = usersCollection.document(id).get().await()
+                doc.toObject(User::class.java)?.let {
+                    users.add(it.copy(id = doc.id))
+                }
+            }
+            users
         } catch (e: Exception) {
             emptyList()
         }

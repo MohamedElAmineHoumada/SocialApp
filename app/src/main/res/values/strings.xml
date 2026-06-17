@@ -1,16 +1,56 @@
 <resources>
-    <string name="app_name">SocialApp</string>
-    <string name="login_title">Bienvenue !</string>
-    <string name="register_title">Créer un compte</string>
-    <string name="feed_title">Fil d\'actualité</string>
-    <string name="profile_title">Profil</string>
-    <string name="btn_login">Se connecter</string>
-    <string name="btn_register">S\'inscrire</string>
-    <string name="go_register">Pas encore de compte ? S\'inscrire</string>
-    <string name="go_login">Déjà un compte ? Se connecter</string>
-    <!-- TODO: Remove or change this placeholder text -->
-    <string name="hello_blank_fragment">Hello blank fragment</string>
-    <item name="tvCommentUsername" type="id" />
-    <item name="tvCommentText" type="id" />
-    <item name="tvCommentTimestamp" type="id" />
+    <string name="app_name">AFN</string>
+    <string name="settings_title">Paramètres</string>
+    <string name="account_section">Compte</string>
+    <string name="private_account">Compte privé</string>
+    <string name="private_account_desc">Seuls vos abonnés peuvent voir vos posts</string>
+    <string name="reset_password">Réinitialiser le mot de passe</string>
+    <string name="preferences_section">Préférences</string>
+    <string name="change_language">Changer la langue</string>
+    <string name="notifications">Notifications</string>
+    <string name="danger_zone">Zone de danger</string>
+    <string name="delete_account">Supprimer le compte</string>
+    <string name="delete_account_desc">Cette action est irréversible</string>
+    <string name="cancel">Annuler</string>
+    <string name="nav_home">Accueil</string>
+    <string name="nav_messages">Messages</string>
+    <string name="nav_studio">Studio</string>
+    <string name="nav_network">Réseaux</string>
+    <string name="nav_profile">Profil</string>
+    <string name="reset_password_confirm">Voulez-vous envoyer un lien de réinitialisation à %1$s ?</string>
+    <string name="confirm">Confirmer</string>
+    <string name="delete_account_warning">Êtes-vous sûr de vouloir supprimer votre compte ? Cette action est irréversible.</string>
+    <string name="delete">Supprimer</string>
+    <string name="login">Connexion</string>
+    <string name="email">Email</string>
+    <string name="password">Mot de passe</string>
+    <string name="forgot_password_q">Mot de passe oublié ?</string>
+    <string name="dont_have_account">Pas encore de compte ?</string>
+    <string name="sign_up">S\'inscrire</string>
+    <string name="create_account">Créer un compte</string>
+    <string name="already_have_account">Déjà un compte ?</string>
+    <string name="log_in">Se connecter</string>
+    <string name="full_name">Nom complet</string>
+    <string name="agree_terms">J\'accepte les conditions d\'utilisation</string>
+    <string name="network">Réseau</string>
+    <string name="follow_requests">Demandes de suivi</string>
+    <string name="suggestions_for_you">Suggestions pour vous</string>
+    <string name="accept">Accepter</string>
+    <string name="decline">Refuser</string>
+    <string name="follow">Suivre</string>
+    <string name="see_all">Voir tout</string>
+    <string name="search">Rechercher</string>
+    <string name="back">Retour</string>
+    <string name="no_posts">Aucun post pour le moment</string>
+    <string name="your_story">Votre story</string>
+    <string name="edit_profile">Modifier le profil</string>
+    <string name="message">Message</string>
+    <string name="posts_stat">Posts</string>
+    <string name="followers_stat">Abonnés</string>
+    <string name="following_stat">Abonnements</string>
+    <string name="unfollow">Se désabonner</string>
+    <string name="active_now">En ligne</string>
+    <string name="type_message">Écrivez un message...</string>
+    <string name="hold_to_record">Maintenez pour enregistrer</string>
+    <string name="splash_tagline">Connectez-vous avec le monde</string>
 </resources>
