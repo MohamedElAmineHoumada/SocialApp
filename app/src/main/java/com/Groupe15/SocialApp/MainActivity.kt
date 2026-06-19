@@ -164,13 +164,11 @@ fun MainScreen() {
             ) { backStackEntry ->
                 val uid = backStackEntry.arguments?.getString("uid") ?: ""
                 ProfileScreen(
-                    viewModel = hiltViewModel<ProfileViewModel>(),
-                    followViewModel = hiltViewModel<FollowViewModel>(),
+                    viewModel = hiltViewModel<ProfileViewModel>(),                    followViewModel = hiltViewModel<FollowViewModel>(),
                     targetUid = uid,
                     onEditProfile = { navController.navigate("editProfile") },
                     onSettings = { navController.navigate("settings") },
-                    onMessage = { name: String -> navController.navigate("chat/$uid/$name") },
-                    onNavigateToProfile = { otherUid: String -> navController.navigate("profile/$otherUid") } // ✅ NOUVEAU
+                    onMessage = { name: String -> navController.navigate("chat/$uid/$name") }
                 )
             }
             composable("discover") {
@@ -202,9 +200,7 @@ fun MainScreen() {
                     viewModel = hiltViewModel<AuthViewModel>(),
                     onBack = { navController.popBackStack() },
                     onShowToast = { /* Handle toast */ },
-                    onAccountDeleted = { navController.navigate("login") { popUpTo(0) { inclusive = true } } },
-                    onLoggedOut = { navController.navigate("login") { popUpTo(0) { inclusive = true } } }
-
+                    onAccountDeleted = { /* Exit app or logout */ }
                 )
             }
             composable(

@@ -12,7 +12,8 @@ data class User(
     val followersCount: Int = 0,
     val followingCount: Int = 0,
     val postsCount: Int = 0,
-    val isPrivate: Boolean = false
+    val isPrivate: Boolean = false,
+    val role: String = "" // ex: "UI/UX Designer", "Product Manager" — affiché dans les suggestions
 ) {
     // Constructeur vide requis par Firestore
     constructor() : this("")

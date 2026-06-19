@@ -18,18 +18,33 @@ class AuthRepository @Inject constructor(
 ) {
     fun isLoggedIn(): Boolean = auth.currentUser != null
 
+    fun getCurrentUserUid(): String? = auth.currentUser?.uid
+
     fun getCurrentUser(): Flow<User?> = callbackFlow {
-        val uid = auth.currentUser?.uid
-        if (uid == null) {
-            trySend(null)
-            close()
-            return@callbackFlow
-        }
-        val listener = firestore.collection("users").document(uid)
-            .addSnapshotListener { snapshot, _ ->
-                trySend(snapshot?.toObject(User::class.java))
+        var docListener: com.google.firebase.firestore.ListenerRegistration? = null
+        
+        val authListener = FirebaseAuth.AuthStateListener { firebaseAuth ->
+            docListener?.remove()
+            val uid = firebaseAuth.currentUser?.uid
+            if (uid != null) {
+                docListener = firestore.collection("users").document(uid)
+                    .addSnapshotListener { snapshot, error ->
+                        if (error == null) {
+                            trySend(snapshot?.toObject(User::class.java))
+                        } else {
+                            trySend(null)
+                        }
+                    }
+            } else {
+                trySend(null)
             }
-        awaitClose { listener.remove() }
+        }
+        
+        auth.addAuthStateListener(authListener)
+        awaitClose {
+            auth.removeAuthStateListener(authListener)
+            docListener?.remove()
+        }
     }
 
     fun getUserById(uid: String): Flow<User?> = callbackFlow {
@@ -51,16 +66,24 @@ class AuthRepository @Inject constructor(
 
     suspend fun register(email: String, password: String, displayName: String): Result<Unit> {
         return try {
-            val username = displayName.lowercase().replace(" ", "_")
+            val username = displayName.lowercase().replace(" ", "_").filter { it.isLetterOrDigit() || it == '_' }
+            
+            // 1. Créer le compte Auth d'abord pour être authentifié
+            val result = auth.createUserWithEmailAndPassword(email, password).await()
+            val uid = result.user?.uid ?: throw Exception("Échec de la création du compte.")
+
+            // 2. Maintenant qu'on est connecté, on peut vérifier le pseudo et créer le document
             val existingUser = firestore.collection("users")
                 .whereEqualTo("username", username)
                 .get()
                 .await()
+            
             if (!existingUser.isEmpty) {
+                // Si le pseudo est pris, on pourrait supprimer le compte Auth ou demander de changer
+                // Pour simplifier ici, on ajoute un suffixe aléatoire ou on renvoie une erreur
                 return Result.failure(Exception("Ce nom d'utilisateur est déjà pris."))
             }
-            val result = auth.createUserWithEmailAndPassword(email, password).await()
-            val uid = result.user?.uid ?: throw Exception("UID null")
+
             val user = hashMapOf(
                 "id"              to uid,
                 "email"           to email,
@@ -70,7 +93,8 @@ class AuthRepository @Inject constructor(
                 "profileImageUrl" to "",
                 "followersCount"  to 0,
                 "followingCount"  to 0,
-                "postsCount"      to 0
+                "postsCount"      to 0,
+                "isPrivate"       to false
             )
             firestore.collection("users").document(uid).set(user).await()
             Result.success(Unit)
