@@ -30,7 +30,6 @@ fun ProfileScreen(
     val followState by followViewModel.followState.collectAsState()
 
     LaunchedEffect(targetUid) {
-        viewModel.loadProfile(targetUid, currentUid = "")
         if (targetUid.isNotEmpty()) {
             followViewModel.checkIsFollowing(targetUid)
         }

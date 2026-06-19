@@ -28,14 +28,18 @@ class ProfileViewModel @Inject constructor(
     val isFollowing: StateFlow<Boolean> = _isFollowing.asStateFlow()
 
     fun loadProfile(targetUid: String, currentUid: String) {
-        _isOwnProfile.value = targetUid == currentUid || targetUid.isEmpty()
+        val finalTargetUid = if (targetUid.isEmpty() || targetUid == "YOUR_USER_ID") currentUid else targetUid
+        _isOwnProfile.value = finalTargetUid == currentUid || finalTargetUid.isEmpty()
+        
         viewModelScope.launch {
-            if (targetUid.isEmpty() || targetUid == currentUid) {
+            if (finalTargetUid.isEmpty()) return@launch
+
+            if (finalTargetUid == currentUid) {
                 authRepository.getCurrentUser().collect { user ->
                     _currentUser.value = user
                 }
             } else {
-                authRepository.getUserById(targetUid).collect { user ->
+                authRepository.getUserById(finalTargetUid).collect { user ->
                     _currentUser.value = user
                 }
             }

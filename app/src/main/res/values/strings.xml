@@ -52,5 +52,8 @@
     <string name="active_now">En ligne</string>
     <string name="type_message">Écrivez un message...</string>
     <string name="hold_to_record">Maintenez pour enregistrer</string>
+    <string name="facebook_app_id">2009154023018996</string>
+    <string name="fb_login_protocol_scheme">fbTON_APP_ID_FACEBOOK</string>
+    <string name="facebook_client_token">TON_CLIENT_TOKEN_FACEBOOK</string>
     <string name="splash_tagline">Connectez-vous avec le monde</string>
 </resources>
