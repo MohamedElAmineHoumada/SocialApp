@@ -27,6 +27,8 @@ class AuthViewModel @Inject constructor(
 
     fun isLoggedIn() = authRepository.isLoggedIn()
 
+    fun getCurrentUserUid() = authRepository.getCurrentUserUid()
+
     fun signOut() = authRepository.logout()
 
     fun resetPassword(email: String) {
