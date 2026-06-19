@@ -53,7 +53,12 @@
     <string name="type_message">Écrivez un message...</string>
     <string name="hold_to_record">Maintenez pour enregistrer</string>
     <string name="facebook_app_id">2009154023018996</string>
-    <string name="fb_login_protocol_scheme">fbTON_APP_ID_FACEBOOK</string>
-    <string name="facebook_client_token">TON_CLIENT_TOKEN_FACEBOOK</string>
+    <string name="fb_login_protocol_scheme">fb2009154023018996</string>
+    <string name="facebook_client_token">c804110364840ddf62a32e4b5212c949</string>
     <string name="splash_tagline">Connectez-vous avec le monde</string>
+    <!--
+        IMPORTANT : remplacez cette valeur par le "Web client ID" de votre projet Firebase.
+        Trouvez-le dans : Firebase Console → Authentication → Sign-in method → Google → Web SDK configuration
+    -->
+    <string name="default_web_client_id">137216888053-sbc9e9rvhq92eo36bqhqf1sed35mu9ti.apps.googleusercontent.com.apps.googleusercontent.com</string>
 </resources>
