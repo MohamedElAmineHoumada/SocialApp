@@ -38,9 +38,9 @@ import com.Groupe15.SocialApp.ui.messages.*
 import com.Groupe15.SocialApp.ui.network.*
 import com.Groupe15.SocialApp.ui.discover.*
 import com.Groupe15.SocialApp.ui.post.*
-import com.Groupe15.SocialApp.ui.story.*
 import dagger.hilt.android.AndroidEntryPoint
 import com.Groupe15.SocialApp.viewmodel.*
+
 @AndroidEntryPoint
 class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -51,7 +51,7 @@ class MainActivity : AppCompatActivity() {
             else AppCompatDelegate.MODE_NIGHT_NO
         )
         super.onCreate(savedInstanceState)
-        
+
         setContent {
             SocialAppTheme(darkTheme = isDarkMode) {
                 MainScreen()
@@ -73,17 +73,22 @@ fun MainScreen() {
         "editProfile", "settings"
     )
 
-    val showBottomNav = currentDestination?.route !in noBottomBarRoutes && 
-                       currentDestination?.route?.contains("chat/") == false
+    val showBottomNav = currentDestination?.route !in noBottomBarRoutes &&
+            currentDestination?.route?.contains("chat/") == false
 
     Scaffold(
         bottomBar = {
-            AnimatedVisibility(
-                visible = showBottomNav,
-                enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
-                exit = slideOutVertically(targetOffsetY = { it }) + fadeOut()
-            ) {
-                CustomBottomNavigation(navController, currentDestination)
+            if (showBottomNav) {
+                val networkViewModel = hiltViewModel<NetworkViewModel>()
+                val followRequests by networkViewModel.followRequests.collectAsState()
+
+                AnimatedVisibility(
+                    visible = true,
+                    enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
+                    exit = slideOutVertically(targetOffsetY = { it }) + fadeOut()
+                ) {
+                    CustomBottomNavigation(navController, currentDestination, followRequests.size)
+                }
             }
         }
     ) { padding ->
@@ -95,7 +100,7 @@ fun MainScreen() {
             composable("login") {
                 LoginScreen(
                     viewModel = hiltViewModel(),
-                    onLoginClick = { e, p -> /* logic in screen */ },
+                    onLoginClick = { _, _ -> /* logic in screen */ },
                     onGoogleClick = { /* logic in fragment/activity */ },
                     onFacebookClick = { /* logic in fragment/activity */ },
                     onRegisterClick = { navController.navigate("register") },
@@ -109,7 +114,7 @@ fun MainScreen() {
             composable("register") {
                 RegisterScreen(
                     viewModel = hiltViewModel<RegisterViewModel>(),
-                    onRegisterClick = { e: String, p: String, u: String -> /* logic in screen */ },
+                    onRegisterClick = { _, _, _ -> /* logic in screen */ },
                     onLoginClick = { navController.popBackStack() },
                     onSuccess = { navController.navigate("onboardingWelcome") }
                 )
@@ -134,7 +139,7 @@ fun MainScreen() {
             composable("onboardingInterests") {
                 OnboardingInterestsScreen(
                     onBack = { navController.popBackStack() },
-                    onFinish = { 
+                    onFinish = {
                         navController.navigate("feed") {
                             popUpTo("onboardingWelcome") { inclusive = true }
                         }
@@ -143,7 +148,8 @@ fun MainScreen() {
             }
             composable("feed") {
                 FeedScreen(
-                    viewModel = hiltViewModel<FeedViewModel>(),                    onNavigateToDiscover = { navController.navigate("discover") },
+                    viewModel = hiltViewModel<FeedViewModel>(),
+                    onNavigateToDiscover = { navController.navigate("discover") },
                     onNavigateToProfile = { uid: String -> navController.navigate("profile/$uid") },
                     onCommentClick = { /* logic for bottom sheet */ },
                     onShareClick = { /* logic for bottom sheet */ }
@@ -156,19 +162,46 @@ fun MainScreen() {
                 )
             }
             composable("network") {
-                NetworkScreen(onBack = { navController.popBackStack() })
+                val networkViewModel = hiltViewModel<NetworkViewModel>()
+                val followRequests by networkViewModel.followRequests.collectAsState()
+                val suggestions by networkViewModel.suggestions.collectAsState()
+
+                NetworkScreen(
+                    followRequests = followRequests,
+                    suggestions = suggestions,
+                    onAcceptRequest = { id -> networkViewModel.onAcceptRequest(id) },
+                    onDeclineRequest = { id -> networkViewModel.onDeclineRequest(id) },
+                    onFollowUser = { uid -> networkViewModel.onFollowUser(uid) }
+                )
             }
             composable(
                 "profile/{uid}",
                 arguments = listOf(navArgument("uid") { defaultValue = "" })
             ) { backStackEntry ->
                 val uid = backStackEntry.arguments?.getString("uid") ?: ""
+                val authViewModel = hiltViewModel<AuthViewModel>()
+                val profileViewModel = hiltViewModel<ProfileViewModel>()
+
+                val effectiveUid = if (uid.isEmpty() || uid == "YOUR_USER_ID") {
+                    authViewModel.getCurrentUserUid() ?: ""
+                } else {
+                    uid
+                }
+
+                LaunchedEffect(effectiveUid) {
+                    if (effectiveUid.isNotEmpty()) {
+                        profileViewModel.loadProfile(effectiveUid)
+                    }
+                }
+
                 ProfileScreen(
-                    viewModel = hiltViewModel<ProfileViewModel>(),                    followViewModel = hiltViewModel<FollowViewModel>(),
-                    targetUid = uid,
+                    viewModel = profileViewModel,
+                    followViewModel = hiltViewModel<FollowViewModel>(),
+                    targetUid = effectiveUid,
                     onEditProfile = { navController.navigate("editProfile") },
                     onSettings = { navController.navigate("settings") },
-                    onMessage = { name: String -> navController.navigate("chat/$uid/$name") }
+                    onMessage = { name: String -> navController.navigate("chat/$effectiveUid/$name") },
+                    onNavigateToProfile = { otherUid: String -> navController.navigate("profile/$otherUid") }
                 )
             }
             composable("discover") {
@@ -194,8 +227,6 @@ fun MainScreen() {
                 )
             }
             composable("settings") {
-                // Note: SettingsScreen and its ViewModel need to be implemented
-                // For now, using AuthViewModel as a placeholder if applicable or specify the intended type
                 SettingsScreen(
                     viewModel = hiltViewModel<AuthViewModel>(),
                     onBack = { navController.popBackStack() },
@@ -219,13 +250,16 @@ fun MainScreen() {
                     onShowToast = { }
                 )
             }
-            // Other routes...
         }
     }
 }
 
 @Composable
-fun CustomBottomNavigation(navController: NavController, currentDestination: NavDestination?) {
+fun CustomBottomNavigation(
+    navController: NavController,
+    currentDestination: NavDestination?,
+    badgeCount: Int
+) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -261,7 +295,7 @@ fun CustomBottomNavigation(navController: NavController, currentDestination: Nav
                 onClick = { navController.navigate("messages") }
             )
 
-            // Studio
+            // Studio / Create Post Button
             Box(
                 modifier = Modifier
                     .weight(1.2f)
@@ -305,6 +339,7 @@ fun CustomBottomNavigation(navController: NavController, currentDestination: Nav
                 selected = currentDestination?.hierarchy?.any { it.route == "network" } == true,
                 activeColor = activeColor,
                 inactiveColor = inactiveColor,
+                badgeCount = badgeCount,
                 onClick = { navController.navigate("network") }
             )
 
@@ -329,6 +364,7 @@ fun BottomNavItem(
     selected: Boolean,
     activeColor: Color,
     inactiveColor: Color,
+    badgeCount: Int = 0,
     onClick: () -> Unit
 ) {
     Column(
@@ -338,12 +374,31 @@ fun BottomNavItem(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Icon(
-            painter = painterResource(iconRes),
-            contentDescription = null,
-            tint = if (selected) activeColor else inactiveColor,
-            modifier = Modifier.size(22.dp)
-        )
+        Box {
+            Icon(
+                painter = painterResource(iconRes),
+                contentDescription = null,
+                tint = if (selected) activeColor else inactiveColor,
+                modifier = Modifier.size(22.dp)
+            )
+            if (badgeCount > 0) {
+                Surface(
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .offset(x = 8.dp, y = (-4).dp),
+                    color = Color.Red,
+                    shape = RoundedCornerShape(10.dp)
+                ) {
+                    Text(
+                        text = if (badgeCount > 99) "99+" else badgeCount.toString(),
+                        color = Color.White,
+                        fontSize = 8.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
+                    )
+                }
+            }
+        }
         Spacer(modifier = Modifier.height(4.dp))
         Text(
             text = label,
