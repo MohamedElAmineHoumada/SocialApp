@@ -39,6 +39,9 @@ class EditProfileViewModel @Inject constructor(
 
     private var newImageUri: Uri? = null
 
+    // URI de la nouvelle image de couverture sélectionnée
+    private var newCoverUri: Uri? = null
+
     init {
         viewModelScope.launch {
             authRepository.getCurrentUser().collect { user ->
@@ -51,6 +54,11 @@ class EditProfileViewModel @Inject constructor(
         newImageUri = uri
     }
 
+    // Appelé quand l'utilisateur choisit une nouvelle image de couverture
+    fun setNewCoverImage(uri: Uri) {
+        newCoverUri = uri
+    }
+
     fun saveProfile(displayName: String, username: String, bio: String, website: String) {
         if (_isSaving.value) return
         viewModelScope.launch {
@@ -59,12 +67,20 @@ class EditProfileViewModel @Inject constructor(
             try {
                 val uid = auth.currentUser?.uid ?: throw Exception("Non connecté")
 
-                // Upload nouvelle photo si sélectionnée
+                // Upload nouvelle photo de profil si sélectionnée
                 var profileImageUrl = _currentUser.value?.profileImageUrl ?: ""
                 newImageUri?.let { uri ->
                     val ref = storage.reference.child("avatars/$uid/${UUID.randomUUID()}.jpg")
                     ref.putFile(uri).await()
                     profileImageUrl = ref.downloadUrl.await().toString()
+                }
+
+                // Upload nouvelle photo de couverture si sélectionnée
+                var coverImageUrl = _currentUser.value?.coverImageUrl ?: ""
+                newCoverUri?.let { uri ->
+                    val ref = storage.reference.child("covers/$uid/${UUID.randomUUID()}.jpg")
+                    ref.putFile(uri).await()
+                    coverImageUrl = ref.downloadUrl.await().toString()
                 }
 
                 // Mettre à jour Firestore
@@ -73,7 +89,8 @@ class EditProfileViewModel @Inject constructor(
                     "username"        to username,
                     "bio"             to bio,
                     "website"         to website,
-                    "profileImageUrl" to profileImageUrl
+                    "profileImageUrl" to profileImageUrl,
+                    "coverImageUrl"   to coverImageUrl
                 )
                 firestore.collection("users").document(uid).update(updates).await()
                 _saveSuccess.value = true

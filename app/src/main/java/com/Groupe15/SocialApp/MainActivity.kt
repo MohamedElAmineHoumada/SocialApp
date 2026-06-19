@@ -81,7 +81,7 @@ fun MainScreen() {
             if (showBottomNav) {
                 val networkViewModel = hiltViewModel<NetworkViewModel>()
                 val followRequests by networkViewModel.followRequests.collectAsState()
-                
+
                 AnimatedVisibility(
                     visible = true,
                     enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
@@ -181,7 +181,7 @@ fun MainScreen() {
                 val uid = backStackEntry.arguments?.getString("uid") ?: ""
                 val authViewModel = hiltViewModel<AuthViewModel>()
                 val profileViewModel = hiltViewModel<ProfileViewModel>()
-                
+
                 val effectiveUid = if (uid.isEmpty() || uid == "YOUR_USER_ID") {
                     authViewModel.getCurrentUserUid() ?: ""
                 } else {
@@ -190,7 +190,7 @@ fun MainScreen() {
 
                 LaunchedEffect(effectiveUid) {
                     if (effectiveUid.isNotEmpty()) {
-                        profileViewModel.loadProfile(effectiveUid, authViewModel.getCurrentUserUid() ?: "")
+                        profileViewModel.loadProfile(effectiveUid)
                     }
                 }
 
@@ -200,7 +200,8 @@ fun MainScreen() {
                     targetUid = effectiveUid,
                     onEditProfile = { navController.navigate("editProfile") },
                     onSettings = { navController.navigate("settings") },
-                    onMessage = { name: String -> navController.navigate("chat/$effectiveUid/$name") }
+                    onMessage = { name: String -> navController.navigate("chat/$effectiveUid/$name") },
+                    onNavigateToProfile = { otherUid: String -> navController.navigate("profile/$otherUid") }
                 )
             }
             composable("discover") {
