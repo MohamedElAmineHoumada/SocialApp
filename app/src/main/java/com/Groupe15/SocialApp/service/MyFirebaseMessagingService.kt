@@ -88,5 +88,13 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
 
     override fun onNewToken(token: String) {
         super.onNewToken(token)
+        // Note: Idéalement, on injecte AuthRepository ici via Hilt ou on utilise FirebaseFirestore directement
+        // Pour rester simple et efficace :
+        val uid = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid
+        if (uid != null) {
+            com.google.firebase.firestore.FirebaseFirestore.getInstance()
+                .collection("users").document(uid)
+                .update("fcmToken", token)
+        }
     }
 }

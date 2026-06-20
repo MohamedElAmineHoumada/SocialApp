@@ -105,7 +105,7 @@ fun LoginScreen(
                 ),
                 keyboardActions = KeyboardActions(onDone = {
                     focusManager.clearFocus()
-                    if (email.isNotBlank() && password.isNotBlank()) viewModel.login(email, password)
+                    if (email.isNotBlank() && password.isNotBlank()) onLoginClick(email, password)
                 })
             )
 
@@ -118,7 +118,7 @@ fun LoginScreen(
 
             // ── Bouton Se connecter ────────────────────────────────────────
             Button(
-                onClick = { viewModel.login(email, password) },
+                onClick = { onLoginClick(email, password) },
                 modifier = Modifier.fillMaxWidth().height(56.dp),
                 shape = RoundedCornerShape(12.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
@@ -215,12 +215,27 @@ fun CustomLoginTextField(
     keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
     keyboardActions: KeyboardActions = KeyboardActions.Default
 ) {
+    var passwordVisible by remember { mutableStateOf(false) }
+
     TextField(
         value = value,
         onValueChange = onValueChange,
         modifier = Modifier.fillMaxWidth(),
         placeholder = { Text(placeholder, color = Color.Gray) },
         leadingIcon = { Icon(imageVector = leadingIcon, contentDescription = null, tint = Color.Gray) },
+        trailingIcon = {
+            if (isPassword) {
+                val image = if (passwordVisible)
+                    Icons.Filled.Visibility
+                else Icons.Filled.VisibilityOff
+
+                val description = if (passwordVisible) "Masquer le mot de passe" else "Afficher le mot de passe"
+
+                IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                    Icon(imageVector = image, contentDescription = description, tint = Color.Gray)
+                }
+            }
+        },
         shape = RoundedCornerShape(12.dp),
         colors = TextFieldDefaults.colors(
             focusedContainerColor = Color(0xFFF0F2FA),
@@ -228,7 +243,7 @@ fun CustomLoginTextField(
             focusedIndicatorColor = Color.Transparent,
             unfocusedIndicatorColor = Color.Transparent
         ),
-        visualTransformation = if (isPassword) PasswordVisualTransformation()
+        visualTransformation = if (isPassword && !passwordVisible) PasswordVisualTransformation()
         else androidx.compose.ui.text.input.VisualTransformation.None,
         singleLine = true,
         keyboardOptions = keyboardOptions,

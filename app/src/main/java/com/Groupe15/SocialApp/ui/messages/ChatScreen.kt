@@ -70,6 +70,7 @@ fun ChatScreen(
     val scope = rememberCoroutineScope()
 
     var showGifPicker by remember { mutableStateOf(false) }
+    var showEmojiPicker by remember { mutableStateOf(false) }
     var isRecording by remember { mutableStateOf(false) }
     val sheetState = rememberModalBottomSheetState()
     val keyboardController = LocalSoftwareKeyboardController.current
@@ -123,7 +124,9 @@ fun ChatScreen(
                 },
                 onEmojiClick = { 
                     Log.d("ChatInput", "Button clicked: Emoji")
-                    textState += "😊" 
+                    focusManager.clearFocus()
+                    keyboardController?.hide()
+                    showEmojiPicker = true
                 },
                 onGifClick = { 
                     Log.d("ChatInput", "Button clicked: GIF")
@@ -168,6 +171,22 @@ fun ChatScreen(
         }
     }
 
+    if (showEmojiPicker) {
+        ModalBottomSheet(
+            onDismissRequest = { showEmojiPicker = false },
+            sheetState = sheetState,
+            containerColor = MaterialTheme.colorScheme.surface,
+            tonalElevation = 8.dp
+        ) {
+            EmojiPickerContent(
+                onEmojiSelected = { emoji ->
+                    textState += emoji
+                    showEmojiPicker = false
+                }
+            )
+        }
+    }
+
     if (showGifPicker) {
         Log.d("ChatScreen", "Rendering ModalBottomSheet")
         ModalBottomSheet(
@@ -186,6 +205,49 @@ fun ChatScreen(
                     showGifPicker = false
                 }
             )
+        }
+    }
+}
+
+// ── Emoji Picker Content ──────────────────────────────────────────────────
+@Composable
+fun EmojiPickerContent(onEmojiSelected: (String) -> Unit) {
+    val emojis = listOf(
+        "😊", "😂", "🤣", "❤️", "😍", "😒", "😭", "😘", "😩", "😔",
+        "😎", "🤓", "🥳", "😡", "😱", "🤔", "🤫", "🤥", "😴", "🤢",
+        "🔥", "✨", "⭐", "🌈", "🍎", "🍕", "🍔", "🍦", "⚽", "🏀",
+        "🚗", "✈️", "🏠", "💻", "📱", "💡", "🎉", "🎁", "🚩", "🏁"
+    )
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(bottom = 32.dp, start = 16.dp, end = 16.dp, top = 8.dp)
+    ) {
+        Text(
+            text = "Choose an Emoji",
+            style = MaterialTheme.typography.titleMedium,
+            modifier = Modifier.padding(bottom = 16.dp)
+        )
+
+        LazyVerticalGrid(
+            columns = GridCells.Fixed(5),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.height(300.dp)
+        ) {
+            items(emojis) { emoji ->
+                Box(
+                    modifier = Modifier
+                        .aspectRatio(1f)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(MaterialTheme.colorScheme.surfaceVariant)
+                        .clickable { onEmojiSelected(emoji) },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(text = emoji, fontSize = 28.sp)
+                }
+            }
         }
     }
 }

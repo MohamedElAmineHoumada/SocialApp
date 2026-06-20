@@ -84,6 +84,35 @@ class MessageRepository @Inject constructor(
 
         val lastMessage = if (type == MessageType.IMAGE) "Sent an image" else text
         updateConversationSummary(chatId, senderId, receiverId, lastMessage)
+
+        // Send Push Notification
+        sendPushNotification(receiverId, "Nouveau message", lastMessage, senderId)
+    }
+
+    private suspend fun sendPushNotification(receiverId: String, title: String, body: String, senderId: String) {
+        try {
+            val userDoc = firestore.collection("users").document(receiverId).get().await()
+            val fcmToken = userDoc.getString("fcmToken")
+            
+            if (!fcmToken.isNullOrBlank()) {
+                // Ici, normalement on appelle une Cloud Function ou un backend.
+                // Pour l'exemple, on crée un document dans une collection "outgoing_notifications"
+                // qu'une Cloud Function pourrait écouter.
+                val pushData = hashMapOf(
+                    "to" to fcmToken,
+                    "title" to title,
+                    "body" to body,
+                    "data" to mapOf(
+                        "otherUserId" to senderId,
+                        "type" to "message"
+                    ),
+                    "timestamp" to Timestamp.now()
+                )
+                firestore.collection("outgoing_notifications").add(pushData)
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
 
     suspend fun markLastMessageAsRead(chatId: String) {

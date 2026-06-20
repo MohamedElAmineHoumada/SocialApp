@@ -30,7 +30,6 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.Groupe15.SocialApp.R
-import com.Groupe15.SocialApp.viewmodel.AuthState
 import com.Groupe15.SocialApp.viewmodel.RegisterViewModel
 import com.facebook.CallbackManager
 import com.facebook.FacebookCallback
@@ -262,7 +261,7 @@ fun RegisterScreen(
 
         // Main Button
         Button(
-            onClick = { viewModel.register(email, password, fullName) },
+            onClick = { onRegisterClick(email, password, fullName) },
             modifier = Modifier
                 .fillMaxWidth()
                 .height(56.dp),
