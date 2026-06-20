@@ -171,14 +171,15 @@ fun ConversationItem(conversation: Conversation, onClick: () -> Unit) {
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = conversation.username,
-                fontWeight = FontWeight.SemiBold,
+                fontWeight = if (conversation.hasUnread) FontWeight.Bold else FontWeight.SemiBold,
                 fontSize = 15.sp,
                 color = MaterialTheme.colorScheme.onSurface
             )
             Spacer(modifier = Modifier.height(3.dp))
             Text(
                 text = conversation.lastMessage,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = if (conversation.hasUnread) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
+                fontWeight = if (conversation.hasUnread) FontWeight.Medium else FontWeight.Normal,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 fontSize = 13.sp
@@ -187,11 +188,22 @@ fun ConversationItem(conversation: Conversation, onClick: () -> Unit) {
 
         Spacer(modifier = Modifier.width(8.dp))
 
-        Text(
-            text = conversation.timestamp,
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            fontSize = 11.sp
-        )
+        Column(horizontalAlignment = Alignment.End) {
+            Text(
+                text = conversation.timestamp,
+                style = MaterialTheme.typography.labelSmall,
+                color = if (conversation.hasUnread) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                fontSize = 11.sp
+            )
+            if (conversation.hasUnread) {
+                Spacer(modifier = Modifier.height(4.dp))
+                Box(
+                    modifier = Modifier
+                        .size(8.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.primary)
+                )
+            }
+        }
     }
 }

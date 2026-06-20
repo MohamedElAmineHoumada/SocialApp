@@ -69,7 +69,7 @@ class MessagesViewModel @Inject constructor(
                                 lastMessage = summary.lastMessage,
                                 timestamp = formatTimestamp(summary.lastMessageTimestamp.toDate().time),
                                 isOnline = false,
-                                hasUnread = false
+                                hasUnread = summary.lastSenderId != currentUserId && !summary.isLastMessageRead
                             )
                         } catch (e: Exception) {
                             null

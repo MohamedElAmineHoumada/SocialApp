@@ -5,6 +5,7 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.Groupe15.SocialApp.models.Message
+import com.Groupe15.SocialApp.models.MessageType
 import com.Groupe15.SocialApp.repository.MessageRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.catch
@@ -49,15 +50,26 @@ class ChatViewModel @Inject constructor(
                 }
                 .collect { messages ->
                     _messages.value = messages
+                    markAsRead()
                 }
         }
     }
 
+    private fun markAsRead() {
+        viewModelScope.launch {
+            try {
+                messageRepository.markLastMessageAsRead(currentChatId)
+            } catch (e: Exception) {
+                // Ignore
+            }
+        }
+    }
+
     /**
-     * Envoie un message texte vers Firestore.
+     * Envoie un message texte ou image vers Firestore.
      */
-    fun sendMessage(text: String) {
-        if (text.isBlank()) return
+    fun sendMessage(text: String, type: MessageType = MessageType.TEXT, imageUrl: String = "") {
+        if (text.isBlank() && type == MessageType.TEXT) return
         viewModelScope.launch {
             try {
                 _sendStatus.value = SendStatus.Sending
@@ -65,7 +77,9 @@ class ChatViewModel @Inject constructor(
                     chatId = currentChatId,
                     senderId = currentUserId,
                     receiverId = otherUserId,
-                    text = text.trim()
+                    text = text.trim(),
+                    type = type,
+                    imageUrl = imageUrl
                 )
                 _sendStatus.value = SendStatus.Success
             } catch (e: Exception) {

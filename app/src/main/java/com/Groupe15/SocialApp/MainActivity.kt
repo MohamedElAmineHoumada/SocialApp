@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
@@ -69,7 +70,7 @@ fun MainScreen() {
     val noBottomBarRoutes = listOf(
         "login", "register", "forgotPassword", "onboardingWelcome",
         "onboardingDob", "onboardingGender", "onboardingInterests",
-        "chat/{chatId}/{userName}", "createPost", "createStory", "storyViewer",
+        "chat/{otherUserId}/{userName}", "createPost", "createStory", "storyViewer",
         "editProfile", "settings"
     )
 
@@ -80,14 +81,23 @@ fun MainScreen() {
         bottomBar = {
             if (showBottomNav) {
                 val networkViewModel = hiltViewModel<NetworkViewModel>()
+                val messagesViewModel = hiltViewModel<MessagesViewModel>()
                 val followRequests by networkViewModel.followRequests.collectAsState()
+                val conversations by messagesViewModel.conversations.observeAsState(initial = emptyList<Conversation>())
                 
+                val unreadMessagesCount = conversations.count { it.hasUnread }
+
                 AnimatedVisibility(
                     visible = true,
                     enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
                     exit = slideOutVertically(targetOffsetY = { it }) + fadeOut()
                 ) {
-                    CustomBottomNavigation(navController, currentDestination, followRequests.size)
+                    CustomBottomNavigation(
+                        navController = navController,
+                        currentDestination = currentDestination,
+                        networkBadgeCount = followRequests.size,
+                        messagesBadgeCount = unreadMessagesCount
+                    )
                 }
             }
         }
@@ -234,19 +244,44 @@ fun MainScreen() {
                 )
             }
             composable(
-                "chat/{chatId}/{userName}",
+                "chat/{otherUserId}/{userName}",
                 arguments = listOf(
-                    navArgument("chatId") { type = NavType.StringType },
+                    navArgument("otherUserId") { type = NavType.StringType },
                     navArgument("userName") { type = NavType.StringType }
                 )
             ) { backStackEntry ->
+                val otherUserId = backStackEntry.arguments?.getString("otherUserId") ?: ""
                 val userName = backStackEntry.arguments?.getString("userName") ?: "Chat"
+                val authViewModel = hiltViewModel<AuthViewModel>()
+                val currentUserId = authViewModel.getCurrentUserUid() ?: ""
+
+                val context = androidx.compose.ui.platform.LocalContext.current
                 ChatScreen(
                     viewModel = hiltViewModel(),
-                    currentUserId = "USER_ID", // TODO: Get actual UID
+                    currentUserId = currentUserId,
+                    otherUserId = otherUserId,
                     userName = userName,
                     onBack = { navController.popBackStack() },
-                    onShowToast = { }
+                    onCall = { isVideo -> navController.navigate("call/$userName/$isVideo") },
+                    onShowToast = { msg ->
+                        android.widget.Toast.makeText(context, msg, android.widget.Toast.LENGTH_SHORT).show()
+                    }
+                )
+            }
+            composable(
+                "call/{userName}/{isVideo}",
+                arguments = listOf(
+                    navArgument("userName") { type = NavType.StringType },
+                    navArgument("isVideo") { type = NavType.BoolType }
+                )
+            ) { backStackEntry ->
+                val userName = backStackEntry.arguments?.getString("userName") ?: "User"
+                val isVideo = backStackEntry.arguments?.getBoolean("isVideo") ?: false
+                CallScreen(
+                    userName = userName,
+                    userAvatar = "", // On pourrait passer l'avatar si besoin
+                    isVideoCall = isVideo,
+                    onHangUp = { navController.popBackStack() }
                 )
             }
         }
@@ -257,7 +292,8 @@ fun MainScreen() {
 fun CustomBottomNavigation(
     navController: NavController,
     currentDestination: NavDestination?,
-    badgeCount: Int
+    networkBadgeCount: Int,
+    messagesBadgeCount: Int
 ) {
     Card(
         modifier = Modifier
@@ -291,6 +327,7 @@ fun CustomBottomNavigation(
                 selected = currentDestination?.hierarchy?.any { it.route == "messages" } == true,
                 activeColor = activeColor,
                 inactiveColor = inactiveColor,
+                badgeCount = messagesBadgeCount,
                 onClick = { navController.navigate("messages") }
             )
 
@@ -338,7 +375,7 @@ fun CustomBottomNavigation(
                 selected = currentDestination?.hierarchy?.any { it.route == "network" } == true,
                 activeColor = activeColor,
                 inactiveColor = inactiveColor,
-                badgeCount = badgeCount,
+                badgeCount = networkBadgeCount,
                 onClick = { navController.navigate("network") }
             )
 

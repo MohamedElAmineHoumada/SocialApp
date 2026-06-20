@@ -1,18 +1,30 @@
 package com.Groupe15.SocialApp.ui.messages
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.AddPhotoAlternate
 import androidx.compose.material.icons.filled.Call
+import androidx.compose.material.icons.filled.Videocam
+import androidx.compose.material.icons.filled.Gif
+import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.SentimentSatisfiedAlt
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
@@ -30,10 +42,12 @@ import com.Groupe15.SocialApp.models.Message
 import com.Groupe15.SocialApp.models.MessageType
 import com.Groupe15.SocialApp.viewmodel.ChatViewModel
 import kotlinx.coroutines.launch
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.platform.LocalFocusManager
+import android.util.Log
 import java.text.SimpleDateFormat
 import java.util.*
 
-// Violet accent fixe (identité app), tout le reste suit MaterialTheme
 private val VioletStart = Color(0xFF6C47FF)
 private val VioletEnd   = Color(0xFF4B6FE4)
 private val OnlineGreen = Color(0xFF00E676)
@@ -43,15 +57,36 @@ private val OnlineGreen = Color(0xFF00E676)
 fun ChatScreen(
     viewModel: ChatViewModel,
     currentUserId: String,
+    otherUserId: String,
     userName: String,
     userAvatar: String = "",
     onBack: () -> Unit,
+    onCall: (Boolean) -> Unit,
     onShowToast: (String) -> Unit
 ) {
     val messages by viewModel.messages.observeAsState(emptyList())
     var textState by remember { mutableStateOf("") }
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
+
+    var showGifPicker by remember { mutableStateOf(false) }
+    var isRecording by remember { mutableStateOf(false) }
+    val sheetState = rememberModalBottomSheetState()
+    val keyboardController = LocalSoftwareKeyboardController.current
+    val focusManager = LocalFocusManager.current
+
+    val imagePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia()
+    ) { uri ->
+        uri?.let {
+            viewModel.sendMessage("Sent an image", type = MessageType.IMAGE, imageUrl = it.toString())
+        }
+    }
+
+    // Initialisation du chat
+    LaunchedEffect(currentUserId, otherUserId) {
+        viewModel.initChat(currentUserId, otherUserId)
+    }
 
     // reverseLayout=true → index 0 = dernier message (en bas)
     // donc on scroll à 0 à chaque nouveau message
@@ -67,7 +102,8 @@ fun ChatScreen(
             ChatTopBar(
                 userName = userName,
                 userAvatar = userAvatar,
-                onBack = onBack
+                onBack = onBack,
+                onCall = onCall
             )
         },
         bottomBar = {
@@ -79,7 +115,36 @@ fun ChatScreen(
                         viewModel.sendMessage(textState)
                         textState = ""
                     }
-                }
+                },
+                onAddClick = {
+                    imagePickerLauncher.launch(
+                        PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                    )
+                },
+                onEmojiClick = { 
+                    Log.d("ChatInput", "Button clicked: Emoji")
+                    textState += "😊" 
+                },
+                onGifClick = { 
+                    Log.d("ChatInput", "Button clicked: GIF")
+                    focusManager.clearFocus()
+                    keyboardController?.hide()
+                    showGifPicker = true
+                },
+                onMicClick = { 
+                    if (!isRecording) {
+                        Log.d("ChatInput", "Starting recording")
+                        isRecording = true
+                        onShowToast("Enregistrement démarré...")
+                    } else {
+                        Log.d("ChatInput", "Stopping recording")
+                        isRecording = false
+                        viewModel.sendMessage("Voice message", type = MessageType.VOICE)
+                        onShowToast("Message vocal envoyé")
+                    }
+                },
+                isRecording = isRecording,
+                onShowToast = onShowToast
             )
         }
     ) { padding ->
@@ -91,13 +156,80 @@ fun ChatScreen(
                 .padding(padding)
                 .padding(horizontal = 12.dp),
             reverseLayout = true,
-            verticalArrangement = Arrangement.spacedBy(4.dp),
+            verticalArrangement = Arrangement.Top,
             contentPadding = PaddingValues(vertical = 8.dp)
         ) {
             items(messages) { message ->
                 MessageBubble(
                     message = message,
                     isCurrentUser = message.senderId == currentUserId
+                )
+            }
+        }
+    }
+
+    if (showGifPicker) {
+        Log.d("ChatScreen", "Rendering ModalBottomSheet")
+        ModalBottomSheet(
+            onDismissRequest = { 
+                Log.d("ChatScreen", "ModalBottomSheet onDismissRequest")
+                showGifPicker = false 
+            },
+            sheetState = sheetState,
+            containerColor = MaterialTheme.colorScheme.surface,
+            tonalElevation = 8.dp
+        ) {
+            GifPickerContent(
+                onGifSelected = { gifUrl ->
+                    Log.d("ChatScreen", "GIF selected: $gifUrl")
+                    viewModel.sendMessage("Sent a GIF", type = MessageType.GIF, imageUrl = gifUrl)
+                    showGifPicker = false
+                }
+            )
+        }
+    }
+}
+
+// ── GIF Picker Content ────────────────────────────────────────────────────
+@Composable
+fun GifPickerContent(onGifSelected: (String) -> Unit) {
+    val gifs = listOf(
+        "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJueGZ3bmZ6Z3B6Z3B6Z3B6Z3B6Z3B6Z3B6Z3B6Z3B6Z3B6Z3B6JmVwPXYxX2ludGVybmFsX2dpZl9ieV9pZCZjdD1n/3o7TKSjP6VT5fEdVMA/giphy.gif",
+        "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJueGZ3bmZ6Z3B6Z3B6Z3B6Z3B6Z3B6Z3B6Z3B6Z3B6Z3B6Z3B6JmVwPXYxX2ludGVybmFsX2dpZl9ieV9pZCZjdD1n/l0HlIDZpxk4T6B2qA/giphy.gif",
+        "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJueGZ3bmZ6Z3B6Z3B6Z3B6Z3B6Z3B6Z3B6Z3B6Z3B6Z3B6Z3B6JmVwPXYxX2ludGVybmFsX2dpZl9ieV9pZCZjdD1n/3o7TKVUn7iM8FMEU24/giphy.gif",
+        "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJueGZ3bmZ6Z3B6Z3B6Z3B6Z3B6Z3B6Z3B6Z3B6Z3B6Z3B6Z3B6JmVwPXYxX2ludGVybmFsX2dpZl9ieV9pZCZjdD1n/3o7TKMGpxvfSdfV9S0/giphy.gif",
+        "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJueGZ3bmZ6Z3B6Z3B6Z3B6Z3B6Z3B6Z3B6Z3B6Z3B6Z3B6Z3B6JmVwPXYxX2ludGVybmFsX2dpZl9ieV9pZCZjdD1n/l41lTfuxS8pXhYy08/giphy.gif",
+        "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJueGZ3bmZ6Z3B6Z3B6Z3B6Z3B6Z3B6Z3B6Z3B6Z3B6Z3B6Z3B6JmVwPXYxX2ludGVybmFsX2dpZl9ieV9pZCZjdD1n/3o7TKDkDbIDJieKbVm/giphy.gif"
+    )
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(bottom = 32.dp, start = 16.dp, end = 16.dp, top = 8.dp)
+    ) {
+        Text(
+            text = "Choose a GIF",
+            style = MaterialTheme.typography.titleMedium,
+            modifier = Modifier.padding(bottom = 16.dp)
+        )
+        
+        LazyVerticalGrid(
+            columns = GridCells.Fixed(2),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.height(300.dp)
+        ) {
+            items(gifs) { url ->
+                AsyncImage(
+                    model = url,
+                    contentDescription = null,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(120.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(MaterialTheme.colorScheme.surfaceVariant)
+                        .clickable { onGifSelected(url) },
+                    contentScale = ContentScale.Crop
                 )
             }
         }
@@ -109,7 +241,8 @@ fun ChatScreen(
 private fun ChatTopBar(
     userName: String,
     userAvatar: String,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    onCall: (Boolean) -> Unit
 ) {
     Surface(
         color = MaterialTheme.colorScheme.surface,
@@ -159,8 +292,12 @@ private fun ChatTopBar(
                     )
                 }
 
-                IconButton(onClick = {}) {
-                    Icon(Icons.Default.Call, contentDescription = "Appel",
+                IconButton(onClick = { onCall(false) }) {
+                    Icon(Icons.Default.Call, contentDescription = "Appel vocal",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                IconButton(onClick = { onCall(true) }) {
+                    Icon(Icons.Default.Videocam, contentDescription = "Appel vidéo",
                         tint = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 IconButton(onClick = {}) {
@@ -191,10 +328,15 @@ fun MessageBubble(message: Message, isCurrentUser: Boolean) {
             modifier = Modifier.widthIn(max = 280.dp)
         ) {
             when (message.type) {
-                MessageType.IMAGE -> {
+                MessageType.IMAGE, MessageType.GIF -> {
                     ImageMessageBubble(
                         imageUrl = message.imageUrl,
                         caption = message.text,
+                        isCurrentUser = isCurrentUser
+                    )
+                }
+                MessageType.VOICE -> {
+                    VoiceMessageBubble(
                         isCurrentUser = isCurrentUser
                     )
                 }
@@ -246,6 +388,62 @@ fun MessageBubble(message: Message, isCurrentUser: Boolean) {
     }
 }
 
+// ── Voice Message Bubble ──────────────────────────────────────────────────
+@Composable
+private fun VoiceMessageBubble(
+    isCurrentUser: Boolean
+) {
+    Row(
+        modifier = Modifier
+            .clip(RoundedCornerShape(18.dp))
+            .background(
+                if (isCurrentUser)
+                    Brush.linearGradient(listOf(VioletStart, VioletEnd))
+                else
+                    Brush.linearGradient(
+                        listOf(
+                            MaterialTheme.colorScheme.surfaceVariant,
+                            MaterialTheme.colorScheme.surfaceVariant
+                        )
+                    )
+            )
+            .padding(horizontal = 12.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            imageVector = Icons.Default.Mic,
+            contentDescription = null,
+            tint = if (isCurrentUser) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(20.dp)
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        // Simulation d'une onde sonore
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            repeat(15) { index ->
+                val height = (4..12).random().dp
+                Box(
+                    modifier = Modifier
+                        .width(2.dp)
+                        .height(height)
+                        .background(
+                            if (isCurrentUser) Color.White.copy(alpha = 0.7f)
+                            else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                            CircleShape
+                        )
+                        .padding(horizontal = 1.dp)
+                )
+                Spacer(modifier = Modifier.width(2.dp))
+            }
+        }
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(
+            text = "0:12",
+            color = if (isCurrentUser) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
+            fontSize = 12.sp
+        )
+    }
+}
+
 // ── Image Bubble ──────────────────────────────────────────────────────────
 @Composable
 private fun ImageMessageBubble(
@@ -294,7 +492,13 @@ private fun ImageMessageBubble(
 fun ChatInputBar(
     text: String,
     onTextChange: (String) -> Unit,
-    onSend: () -> Unit
+    onSend: () -> Unit,
+    onAddClick: () -> Unit,
+    onEmojiClick: () -> Unit,
+    onGifClick: () -> Unit,
+    onMicClick: () -> Unit,
+    onShowToast: (String) -> Unit,
+    isRecording: Boolean = false
 ) {
     Surface(
         color = MaterialTheme.colorScheme.surface,
@@ -310,46 +514,110 @@ fun ChatInputBar(
                     .fillMaxWidth()
                     .navigationBarsPadding()
                     .imePadding()
-                    .padding(horizontal = 16.dp, vertical = 10.dp),
+                    .padding(horizontal = 8.dp, vertical = 10.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Input field
+                // Add button (Plus)
+                var showAddOptions by remember { mutableStateOf(false) }
+                Box {
+                    IconButton(onClick = { showAddOptions = true }) {
+                        Icon(
+                            Icons.Default.Add,
+                            contentDescription = "Attach",
+                            tint = VioletStart,
+                            modifier = Modifier.size(26.dp)
+                        )
+                    }
+                    DropdownMenu(
+                        expanded = showAddOptions,
+                        onDismissRequest = { showAddOptions = false }
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text("Images") },
+                            onClick = {
+                                showAddOptions = false
+                                onAddClick()
+                            },
+                            leadingIcon = { Icon(Icons.Default.AddPhotoAlternate, contentDescription = null) }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Files") },
+                            onClick = {
+                                showAddOptions = false
+                                onShowToast("Files feature coming soon")
+                            },
+                            leadingIcon = { Icon(Icons.Default.Add, contentDescription = null) }
+                        )
+                    }
+                }
+
+                // Input field group (Emoji + TextField + GIF)
                 Box(
                     modifier = Modifier
                         .weight(1f)
                         .clip(RoundedCornerShape(24.dp))
                         .background(MaterialTheme.colorScheme.surfaceVariant)
-                        .padding(horizontal = 16.dp, vertical = 4.dp),
+                        .padding(horizontal = 4.dp, vertical = 2.dp),
                     contentAlignment = Alignment.CenterStart
                 ) {
-                    TextField(
-                        value = text,
-                        onValueChange = onTextChange,
-                        modifier = Modifier.fillMaxWidth(),
-                        placeholder = {
-                            Text(
-                                "Type a message...",
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                fontSize = 14.sp
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        IconButton(onClick = onEmojiClick, modifier = Modifier.size(36.dp)) {
+                            Icon(
+                                Icons.Default.SentimentSatisfiedAlt,
+                                contentDescription = "Emoji",
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(22.dp)
                             )
-                        },
-                        colors = TextFieldDefaults.colors(
-                            focusedContainerColor   = Color.Transparent,
-                            unfocusedContainerColor = Color.Transparent,
-                            focusedIndicatorColor   = Color.Transparent,
-                            unfocusedIndicatorColor = Color.Transparent,
-                            focusedTextColor        = MaterialTheme.colorScheme.onSurface,
-                            unfocusedTextColor      = MaterialTheme.colorScheme.onSurface,
-                            cursorColor             = VioletStart
-                        ),
-                        singleLine = false,
-                        maxLines = 4
-                    )
+                        }
+
+                        if (isRecording) {
+                            Text(
+                                "Enregistrement...",
+                                modifier = Modifier.weight(1f).padding(horizontal = 16.dp),
+                                color = Color.Red,
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        } else {
+                            TextField(
+                                value = text,
+                                onValueChange = onTextChange,
+                                modifier = Modifier.weight(1f),
+                                placeholder = {
+                                    Text(
+                                        "Type a message...",
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        fontSize = 14.sp
+                                    )
+                                },
+                                colors = TextFieldDefaults.colors(
+                                    focusedContainerColor   = Color.Transparent,
+                                    unfocusedContainerColor = Color.Transparent,
+                                    focusedIndicatorColor   = Color.Transparent,
+                                    unfocusedIndicatorColor = Color.Transparent,
+                                    focusedTextColor        = MaterialTheme.colorScheme.onSurface,
+                                    unfocusedTextColor      = MaterialTheme.colorScheme.onSurface,
+                                    cursorColor             = VioletStart
+                                ),
+                                singleLine = false,
+                                maxLines = 4
+                            )
+                        }
+
+                        IconButton(onClick = onGifClick, modifier = Modifier.size(36.dp)) {
+                            Icon(
+                                Icons.Default.Gif,
+                                contentDescription = "GIF",
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
+                    }
                 }
 
-                Spacer(modifier = Modifier.width(10.dp))
+                Spacer(modifier = Modifier.width(8.dp))
 
-                // Send button — gradient violet fixe (accent app)
+                // Send or Mic button
                 Box(
                     modifier = Modifier
                         .size(46.dp)
@@ -357,6 +625,8 @@ fun ChatInputBar(
                         .background(
                             if (text.isNotBlank())
                                 Brush.linearGradient(listOf(VioletStart, VioletEnd))
+                            else if (isRecording)
+                                Brush.linearGradient(listOf(Color.Red, Color(0xFFFF5252)))
                             else
                                 Brush.linearGradient(
                                     listOf(
@@ -365,19 +635,26 @@ fun ChatInputBar(
                                     )
                                 )
                         )
-                        .then(
-                            if (text.isNotBlank()) Modifier.clickable(onClick = onSend)
-                            else Modifier
-                        ),
+                        .clickable {
+                            if (text.isNotBlank()) onSend() else onMicClick()
+                        },
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(
-                        Icons.AutoMirrored.Filled.Send,
-                        contentDescription = "Envoyer",
-                        tint = if (text.isNotBlank()) Color.White
-                        else MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(20.dp)
-                    )
+                    if (text.isNotBlank()) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.Send,
+                            contentDescription = "Send",
+                            tint = Color.White,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    } else {
+                        Icon(
+                            Icons.Default.Mic,
+                            contentDescription = "Mic",
+                            tint = if (isRecording) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(22.dp)
+                        )
+                    }
                 }
             }
         }
