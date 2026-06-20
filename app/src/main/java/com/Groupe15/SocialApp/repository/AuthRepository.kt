@@ -1,6 +1,7 @@
 package com.Groupe15.SocialApp.repository
 
 import com.Groupe15.SocialApp.models.User
+import com.google.firebase.auth.FacebookAuthProvider
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.GoogleAuthProvider
 import com.google.firebase.firestore.FirebaseFirestore
@@ -20,26 +21,23 @@ class AuthRepository @Inject constructor(
 
     fun getCurrentUserUid(): String? = auth.currentUser?.uid
 
+    fun isEmailVerified(): Boolean = auth.currentUser?.isEmailVerified == true
+
     fun getCurrentUser(): Flow<User?> = callbackFlow {
         var docListener: com.google.firebase.firestore.ListenerRegistration? = null
-        
         val authListener = FirebaseAuth.AuthStateListener { firebaseAuth ->
             docListener?.remove()
             val uid = firebaseAuth.currentUser?.uid
             if (uid != null) {
                 docListener = firestore.collection("users").document(uid)
                     .addSnapshotListener { snapshot, error ->
-                        if (error == null) {
-                            trySend(snapshot?.toObject(User::class.java))
-                        } else {
-                            trySend(null)
-                        }
+                        if (error == null) trySend(snapshot?.toObject(User::class.java))
+                        else trySend(null)
                     }
             } else {
                 trySend(null)
             }
         }
-        
         auth.addAuthStateListener(authListener)
         awaitClose {
             auth.removeAuthStateListener(authListener)
@@ -49,9 +47,7 @@ class AuthRepository @Inject constructor(
 
     fun getUserById(uid: String): Flow<User?> = callbackFlow {
         val listener = firestore.collection("users").document(uid)
-            .addSnapshotListener { snapshot, _ ->
-                trySend(snapshot?.toObject(User::class.java))
-            }
+            .addSnapshotListener { snapshot, _ -> trySend(snapshot?.toObject(User::class.java)) }
         awaitClose { listener.remove() }
     }
 
@@ -66,48 +62,115 @@ class AuthRepository @Inject constructor(
 
     suspend fun register(email: String, password: String, displayName: String): Result<Unit> {
         return try {
-            val username = displayName.lowercase().replace(" ", "_").filter { it.isLetterOrDigit() || it == '_' }
-            
-            // 1. Créer le compte Auth d'abord pour être authentifié
+            val username = displayName.lowercase().replace(" ", "_")
+                .filter { it.isLetterOrDigit() || it == '_' }
+
             val result = auth.createUserWithEmailAndPassword(email, password).await()
             val uid = result.user?.uid ?: throw Exception("Échec de la création du compte.")
 
-            // 2. Maintenant qu'on est connecté, on peut vérifier le pseudo et créer le document
             val existingUser = firestore.collection("users")
-                .whereEqualTo("username", username)
-                .get()
-                .await()
-            
+                .whereEqualTo("username", username).get().await()
             if (!existingUser.isEmpty) {
-                // Si le pseudo est pris, on pourrait supprimer le compte Auth ou demander de changer
-                // Pour simplifier ici, on ajoute un suffixe aléatoire ou on renvoie une erreur
                 return Result.failure(Exception("Ce nom d'utilisateur est déjà pris."))
             }
 
             val user = hashMapOf(
-                "id"              to uid,
-                "email"           to email,
-                "displayName"     to displayName,
-                "username"        to username,
-                "bio"             to "",
-                "profileImageUrl" to "",
-                "followersCount"  to 0,
-                "followingCount"  to 0,
-                "postsCount"      to 0,
-                "isPrivate"       to false
+                "id" to uid, "email" to email, "displayName" to displayName,
+                "username" to username, "bio" to "", "profileImageUrl" to "",
+                "followersCount" to 0, "followingCount" to 0, "postsCount" to 0, "isPrivate" to false
             )
             firestore.collection("users").document(uid).set(user).await()
+
+            // Envoyer l'email de vérification
+            auth.currentUser?.sendEmailVerification()?.await()
+
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
         }
     }
 
+    /**
+     * Connexion Google via idToken (obtenu depuis Credential Manager).
+     * Crée le document Firestore + envoie email de vérification si nouvel utilisateur.
+     * Google fournit des emails déjà vérifiés, donc on marque isEmailVerified = true.
+     */
     suspend fun signInWithGoogle(idToken: String): Result<Unit> {
         return try {
             val credential = GoogleAuthProvider.getCredential(idToken, null)
-            auth.signInWithCredential(credential).await()
+            val result = auth.signInWithCredential(credential).await()
+            val firebaseUser = result.user ?: throw Exception("Échec de la connexion Google.")
+            val isNew = result.additionalUserInfo?.isNewUser == true
+
+            if (isNew) {
+                // Créer le document Firestore uniquement si nouvel utilisateur
+                createFirestoreUserFromSocial(
+                    uid = firebaseUser.uid,
+                    email = firebaseUser.email ?: "",
+                    displayName = firebaseUser.displayName ?: "Utilisateur",
+                    photoUrl = firebaseUser.photoUrl?.toString() ?: ""
+                )
+                // Ne PAS envoyer d'email de vérification :
+                // Firebase marque automatiquement isEmailVerified = true pour Google OAuth
+            }
+            // Que l'utilisateur soit nouveau ou existant → succès
             Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    /**
+     * Connexion Facebook via accessToken (obtenu depuis le SDK Facebook).
+     * Crée le document Firestore si nouvel utilisateur.
+     * Envoie un email de vérification car Facebook ne garantit pas la vérification d'email.
+     */
+    suspend fun signInWithFacebook(accessToken: String): Result<Unit> {
+        return try {
+            val credential = FacebookAuthProvider.getCredential(accessToken)
+            val result = auth.signInWithCredential(credential).await()
+            val firebaseUser = result.user ?: throw Exception("Échec de la connexion Facebook.")
+            val isNew = result.additionalUserInfo?.isNewUser == true
+
+            if (isNew) {
+                createFirestoreUserFromSocial(
+                    uid = firebaseUser.uid,
+                    email = firebaseUser.email ?: "",
+                    displayName = firebaseUser.displayName ?: "Utilisateur",
+                    photoUrl = firebaseUser.photoUrl?.toString() ?: ""
+                )
+                // Facebook ne garantit pas que l'email est vérifié côté Firebase
+                if (!firebaseUser.isEmailVerified && firebaseUser.email?.isNotBlank() == true) {
+                    try { firebaseUser.sendEmailVerification().await() } catch (_: Exception) {}
+                }
+            }
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    /**
+     * Renvoie l'email de vérification à l'utilisateur courant.
+     */
+    suspend fun resendVerificationEmail(): Result<Unit> {
+        return try {
+            val user = auth.currentUser ?: throw Exception("Aucun utilisateur connecté.")
+            user.sendEmailVerification().await()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    /**
+     * Recharge l'état Firebase de l'utilisateur courant pour vérifier
+     * si son email a été vérifié depuis la dernière session.
+     */
+    suspend fun reloadUser(): Result<Boolean> {
+        return try {
+            auth.currentUser?.reload()?.await()
+            Result.success(auth.currentUser?.isEmailVerified == true)
         } catch (e: Exception) {
             Result.failure(e)
         }
@@ -128,13 +191,8 @@ class AuthRepository @Inject constructor(
         return try {
             val user = auth.currentUser ?: throw Exception("Aucun utilisateur connecté")
             val uid = user.uid
-            
-            // Supprimer les données de l'utilisateur dans Firestore
             firestore.collection("users").document(uid).delete().await()
-            
-            // Supprimer le compte Auth
             user.delete().await()
-            
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
@@ -149,5 +207,26 @@ class AuthRepository @Inject constructor(
         } catch (e: Exception) {
             Result.failure(e)
         }
+    }
+
+    // ── Helpers privés ───────────────────────────────────────────────────────
+
+    private suspend fun createFirestoreUserFromSocial(
+        uid: String, email: String, displayName: String, photoUrl: String
+    ) {
+        var username = displayName.lowercase().replace(" ", "_")
+            .filter { it.isLetterOrDigit() || it == '_' }
+        if (username.isBlank()) username = "user_${uid.take(6)}"
+
+        val existing = firestore.collection("users")
+            .whereEqualTo("username", username).get().await()
+        if (!existing.isEmpty) username = "${username}_${uid.take(4)}"
+
+        val userData = hashMapOf(
+            "id" to uid, "email" to email, "displayName" to displayName,
+            "username" to username, "bio" to "", "profileImageUrl" to photoUrl,
+            "followersCount" to 0, "followingCount" to 0, "postsCount" to 0, "isPrivate" to false
+        )
+        firestore.collection("users").document(uid).set(userData).await()
     }
 }
