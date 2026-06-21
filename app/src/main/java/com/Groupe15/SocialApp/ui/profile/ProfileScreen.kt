@@ -48,6 +48,7 @@ fun ProfileScreen(
     val followState by followViewModel.followState.collectAsState()
     val userPosts by viewModel.userPosts.collectAsState()
     val isLoadingPosts by viewModel.isLoadingPosts.collectAsState()
+    val realPostsCount by viewModel.realPostsCount.collectAsState()
 
     val followersList by followViewModel.followersList.collectAsState()
     val followingList by followViewModel.followingList.collectAsState()
@@ -171,7 +172,7 @@ fun ProfileScreen(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceEvenly
                 ) {
-                    ProfileStat(count = user.postsCount, label = "Publications")
+                    ProfileStat(count = realPostsCount, label = "Publications")
 
                     ProfileStat(
                         count = user.followersCount,

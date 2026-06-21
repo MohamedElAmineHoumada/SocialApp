@@ -36,6 +36,13 @@ class ProfileViewModel @Inject constructor(
     private val _isLoadingPosts = MutableStateFlow(false)
     val isLoadingPosts: StateFlow<Boolean> = _isLoadingPosts.asStateFlow()
 
+    // ✅ NOUVEAU : nombre réel de publications (texte, image, vidéo confondus),
+    // calculé directement depuis Firestore au lieu de se fier au champ statique
+    // postsCount du document User (qui peut se désynchroniser, comme observé
+    // précédemment pour followersCount/followingCount).
+    private val _realPostsCount = MutableStateFlow(0)
+    val realPostsCount: StateFlow<Int> = _realPostsCount.asStateFlow()
+
     fun loadProfile(targetUid: String) {
         val currentUid = auth.currentUser?.uid ?: ""
 
@@ -57,6 +64,7 @@ class ProfileViewModel @Inject constructor(
         }
 
         loadUserPosts(resolvedUid)
+        loadRealPostsCount(resolvedUid)
     }
 
     private fun loadUserPosts(uid: String) {
@@ -74,6 +82,27 @@ class ProfileViewModel @Inject constructor(
                 _userPosts.value = emptyList()
             } finally {
                 _isLoadingPosts.value = false
+            }
+        }
+    }
+
+    // ✅ NOUVEAU : compte le nombre RÉEL de posts de l'utilisateur (tous types confondus :
+    // texte, image, vidéo — un seul modèle Post couvre tout, distingué seulement par le
+    // contenu de imageUrls/content). Utilise l'agrégation count() de Firestore, qui est
+    // rapide et ne télécharge pas tous les documents (contrairement à .get().size()).
+    private fun loadRealPostsCount(uid: String) {
+        viewModelScope.launch {
+            try {
+                val countSnapshot = firestore.collection("posts")
+                    .whereEqualTo("userId", uid)
+                    .count()
+                    .get(com.google.firebase.firestore.AggregateSource.SERVER)
+                    .await()
+                _realPostsCount.value = countSnapshot.count.toInt()
+            } catch (e: Exception) {
+                // En cas d'échec (ex: ancienne version de Firestore SDK sans count()),
+                // on retombe sur la taille de la liste déjà chargée (limitée à 30)
+                _realPostsCount.value = _userPosts.value.size
             }
         }
     }

@@ -104,10 +104,15 @@ class AuthRepository @Inject constructor(
             val credential = GoogleAuthProvider.getCredential(idToken, null)
             val result = auth.signInWithCredential(credential).await()
             val firebaseUser = result.user ?: throw Exception("Échec de la connexion Google.")
-            val isNew = result.additionalUserInfo?.isNewUser == true
 
-            if (isNew) {
-                // Créer le document Firestore uniquement si nouvel utilisateur
+            // ✅ On ne se fie plus uniquement à isNewUser : ce flag peut être incorrect
+            // si le compte Auth existe déjà mais que son document Firestore a été supprimé
+            // ou n'a jamais été créé (ex: crash pendant une inscription précédente, ou
+            // suppression manuelle pendant des tests). On vérifie l'existence RÉELLE du
+            // document dans Firestore, ce qui garantit qu'aucun compte "fantôme"
+            // (authentifié mais sans profil) ne peut se produire.
+            val userDoc = firestore.collection("users").document(firebaseUser.uid).get().await()
+            if (!userDoc.exists()) {
                 createFirestoreUserFromSocial(
                     uid = firebaseUser.uid,
                     email = firebaseUser.email ?: "",
@@ -135,9 +140,11 @@ class AuthRepository @Inject constructor(
             val credential = FacebookAuthProvider.getCredential(accessToken)
             val result = auth.signInWithCredential(credential).await()
             val firebaseUser = result.user ?: throw Exception("Échec de la connexion Facebook.")
-            val isNew = result.additionalUserInfo?.isNewUser == true
 
-            if (isNew) {
+            // ✅ Même garde que pour Google : on vérifie l'existence réelle du document
+            // Firestore plutôt que de se fier uniquement à isNewUser.
+            val userDoc = firestore.collection("users").document(firebaseUser.uid).get().await()
+            if (!userDoc.exists()) {
                 createFirestoreUserFromSocial(
                     uid = firebaseUser.uid,
                     email = firebaseUser.email ?: "",

@@ -177,7 +177,7 @@ fun MainScreen(
         "login", "register", "forgotPassword", "onboardingWelcome",
         "onboardingDob", "onboardingGender", "onboardingInterests",
         "chat/{otherUserId}/{userName}", "createPost", "createStory", "storyViewer",
-        "editProfile", "settings", "notifications"
+        "editProfile", "settings", "notifications", "notificationSettings"
     )
     val showBottomNav = currentDestination?.route !in noBottomBarRoutes &&
             currentDestination?.route?.contains("chat/") == false
@@ -389,7 +389,13 @@ fun MainScreen(
                         navController.navigate("login") {
                             popUpTo(navController.graph.id) { inclusive = true }
                         }
-                    }
+                    },
+                    onNotifications = { navController.navigate("notificationSettings") }  // ← ajouté
+                )
+            }
+            composable("notificationSettings") {   // ← nouveau bloc entier
+                NotificationSettingsScreen(
+                    onBack = { navController.popBackStack() }
                 )
             }
             composable(
