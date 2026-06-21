@@ -254,11 +254,6 @@ fun MainScreen(
                         registerViewModel.register(email, password, name)
                     },
                     onLoginClick = { navController.popBackStack() },
-                    // ✅ NOUVEAU : on réutilise EXACTEMENT le même mécanisme que LoginScreen
-                    // (CredentialManager + CallbackManager uniques, gérés par MainActivity),
-                    // au lieu de l'ancienne implémentation dupliquée qui causait des erreurs
-                    // Facebook (deux CallbackManager enregistrés en parallèle) et un
-                    // comportement Google incohérent pour les nouveaux comptes.
                     onGoogleClick = {
                         onLaunchGoogle(
                             { idToken -> registerViewModel.signInWithGoogle(idToken) },
@@ -271,30 +266,43 @@ fun MainScreen(
                             { error -> registerViewModel.resetState() }
                         )
                     },
-                    onSuccess = { navController.navigate("onboardingWelcome") }
+                    // ✅ FIX : popUpTo("register") pour vider la back-stack
+                    // avant d'aller vers l'onboarding. Sans ça, "register" restait
+                    // dans la pile et bloquait la navigation sur onboardingDob.
+                    onSuccess = {
+                        navController.navigate("onboardingWelcome") {
+                            popUpTo("register") { inclusive = true }
+                        }
+                    }
                 )
             }
+
             composable("onboardingWelcome") {
                 OnboardingWelcomeScreen(onStart = { navController.navigate("onboardingDob") })
             }
+
             composable("onboardingDob") {
                 OnboardingDobScreen(
                     onBack = { navController.popBackStack() },
                     onContinue = { navController.navigate("onboardingGender") }
                 )
             }
+
             composable("onboardingGender") {
                 OnboardingGenderScreen(
                     onBack = { navController.popBackStack() },
                     onContinue = { navController.navigate("onboardingInterests") }
                 )
             }
+
             composable("onboardingInterests") {
                 OnboardingInterestsScreen(
                     onBack = { navController.popBackStack() },
+                    // ✅ FIX : popUpTo(0) vide toute la back-stack (login + onboarding)
+                    // pour que l'utilisateur ne puisse pas revenir en arrière depuis le feed.
                     onFinish = {
                         navController.navigate("feed") {
-                            popUpTo("onboardingWelcome") { inclusive = true }
+                            popUpTo(0) { inclusive = true }
                         }
                     }
                 )
@@ -322,6 +330,7 @@ fun MainScreen(
                     }
                 )
             }
+
             composable("network") {
                 val networkViewModel = hiltViewModel<NetworkViewModel>()
                 NetworkScreen(
@@ -331,6 +340,7 @@ fun MainScreen(
                     onUserClick = { uid -> navController.navigate("profile/$uid") }
                 )
             }
+
             composable("all_suggestions") {
                 val networkViewModel = hiltViewModel<NetworkViewModel>()
                 SuggestionsScreen(
@@ -339,6 +349,7 @@ fun MainScreen(
                     onUserClick = { uid -> navController.navigate("profile/$uid") }
                 )
             }
+
             composable(
                 "profile/{uid}",
                 arguments = listOf(navArgument("uid") { defaultValue = "" })
@@ -360,17 +371,20 @@ fun MainScreen(
                     onNavigateToProfile = { otherUid -> navController.navigate("profile/$otherUid") }
                 )
             }
+
             composable("discover") {
                 DiscoverScreen(
                     onNavigateToProfile = { uid -> navController.navigate("profile/$uid") },
                     onNavigateToNotifications = { navController.navigate("notifications") }
                 )
             }
+
             composable("notifications") {
                 NotificationsScreen(
                     onBackClick = { navController.popBackStack() }
                 )
             }
+
             composable("createPost") {
                 CreatePostScreen(
                     viewModel = hiltViewModel<CreatePostViewModel>(),
@@ -379,6 +393,7 @@ fun MainScreen(
                     onShowAudiencePicker = {}
                 )
             }
+
             composable("editProfile") {
                 EditProfileScreen(
                     viewModel = hiltViewModel<EditProfileViewModel>(),
@@ -387,6 +402,7 @@ fun MainScreen(
                     onError = {}
                 )
             }
+
             composable("settings") {
                 SettingsScreen(
                     viewModel = hiltViewModel<AuthViewModel>(),
@@ -402,14 +418,16 @@ fun MainScreen(
                             popUpTo(navController.graph.id) { inclusive = true }
                         }
                     },
-                    onNotifications = { navController.navigate("notificationSettings") }  // ← ajouté
+                    onNotifications = { navController.navigate("notificationSettings") }
                 )
             }
-            composable("notificationSettings") {   // ← nouveau bloc entier
+
+            composable("notificationSettings") {
                 NotificationSettingsScreen(
                     onBack = { navController.popBackStack() }
                 )
             }
+
             composable(
                 "chat/{otherUserId}/{userName}",
                 arguments = listOf(
@@ -433,6 +451,7 @@ fun MainScreen(
                     onShowToast = { msg -> Toast.makeText(context, msg, Toast.LENGTH_SHORT).show() }
                 )
             }
+
             composable(
                 "call/{userName}/{isVideo}",
                 arguments = listOf(

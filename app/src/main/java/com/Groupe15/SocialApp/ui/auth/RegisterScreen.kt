@@ -35,31 +35,37 @@ fun RegisterScreen(
     onLoginClick: () -> Unit,
     onGoogleClick: () -> Unit,
     onFacebookClick: () -> Unit,
-    onSuccess: () -> Unit
+    onSuccess: () -> Unit   // → navigue vers onboardingWelcome (géré dans MainActivity)
 ) {
     val state by viewModel.state.observeAsState(AuthState.Idle)
+
     var fullName by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var acceptTerms by remember { mutableStateOf(false) }
     var isPasswordVisible by remember { mutableStateOf(false) }
-    // ✅ Afficher l'écran "vérifiez votre email" après inscription réussie
+
+    // ✅ Afficher l'écran de confirmation email après inscription réussie,
+    //    AVANT de passer à l'onboarding (DOB → Genre → Centres d'intérêt)
     var showEmailSent by remember { mutableStateOf(false) }
 
+    // Quand l'inscription réussit → montrer l'écran "vérifiez votre email"
     LaunchedEffect(state) {
         if (state is AuthState.Success) {
             showEmailSent = true
         }
     }
 
+    // ── Écran "Vérifiez votre email" ────────────────────────────────────────
     if (showEmailSent) {
         EmailVerificationUI(
             email = email,
             onCodeEntered = { _ ->
-                // L'utilisateur confirme avoir cliqué sur le lien → on continue
+                // L'utilisateur a cliqué sur le lien → on continue vers l'onboarding
                 onSuccess()
             },
             onBack = {
+                // Retour au formulaire d'inscription
                 showEmailSent = false
                 viewModel.resetState()
             }
@@ -67,6 +73,7 @@ fun RegisterScreen(
         return
     }
 
+    // ── Formulaire d'inscription ─────────────────────────────────────────────
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -74,7 +81,7 @@ fun RegisterScreen(
             .verticalScroll(rememberScrollState())
             .padding(24.dp)
     ) {
-        // Top Bar
+        // Top Bar – bouton Retour vers Login
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -91,17 +98,13 @@ fun RegisterScreen(
                     modifier = Modifier.size(18.dp)
                 )
                 Spacer(modifier = Modifier.width(4.dp))
-                Text(
-                    text = "Retour",
-                    color = Color.Gray,
-                    fontSize = 14.sp
-                )
+                Text(text = "Retour", color = Color.Gray, fontSize = 14.sp)
             }
         }
 
         Spacer(modifier = Modifier.height(32.dp))
 
-        // Logo and Brand
+        // Logo & titre
         Column(
             modifier = Modifier.fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally
@@ -130,7 +133,7 @@ fun RegisterScreen(
 
         Spacer(modifier = Modifier.height(32.dp))
 
-        // Form
+        // Champ Nom complet
         Text(text = "Nom complet", fontWeight = FontWeight.Bold, fontSize = 14.sp)
         Spacer(modifier = Modifier.height(8.dp))
         CustomRegisterTextField(
@@ -142,6 +145,7 @@ fun RegisterScreen(
 
         Spacer(modifier = Modifier.height(16.dp))
 
+        // Champ Email
         Text(text = "Adresse e-mail", fontWeight = FontWeight.Bold, fontSize = 14.sp)
         Spacer(modifier = Modifier.height(8.dp))
         CustomRegisterTextField(
@@ -153,6 +157,7 @@ fun RegisterScreen(
 
         Spacer(modifier = Modifier.height(16.dp))
 
+        // Champ Mot de passe
         Text(text = "Mot de passe", fontWeight = FontWeight.Bold, fontSize = 14.sp)
         Spacer(modifier = Modifier.height(8.dp))
         CustomRegisterTextField(
@@ -167,6 +172,7 @@ fun RegisterScreen(
 
         Spacer(modifier = Modifier.height(16.dp))
 
+        // Case à cocher CGU
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.fillMaxWidth()
@@ -195,7 +201,7 @@ fun RegisterScreen(
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // ✅ Bouton appelle directement register() via onRegisterClick (plus de faux code)
+        // ✅ Bouton S'inscrire → appelle register() directement (Firebase envoie le vrai email)
         Button(
             onClick = { onRegisterClick(email, password, fullName) },
             modifier = Modifier
@@ -204,8 +210,11 @@ fun RegisterScreen(
             shape = RoundedCornerShape(12.dp),
             colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
             contentPadding = PaddingValues(),
-            enabled = state !is AuthState.Loading && acceptTerms
-                    && email.isNotBlank() && password.isNotBlank() && fullName.isNotBlank()
+            enabled = state !is AuthState.Loading
+                    && acceptTerms
+                    && email.isNotBlank()
+                    && password.isNotBlank()
+                    && fullName.isNotBlank()
         ) {
             Box(
                 modifier = Modifier
@@ -219,7 +228,10 @@ fun RegisterScreen(
                 contentAlignment = Alignment.Center
             ) {
                 if (state is AuthState.Loading) {
-                    CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
+                    CircularProgressIndicator(
+                        color = Color.White,
+                        modifier = Modifier.size(24.dp)
+                    )
                 } else {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text("S'inscrire", fontWeight = FontWeight.Bold, color = Color.White)
@@ -236,13 +248,9 @@ fun RegisterScreen(
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // Social Login
+        // Inscription rapide via réseaux sociaux
         Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-            Text(
-                text = "Inscription rapide",
-                color = Color.Gray,
-                fontSize = 12.sp
-            )
+            Text(text = "Inscription rapide", color = Color.Gray, fontSize = 12.sp)
         }
         Spacer(modifier = Modifier.height(16.dp))
         Row(
@@ -265,7 +273,7 @@ fun RegisterScreen(
 
         Spacer(modifier = Modifier.height(32.dp))
 
-        // Footer
+        // Lien vers Login
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.Center
@@ -282,21 +290,27 @@ fun RegisterScreen(
 
         Spacer(modifier = Modifier.height(24.dp))
 
+        // Message d'erreur
         if (state is AuthState.Error) {
             Text(
                 text = (state as AuthState.Error).message,
                 color = MaterialTheme.colorScheme.error,
-                modifier = Modifier.align(Alignment.CenterHorizontally).padding(top = 8.dp)
+                modifier = Modifier
+                    .align(Alignment.CenterHorizontally)
+                    .padding(top = 8.dp)
             )
         }
     }
 }
 
-// ✅ Écran de confirmation : affiche un message pour dire de cliquer sur le lien reçu par email
+// ── Écran intermédiaire : confirmation de l'envoi du lien Firebase ───────────
+// Affiché après inscription réussie, avant de passer à l'onboarding.
+// L'utilisateur doit cliquer sur le lien reçu par email, puis appuyer sur
+// "J'ai vérifié" pour continuer vers Date de naissance → Genre → Centres d'intérêt.
 @Composable
 fun EmailVerificationUI(
     email: String,
-    onCodeEntered: (String) -> Unit,
+    onCodeEntered: (String) -> Unit,  // gardé pour compatibilité avec MainActivity
     onBack: () -> Unit
 ) {
     Column(
@@ -322,14 +336,15 @@ fun EmailVerificationUI(
         )
         Spacer(modifier = Modifier.height(8.dp))
         Text(
-            text = "Un lien de vérification a été envoyé à :\n$email\n\nCliquez sur le lien dans cet e-mail pour activer votre compte.",
+            text = "Un lien de vérification a été envoyé à :\n$email\n\nCliquez sur le lien dans cet e-mail pour activer votre compte, puis revenez ici.",
             textAlign = TextAlign.Center,
             color = Color.Gray,
-            fontSize = 14.sp
+            fontSize = 14.sp,
+            lineHeight = 22.sp
         )
         Spacer(modifier = Modifier.height(32.dp))
 
-        // ✅ L'utilisateur clique après avoir vérifié son email
+        // ✅ Après avoir cliqué sur le lien → continuer vers l'onboarding
         Button(
             onClick = { onCodeEntered("") },
             modifier = Modifier
@@ -338,7 +353,11 @@ fun EmailVerificationUI(
             shape = RoundedCornerShape(12.dp),
             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6C47FF))
         ) {
-            Text("J'ai vérifié mon e-mail", fontWeight = FontWeight.Bold, color = Color.White)
+            Text(
+                "J'ai vérifié mon e-mail — Continuer",
+                fontWeight = FontWeight.Bold,
+                color = Color.White
+            )
         }
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -348,6 +367,8 @@ fun EmailVerificationUI(
         }
     }
 }
+
+// ── Composants réutilisables ─────────────────────────────────────────────────
 
 @Composable
 fun CustomRegisterTextField(
@@ -366,12 +387,15 @@ fun CustomRegisterTextField(
             .fillMaxWidth()
             .height(56.dp),
         placeholder = { Text(placeholder, color = Color.Gray) },
-        leadingIcon = { Icon(imageVector = leadingIcon, contentDescription = null, tint = Color.Gray) },
+        leadingIcon = {
+            Icon(imageVector = leadingIcon, contentDescription = null, tint = Color.Gray)
+        },
         trailingIcon = {
             if (isPassword && onTogglePasswordVisibility != null) {
                 IconButton(onClick = onTogglePasswordVisibility) {
                     Icon(
-                        imageVector = if (isPasswordVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                        imageVector = if (isPasswordVisible) Icons.Default.VisibilityOff
+                        else Icons.Default.Visibility,
                         contentDescription = null,
                         tint = Color.Gray
                     )
@@ -386,7 +410,8 @@ fun CustomRegisterTextField(
             unfocusedIndicatorColor = Color.Transparent,
             disabledIndicatorColor = Color.Transparent
         ),
-        visualTransformation = if (isPassword && !isPasswordVisible) PasswordVisualTransformation() else VisualTransformation.None,
+        visualTransformation = if (isPassword && !isPasswordVisible)
+            PasswordVisualTransformation() else VisualTransformation.None,
         singleLine = true
     )
 }
