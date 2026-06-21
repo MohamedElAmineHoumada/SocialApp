@@ -347,6 +347,14 @@ private fun PostCard(
             }
         }
 
+        // ---- Légende (déplacée avant les boutons d'action) ----
+        if (post.content.isNotBlank()) {
+            Text(
+                text = buildAnnotatedCaption(post.authorUsername, post.content),
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
+            )
+        }
+
         // ---- Actions : like, comment, share, save ----
         Row(
             modifier = Modifier
@@ -372,13 +380,6 @@ private fun PostCard(
                 text = "${post.likesCount} j'aime",
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(horizontal = 12.dp)
-            )
-        }
-
-        if (post.content.isNotBlank()) {
-            Text(
-                text = buildAnnotatedCaption(post.authorUsername, post.content),
-                modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
             )
         }
 

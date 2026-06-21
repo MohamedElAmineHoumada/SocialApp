@@ -1,13 +1,22 @@
 package com.Groupe15.SocialApp.ui.post
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import coil.compose.AsyncImage
 import com.Groupe15.SocialApp.viewmodel.CreatePostViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -19,6 +28,8 @@ fun CreatePostScreen(
     onShowAudiencePicker: () -> Unit
 ) {
     var postText by remember { mutableStateOf("") }
+    var audience by remember { mutableStateOf("Public") }
+    var showAudienceSheet by remember { mutableStateOf(false) }
     val context = LocalContext.current
 
     val isPosting by viewModel.isPosting.collectAsState()
@@ -26,14 +37,23 @@ fun CreatePostScreen(
     val error by viewModel.error.collectAsState()
     val selectedImages by viewModel.selectedImages.collectAsState()
 
-    // Dès que la publication réussit, on revient en arrière automatiquement
+    // Sélecteur d'images natif Android (Photo Picker) : pas besoin de permission
+    // runtime sur Android 13+, fallback automatique géré par le système sur les
+    // versions plus anciennes.
+    val imagePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickMultipleVisualMedia(maxItems = 5)
+    ) { uris ->
+        if (uris.isNotEmpty()) {
+            viewModel.addImages(uris)
+        }
+    }
+
     LaunchedEffect(postSuccess) {
         if (postSuccess) {
             onBack()
         }
     }
 
-    // Affiche l'erreur si la publication échoue
     LaunchedEffect(error) {
         error?.let {
             android.widget.Toast.makeText(context, it, android.widget.Toast.LENGTH_SHORT).show()
@@ -89,25 +109,78 @@ fun CreatePostScreen(
             )
 
             if (selectedImages.isNotEmpty()) {
-                Text(
-                    text = "${selectedImages.size} image(s) sélectionnée(s)",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(bottom = 8.dp)
-                )
+                LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.padding(bottom = 12.dp)
+                ) {
+                    items(selectedImages) { uri ->
+                        Box(modifier = Modifier.size(80.dp)) {
+                            AsyncImage(
+                                model = uri,
+                                contentDescription = null,
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .clip(RoundedCornerShape(8.dp)),
+                                contentScale = ContentScale.Crop
+                            )
+                            IconButton(
+                                onClick = { viewModel.removeImage(uri) },
+                                modifier = Modifier
+                                    .align(Alignment.TopEnd)
+                                    .size(24.dp)
+                            ) {
+                                Icon(
+                                    Icons.Default.Close,
+                                    contentDescription = "Retirer",
+                                    tint = androidx.compose.ui.graphics.Color.White,
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(50))
+                                        .padding(2.dp)
+                                )
+                            }
+                        }
+                    }
+                }
             }
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                OutlinedButton(onClick = onPickImages, modifier = Modifier.weight(1f)) {
+                OutlinedButton(
+                    onClick = {
+                        imagePickerLauncher.launch(
+                            androidx.activity.result.PickVisualMediaRequest(
+                                ActivityResultContracts.PickVisualMedia.ImageOnly
+                            )
+                        )
+                        onPickImages()
+                    },
+                    modifier = Modifier.weight(1f)
+                ) {
                     Text("Ajouter Photo")
                 }
-                OutlinedButton(onClick = onShowAudiencePicker, modifier = Modifier.weight(1f)) {
-                    Text("Audience")
+                OutlinedButton(
+                    onClick = {
+                        showAudienceSheet = true
+                        onShowAudiencePicker()
+                    },
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text(audience)
                 }
             }
+        }
+    }
+
+    if (showAudienceSheet) {
+        ModalBottomSheet(onDismissRequest = { showAudienceSheet = false }) {
+            AudiencePickerScreen(
+                onSelected = { selected ->
+                    audience = selected
+                    showAudienceSheet = false
+                }
+            )
         }
     }
 }
