@@ -32,8 +32,6 @@ class FeedRepository @Inject constructor(
                 if (error != null) return@addSnapshotListener
                 val posts = snapshot?.documents?.mapNotNull { doc ->
                     doc.toObject(Post::class.java)?.also { post ->
-                        // Filet de sécurité : si le champ "id" est absent/vide en base
-                        // (anciens documents), on retombe sur l'ID réel du document Firestore.
                         if (post.postId.isBlank()) post.postId = doc.id
                     }
                 } ?: emptyList()
@@ -49,8 +47,6 @@ class FeedRepository @Inject constructor(
                 if (error != null) return@addSnapshotListener
                 val stories = snapshot?.documents?.mapNotNull { doc ->
                     doc.toObject(Story::class.java)?.let { story ->
-                        // storyId est un val (data class) : on utilise copy() si le champ
-                        // "id" est absent/vide en base (anciens documents).
                         if (story.storyId.isBlank()) story.copy(storyId = doc.id) else story
                     }
                 } ?: emptyList()
@@ -59,18 +55,13 @@ class FeedRepository @Inject constructor(
         awaitClose { listener.remove() }
     }
 
-    suspend fun createStory(
-        mediaUri: Uri,
-        text: String?,
-        filter: String
-    ): Result<Unit> {
+    suspend fun createStory(mediaUri: Uri, text: String?, filter: String): Result<Unit> {
         return try {
             val uid = auth.currentUser?.uid ?: throw Exception("Non connecté")
             val userDoc = firestore.collection("users").document(uid).get().await()
             val username = userDoc.getString("username") ?: "User"
             val profileUrl = userDoc.getString("profileImageUrl") ?: ""
 
-            // Upload image
             val storageRef = FirebaseStorage.getInstance().reference
                 .child("stories/$uid/${UUID.randomUUID()}.jpg")
             storageRef.putFile(mediaUri).await()
@@ -104,7 +95,7 @@ class FeedRepository @Inject constructor(
                 "userId" to uid,
                 "username" to username,
                 "userProfileUrl" to (auth.currentUser?.photoUrl?.toString() ?: ""),
-                "mediaUrl" to post.imageUrl, // Correction: imageUrl -> mediaUrl
+                "mediaUrl" to post.imageUrl,
                 "postId" to post.postId,
                 "timestamp" to FieldValue.serverTimestamp()
             )
@@ -133,6 +124,48 @@ class FeedRepository @Inject constructor(
         }
     }
 
+    // ✅ NOUVEAU : écoute en temps réel les IDs des posts sauvegardés de l'utilisateur courant
+    fun getSavedPostIdsFlow(): Flow<List<String>> = callbackFlow {
+        val uid = auth.currentUser?.uid ?: run {
+            trySend(emptyList())
+            close()
+            return@callbackFlow
+        }
+        val listener = firestore.collection("users").document(uid).collection("savedPosts")
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    trySend(emptyList())
+                    return@addSnapshotListener
+                }
+                trySend(snapshot?.documents?.map { it.id } ?: emptyList())
+            }
+        awaitClose { listener.remove() }
+    }
+
+    // ✅ NOUVEAU : récupère les posts correspondant à une liste d'IDs (pour l'onglet "Saved")
+    suspend fun getPostsByIds(postIds: List<String>): List<Post> {
+        if (postIds.isEmpty()) return emptyList()
+        val results = mutableListOf<Post>()
+        postIds.chunked(30).forEach { chunk ->
+            try {
+                val snapshot = firestore.collection("posts")
+                    .whereIn("id", chunk)
+                    .get()
+                    .await()
+                results.addAll(
+                    snapshot.documents.mapNotNull { doc ->
+                        doc.toObject(Post::class.java)?.also { post ->
+                            if (post.postId.isBlank()) post.postId = doc.id
+                        }
+                    }
+                )
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+        return results
+    }
+
     suspend fun toggleLike(postId: String) {
         val uid = auth.currentUser?.uid ?: return
         val postRef = firestore.collection("posts").document(postId)
@@ -142,12 +175,10 @@ class FeedRepository @Inject constructor(
             val likeDoc = transaction.get(likeRef)
             if (likeDoc.exists()) {
                 transaction.delete(likeRef)
-                transaction.update(postRef, "likesCount",
-                    FieldValue.increment(-1))
+                transaction.update(postRef, "likesCount", FieldValue.increment(-1))
             } else {
                 transaction.set(likeRef, mapOf("userId" to uid))
-                transaction.update(postRef, "likesCount",
-                    FieldValue.increment(1))
+                transaction.update(postRef, "likesCount", FieldValue.increment(1))
             }
         }.await()
     }

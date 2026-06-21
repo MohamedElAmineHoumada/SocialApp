@@ -188,11 +188,11 @@ fun MainScreen(
                 val networkViewModel = hiltViewModel<NetworkViewModel>()
                 val messagesViewModel = hiltViewModel<MessagesViewModel>()
                 val notificationViewModel = hiltViewModel<NotificationViewModel>()
-                
+
                 val followRequests by networkViewModel.followRequests.collectAsState()
                 val conversations by messagesViewModel.conversations.observeAsState(initial = emptyList<Conversation>())
                 val unreadNotificationsCount by notificationViewModel.unreadCount.collectAsState()
-                
+
                 val unreadMessagesCount = conversations.count { it.hasUnread }
 
                 AnimatedVisibility(
@@ -250,8 +250,8 @@ fun MainScreen(
                 val registerViewModel: RegisterViewModel = hiltViewModel()
                 RegisterScreen(
                     viewModel = registerViewModel,
-                    onRegisterClick = { email, password, name -> 
-                        registerViewModel.register(email, password, name) 
+                    onRegisterClick = { email, password, name ->
+                        registerViewModel.register(email, password, name)
                     },
                     onLoginClick = { navController.popBackStack() },
                     onSuccess = { navController.navigate("onboardingWelcome") }
@@ -363,8 +363,7 @@ fun MainScreen(
                 CreatePostScreen(
                     viewModel = hiltViewModel<CreatePostViewModel>(),
                     onBack = { navController.popBackStack() },
-                    onPickImages = {},
-                    onShowAudiencePicker = {}
+                    onPickImages = {}
                 )
             }
             composable("editProfile") {

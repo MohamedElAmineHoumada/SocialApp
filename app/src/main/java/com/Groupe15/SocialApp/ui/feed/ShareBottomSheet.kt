@@ -110,7 +110,6 @@ fun ShareScreen(
             .fillMaxWidth()
             .padding(20.dp)
     ) {
-        // Handle
         Box(
             modifier = Modifier
                 .width(40.dp)
@@ -121,35 +120,24 @@ fun ShareScreen(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        // Header
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                text = "Partager",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold
-            )
+            Text(text = "Partager", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
             IconButton(
                 onClick = onDismiss,
-                modifier = Modifier
-                    .size(32.dp)
-                    .background(MaterialTheme.colorScheme.surfaceVariant, CircleShape)
+                modifier = Modifier.size(32.dp).background(MaterialTheme.colorScheme.surfaceVariant, CircleShape)
             ) {
-                Icon(
-                    Icons.Default.Close,
-                    contentDescription = "Fermer",
-                    modifier = Modifier.size(18.dp),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                Icon(Icons.Default.Close, contentDescription = "Fermer",
+                    modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
 
         Spacer(modifier = Modifier.height(20.dp))
 
-        // Share to Story Button
+        // Partager en story — déjà fonctionnel
         ShareActionButton(
             title = "Partager en story",
             iconRes = R.drawable.ic_add_circle,
@@ -164,7 +152,7 @@ fun ShareScreen(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        // Send in Message Button — messagerie pas encore connectée
+        // ✅ MODIFIÉ : invite à choisir un contact ci-dessous au lieu de "Bientôt disponible"
         ShareActionButton(
             title = "Envoyer en message",
             iconRes = R.drawable.ic_send,
@@ -172,8 +160,11 @@ fun ShareScreen(
             contentColor = MaterialTheme.colorScheme.onSurface,
             border = true,
             onClick = {
-                Toast.makeText(context, "Bientôt disponible", Toast.LENGTH_SHORT).show()
-                onDismiss()
+                if (recentContacts.isEmpty()) {
+                    Toast.makeText(context, "Aucun contact disponible", Toast.LENGTH_SHORT).show()
+                } else {
+                    Toast.makeText(context, "Choisis un contact ci-dessous", Toast.LENGTH_SHORT).show()
+                }
             }
         )
 
@@ -202,19 +193,17 @@ fun ShareScreen(
                 contentPadding = PaddingValues(bottom = 32.dp)
             ) {
                 items(recentContacts) { user ->
+                    // ✅ MODIFIÉ : envoie réellement le lien du post à ce contact
                     RecentContactItem(user = user, onClick = {
-                        Toast.makeText(context, "Bientôt disponible", Toast.LENGTH_SHORT).show()
+                        viewModel.sendPostToChat(user.id, post)
+                        Toast.makeText(context, "Envoyé à ${user.displayName.ifBlank { user.username }}", Toast.LENGTH_SHORT).show()
                         onDismiss()
                     })
                 }
             }
         }
 
-        // Action Icons Row
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             ActionIconItem(label = "Copier le lien", iconRes = R.drawable.ic_link, onClick = {
                 val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                 val clip = ClipData.newPlainText("Post Link", "https://socialapp.com/post/$postId")

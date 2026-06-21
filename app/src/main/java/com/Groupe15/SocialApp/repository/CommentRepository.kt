@@ -14,20 +14,12 @@ import javax.inject.Singleton
 @Singleton
 class CommentRepository @Inject constructor(
     private val firestore: FirebaseFirestore,
-    private val auth: FirebaseAuth
+    private val auth: FirebaseAuth,
+    private val notificationRepository: NotificationRepository // ✅ NOUVEAU
 ) {
 
-    /**
-     * IMPORTANT : pas d'orderBy() dans la query Firestore.
-     * Un orderBy() sur un champ peut nécessiter un index composite côté Firestore
-     * (selon les règles/autres requêtes du projet) ; si l'index est absent, le
-     * listener reçoit une erreur FAILED_PRECONDITION et ne renvoie JAMAIS de
-     * données — sans crash visible, juste une liste vide en permanence.
-     * On trie donc côté client après réception, ce qui est sans risque.
-     */
     fun getComments(postId: String): Flow<List<Comment>> = callbackFlow {
         if (postId.isBlank()) {
-            android.util.Log.w("CommentsDebug", "postId vide, abandon")
             trySend(emptyList())
             close()
             return@callbackFlow
@@ -39,7 +31,6 @@ class CommentRepository @Inject constructor(
             .collection("comments")
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
-                    android.util.Log.e("CommentsDebug", "Erreur listener comments postId=$postId : ${error.message}", error)
                     trySend(emptyList())
                     return@addSnapshotListener
                 }
@@ -49,11 +40,6 @@ class CommentRepository @Inject constructor(
                     }
                 } ?: emptyList()
 
-                android.util.Log.d(
-                    "CommentsDebug",
-                    "postId=$postId reçu ${comments.size} commentaires bruts: ${snapshot?.documents?.size}"
-                )
-
                 val sorted = comments.sortedBy { it.timestamp }
                 trySend(sorted)
             }
@@ -62,8 +48,14 @@ class CommentRepository @Inject constructor(
 
     suspend fun addComment(postId: String, text: String): Result<Unit> {
         return try {
-            val uid      = auth.currentUser?.uid ?: return Result.failure(Exception("Non connecté"))
-            val username = auth.currentUser?.displayName ?: "Anonyme"
+            val uid = auth.currentUser?.uid ?: return Result.failure(Exception("Non connecté"))
+
+            val userDoc = firestore.collection("users").document(uid).get().await()
+            val username = userDoc.getString("username")
+                ?: userDoc.getString("displayName")
+                ?: auth.currentUser?.displayName
+                ?: "Anonyme"
+            val avatar = userDoc.getString("profileImageUrl") ?: ""
 
             val commentRef = firestore
                 .collection("posts")
@@ -80,8 +72,6 @@ class CommentRepository @Inject constructor(
                 timestamp = System.currentTimeMillis()
             )
 
-            android.util.Log.d("CommentsDebug", "Ajout commentaire postId=$postId commentId=${commentRef.id} text=$text")
-
             val postRef = firestore.collection("posts").document(postId)
 
             firestore.runBatch { batch ->
@@ -89,9 +79,27 @@ class CommentRepository @Inject constructor(
                 batch.update(postRef, "commentsCount", FieldValue.increment(1))
             }.await()
 
+            //  notification à l'auteur du post
+            try {
+                val postDoc = postRef.get().await()
+                val authorUid = postDoc.getString("userId") ?: ""
+                if (authorUid.isNotBlank() && authorUid != uid) {
+                    notificationRepository.createNotification(
+                        targetUid = authorUid,
+                        type = "comment",
+                        fromUserId = uid,
+                        fromUserName = username,
+                        fromUserAvatar = avatar,
+                        content = "$username a commenté votre publication",
+                        targetId = postId
+                    )
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+
             Result.success(Unit)
         } catch (e: Exception) {
-            android.util.Log.e("CommentsDebug", "Erreur addComment: ${e.message}", e)
             Result.failure(e)
         }
     }

@@ -8,11 +8,13 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.asLiveData
 import androidx.lifecycle.viewModelScope
 import com.Groupe15.SocialApp.models.Comment
+import com.Groupe15.SocialApp.models.MessageType
 import com.Groupe15.SocialApp.models.Post
 import com.Groupe15.SocialApp.models.Story
 import com.Groupe15.SocialApp.repository.CommentRepository
 import com.Groupe15.SocialApp.repository.FeedRepository
 import com.Groupe15.SocialApp.repository.FollowRepository
+import com.Groupe15.SocialApp.repository.MessageRepository
 import com.Groupe15.SocialApp.repository.PostRepository
 import com.Groupe15.SocialApp.repository.RecommendationRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -24,9 +26,6 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-/**
- * Onglets disponibles dans le Feed (Home).
- */
 enum class FeedTab {
     FOLLOWING,
     FOR_YOU
@@ -39,10 +38,10 @@ class FeedViewModel @Inject constructor(
     private val postRepository: PostRepository,
     private val recommendationRepository: RecommendationRepository,
     private val commentRepository: CommentRepository,
-    private val followRepository: FollowRepository
+    private val followRepository: FollowRepository,
+    private val messageRepository: MessageRepository // ✅ NOUVEAU
 ) : ViewModel() {
 
-    // ---- Onglet sélectionné (Following / For You) ----
     private val _selectedTab = MutableStateFlow(FeedTab.FOLLOWING)
     val selectedTab: LiveData<FeedTab> = _selectedTab.asLiveData()
 
@@ -50,21 +49,12 @@ class FeedViewModel @Inject constructor(
         _selectedTab.value = tab
     }
 
-    // Posts affichés à l'écran selon l'onglet actif.
-    // NOTE: followingPosts/forYouPosts séparés ont été retirés car ils créaient
-    // 2 listeners Firestore actifs en permanence même non utilisés par l'UI.
-    // On garde uniquement le flow réactif à l'onglet sélectionné.
     val posts: LiveData<List<Post>> = _selectedTab
         .flatMapLatest { tab ->
-            android.util.Log.d("FeedDebug", "Onglet sélectionné: $tab")
             when (tab) {
                 FeedTab.FOLLOWING -> postRepository.getLivePosts()
                 FeedTab.FOR_YOU -> recommendationRepository.getForYouPosts(excludeAlreadyLiked = false)
             }
-        }
-        .map { list ->
-            android.util.Log.d("FeedDebug", "Posts reçus: ${list.size} -> ${list.map { it.authorUsername }}")
-            list
         }
         .asLiveData()
 
@@ -85,9 +75,12 @@ class FeedViewModel @Inject constructor(
     private val _isLoading = MutableLiveData(false)
     val isLoading: LiveData<Boolean> = _isLoading
 
-    // Likes de l'utilisateur courant pour les posts visibles actuellement (pour l'état du coeur)
     private val _likedPostIds = MutableLiveData<Set<String>>(emptySet())
     val likedPostIds: LiveData<Set<String>> = _likedPostIds
+
+    //  IDs des posts sauvegardés, mis à jour en temps réel
+    private val _savedPostIds = MutableLiveData<Set<String>>(emptySet())
+    val savedPostIds: LiveData<Set<String>> = _savedPostIds
 
     val currentUserId: String? get() = feedRepository.currentUserId
 
@@ -95,6 +88,7 @@ class FeedViewModel @Inject constructor(
         loadFeed()
         loadStories()
         loadRecentContacts()
+        loadSavedPostIds() // ✅ NOUVEAU
     }
 
     fun selectPost(postId: String) {
@@ -104,17 +98,12 @@ class FeedViewModel @Inject constructor(
     fun toggleLike(postId: String) {
         viewModelScope.launch {
             postRepository.toggleLike(postId)
-            // Met à jour l'état local immédiatement (optimistic UI)
             val current = _likedPostIds.value.orEmpty().toMutableSet()
             if (postId in current) current.remove(postId) else current.add(postId)
             _likedPostIds.value = current
         }
     }
 
-    /**
-     * Charge l'état "liké ou non" pour une liste de posts visibles.
-     * À appeler quand la liste de posts change (ex: changement d'onglet).
-     */
     fun refreshLikedState(postIds: List<String>) {
         viewModelScope.launch {
             val liked = postRepository.getLikedPostIds(postIds)
@@ -129,8 +118,6 @@ class FeedViewModel @Inject constructor(
     }
 
     fun loadFeed() {
-        // Les Flow callbackFlow écoutent en temps réel en permanence.
-        // loadFeed() reste disponible pour le swipe-to-refresh côté UI.
         _isLoading.value = false
     }
 
@@ -186,6 +173,34 @@ class FeedViewModel @Inject constructor(
     fun toggleSavePost(postId: String) {
         viewModelScope.launch {
             feedRepository.toggleSavePost(postId)
+        }
+    }
+
+    //  écoute réactive des posts sauvegardés
+    private fun loadSavedPostIds() {
+        viewModelScope.launch {
+            feedRepository.getSavedPostIdsFlow().collect { ids ->
+                _savedPostIds.value = ids.toSet()
+            }
+        }
+    }
+
+    // envoie le lien du post dans une conversation existante (ou la crée)
+    fun sendPostToChat(otherUserId: String, post: Post) {
+        val senderId = currentUserId ?: return
+        viewModelScope.launch {
+            try {
+                val chatId = messageRepository.getChatId(senderId, otherUserId)
+                messageRepository.sendMessage(
+                    chatId = chatId,
+                    senderId = senderId,
+                    receiverId = otherUserId,
+                    text = "https://socialapp.com/post/${post.postId}",
+                    type = MessageType.TEXT
+                )
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
         }
     }
 }

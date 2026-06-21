@@ -5,10 +5,12 @@ import androidx.lifecycle.viewModelScope
 import com.Groupe15.SocialApp.models.Post
 import com.Groupe15.SocialApp.models.User
 import com.Groupe15.SocialApp.repository.AuthRepository
+import com.Groupe15.SocialApp.repository.FeedRepository
 import com.Groupe15.SocialApp.repository.FollowRepository
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -20,6 +22,7 @@ import javax.inject.Inject
 class ProfileViewModel @Inject constructor(
     private val authRepository: AuthRepository,
     private val followRepository: FollowRepository,
+    private val feedRepository: FeedRepository, // ✅ NOUVEAU
     private val firestore: FirebaseFirestore,
     private val auth: FirebaseAuth
 ) : ViewModel() {
@@ -36,10 +39,17 @@ class ProfileViewModel @Inject constructor(
     private val _isLoadingPosts = MutableStateFlow(false)
     val isLoadingPosts: StateFlow<Boolean> = _isLoadingPosts.asStateFlow()
 
+    //  posts sauvegardés (onglet "Saved")
+    private val _savedPosts = MutableStateFlow<List<Post>>(emptyList())
+    val savedPosts: StateFlow<List<Post>> = _savedPosts.asStateFlow()
+
+    private val _isLoadingSaved = MutableStateFlow(false)
+    val isLoadingSaved: StateFlow<Boolean> = _isLoadingSaved.asStateFlow()
+
+    private var savedPostsJob: Job? = null
+
     fun loadProfile(targetUid: String) {
         val currentUid = auth.currentUser?.uid ?: ""
-
-        // Résoudre le vrai UID : si vide ou "me", charger le profil connecté
         val resolvedUid = if (targetUid.isEmpty() || targetUid == "me") currentUid else targetUid
 
         _isOwnProfile.value = resolvedUid == currentUid
@@ -78,7 +88,19 @@ class ProfileViewModel @Inject constructor(
         }
     }
 
-    // Appelé par FollowViewModel après follow/unfollow pour rafraîchir les compteurs
+    //  charge les posts sauvegardés en temps réel (uniquement pour son propre profil)
+    fun loadSavedPosts() {
+        if (savedPostsJob != null) return // déjà en écoute
+        savedPostsJob = viewModelScope.launch {
+            _isLoadingSaved.value = true
+            feedRepository.getSavedPostIdsFlow().collect { ids ->
+                val posts = feedRepository.getPostsByIds(ids)
+                _savedPosts.value = posts.sortedByDescending { it.getCreatedAtMillis() }
+                _isLoadingSaved.value = false
+            }
+        }
+    }
+
     fun refreshProfile() {
         val uid = _profileUser.value?.id ?: return
         loadProfile(uid)

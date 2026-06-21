@@ -20,7 +20,8 @@ import javax.inject.Singleton
 class PostRepository @Inject constructor(
     private val firestore: FirebaseFirestore,
     private val storage: FirebaseStorage,
-    private val auth: FirebaseAuth
+    private val auth: FirebaseAuth,
+    private val notificationRepository: NotificationRepository // ✅ NOUVEAU
 ) {
 
     suspend fun getFollowingUids(currentUid: String): List<String> {
@@ -36,11 +37,6 @@ class PostRepository @Inject constructor(
         }
     }
 
-    /**
-     * Version réactive (temps réel) de la liste des UID suivis.
-     * Utilisée par RecommendationRepository pour que "For You" se recalcule
-     * automatiquement quand on suit/ne suit plus quelqu'un.
-     */
     fun getFollowingUidsFlow(currentUid: String): Flow<List<String>> = callbackFlow {
         val listener = firestore.collection("users")
             .document(currentUid)
@@ -55,11 +51,6 @@ class PostRepository @Inject constructor(
         awaitClose { listener.remove() }
     }
 
-    /**
-     * Onglet "Following" : posts des utilisateurs suivis + ses propres posts.
-     * PAS d'orderBy dans la query pour éviter les index composites Firestore.
-     * Le tri se fait côté client après réception (le plus récent en premier).
-     */
     fun getLivePosts(): Flow<List<Post>> = callbackFlow {
         val currentUid = auth.currentUser?.uid ?: run {
             trySend(emptyList())
@@ -77,7 +68,7 @@ class PostRepository @Inject constructor(
 
         chunks.forEachIndexed { index, chunk ->
             val listener = firestore.collection("posts")
-                .whereIn("userId", chunk)   // pas d'orderBy → pas d'index requis
+                .whereIn("userId", chunk)
                 .limit(100)
                 .addSnapshotListener { snapshot, error ->
                     if (error != null) return@addSnapshotListener
@@ -86,7 +77,6 @@ class PostRepository @Inject constructor(
                             if (post.postId.isBlank()) post.postId = doc.id
                         }
                     } ?: emptyList()
-                    // Tri côté client : du plus récent au plus ancien
                     val merged = chunkResults.values.flatten()
                         .sortedByDescending { it.getCreatedAtMillis() }
                         .take(50)
@@ -98,11 +88,6 @@ class PostRepository @Inject constructor(
         awaitClose { listeners.forEach { it.remove() } }
     }
 
-    /**
-     * Tous les posts publics récents (toutes sources confondues).
-     * Utilisé comme pool de base pour l'onglet "For You".
-     * PAS d'orderBy → pas d'index composite requis ; tri fait côté client.
-     */
     fun getAllPosts(limit: Long = 200): Flow<List<Post>> = callbackFlow {
         val listener = firestore.collection("posts")
             .limit(limit)
@@ -110,8 +95,6 @@ class PostRepository @Inject constructor(
                 if (error != null) return@addSnapshotListener
                 val posts = snapshot?.documents?.mapNotNull { doc ->
                     doc.toObject(Post::class.java)?.also { post ->
-                        // Filet de sécurité : si le champ "id" est absent/vide en base
-                        // (anciens documents), on retombe sur l'ID réel du document Firestore.
                         if (post.postId.isBlank()) post.postId = doc.id
                     }
                 } ?: emptyList()
@@ -125,7 +108,6 @@ class PostRepository @Inject constructor(
             val uid = auth.currentUser?.uid
                 ?: return Result.failure(Exception("Non connecté"))
 
-            // Lire le vrai username depuis Firestore
             val userDoc = firestore.collection("users").document(uid).get().await()
             val username = userDoc.getString("username")
                 ?: userDoc.getString("displayName")
@@ -161,21 +143,47 @@ class PostRepository @Inject constructor(
         val postRef = firestore.collection("posts").document(postId)
         val likeRef = postRef.collection("likes").document(uid)
 
-        firestore.runTransaction { transaction ->
+        val isNowLiked = firestore.runTransaction { transaction ->
             val likeDoc = transaction.get(likeRef)
             if (likeDoc.exists()) {
                 transaction.delete(likeRef)
                 transaction.update(postRef, "likesCount", FieldValue.increment(-1))
+                false
             } else {
                 transaction.set(likeRef, mapOf("userId" to uid))
                 transaction.update(postRef, "likesCount", FieldValue.increment(1))
+                true
             }
         }.await()
+
+        // ✅ NOUVEAU : notification uniquement quand on LIKE (pas quand on unlike)
+        if (isNowLiked) {
+            try {
+                val postDoc = postRef.get().await()
+                val authorUid = postDoc.getString("userId") ?: ""
+                if (authorUid.isNotBlank() && authorUid != uid) {
+                    val userDoc = firestore.collection("users").document(uid).get().await()
+                    val likerName = userDoc.getString("username")
+                        ?: userDoc.getString("displayName")
+                        ?: "Quelqu'un"
+                    val likerAvatar = userDoc.getString("profileImageUrl") ?: ""
+
+                    notificationRepository.createNotification(
+                        targetUid = authorUid,
+                        type = "like",
+                        fromUserId = uid,
+                        fromUserName = likerName,
+                        fromUserAvatar = likerAvatar,
+                        content = "$likerName a aimé votre publication",
+                        targetId = postId
+                    )
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
     }
 
-    /**
-     * Vérifie si l'utilisateur courant a liké ce post.
-     */
     suspend fun isLikedByCurrentUser(postId: String): Boolean {
         val uid = auth.currentUser?.uid ?: return false
         return try {
@@ -187,16 +195,10 @@ class PostRepository @Inject constructor(
         }
     }
 
-    /**
-     * Récupère l'ensemble des postId likés par l'utilisateur courant
-     * parmi une liste donnée (utile pour le scoring "For You" et l'UI des coeurs).
-     */
     suspend fun getLikedPostIds(postIds: List<String>): Set<String> {
         val uid = auth.currentUser?.uid ?: return emptySet()
         if (postIds.isEmpty()) return emptySet()
         val liked = mutableSetOf<String>()
-        // Firestore n'a pas de "IN" sur des sous-collections différentes par doc,
-        // donc on vérifie en parallèle léger (limité car déjà filtré en amont).
         postIds.chunked(10).forEach { chunk ->
             chunk.forEach { postId ->
                 try {
