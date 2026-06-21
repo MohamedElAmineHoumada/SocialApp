@@ -177,7 +177,7 @@ fun MainScreen(
         "login", "register", "forgotPassword", "onboardingWelcome",
         "onboardingDob", "onboardingGender", "onboardingInterests",
         "chat/{otherUserId}/{userName}", "createPost", "createStory", "storyViewer",
-        "editProfile", "settings", "notifications"
+        "editProfile", "settings", "notifications", "notificationSettings"
     )
     val showBottomNav = currentDestination?.route !in noBottomBarRoutes &&
             currentDestination?.route?.contains("chat/") == false
@@ -188,11 +188,11 @@ fun MainScreen(
                 val networkViewModel = hiltViewModel<NetworkViewModel>()
                 val messagesViewModel = hiltViewModel<MessagesViewModel>()
                 val notificationViewModel = hiltViewModel<NotificationViewModel>()
-                
+
                 val followRequests by networkViewModel.followRequests.collectAsState()
                 val conversations by messagesViewModel.conversations.observeAsState(initial = emptyList<Conversation>())
                 val unreadNotificationsCount by notificationViewModel.unreadCount.collectAsState()
-                
+
                 val unreadMessagesCount = conversations.count { it.hasUnread }
 
                 AnimatedVisibility(
@@ -250,34 +250,59 @@ fun MainScreen(
                 val registerViewModel: RegisterViewModel = hiltViewModel()
                 RegisterScreen(
                     viewModel = registerViewModel,
-                    onRegisterClick = { email, password, name -> 
-                        registerViewModel.register(email, password, name) 
+                    onRegisterClick = { email, password, name ->
+                        registerViewModel.register(email, password, name)
                     },
                     onLoginClick = { navController.popBackStack() },
-                    onSuccess = { navController.navigate("onboardingWelcome") }
+                    onGoogleClick = {
+                        onLaunchGoogle(
+                            { idToken -> registerViewModel.signInWithGoogle(idToken) },
+                            { error -> registerViewModel.resetState() }
+                        )
+                    },
+                    onFacebookClick = {
+                        onLaunchFacebook(
+                            { accessToken -> registerViewModel.signInWithFacebook(accessToken) },
+                            { error -> registerViewModel.resetState() }
+                        )
+                    },
+                    // ✅ FIX : popUpTo("register") pour vider la back-stack
+                    // avant d'aller vers l'onboarding. Sans ça, "register" restait
+                    // dans la pile et bloquait la navigation sur onboardingDob.
+                    onSuccess = {
+                        navController.navigate("onboardingWelcome") {
+                            popUpTo("register") { inclusive = true }
+                        }
+                    }
                 )
             }
+
             composable("onboardingWelcome") {
                 OnboardingWelcomeScreen(onStart = { navController.navigate("onboardingDob") })
             }
+
             composable("onboardingDob") {
                 OnboardingDobScreen(
                     onBack = { navController.popBackStack() },
                     onContinue = { navController.navigate("onboardingGender") }
                 )
             }
+
             composable("onboardingGender") {
                 OnboardingGenderScreen(
                     onBack = { navController.popBackStack() },
                     onContinue = { navController.navigate("onboardingInterests") }
                 )
             }
+
             composable("onboardingInterests") {
                 OnboardingInterestsScreen(
                     onBack = { navController.popBackStack() },
+                    // ✅ FIX : popUpTo(0) vide toute la back-stack (login + onboarding)
+                    // pour que l'utilisateur ne puisse pas revenir en arrière depuis le feed.
                     onFinish = {
                         navController.navigate("feed") {
-                            popUpTo("onboardingWelcome") { inclusive = true }
+                            popUpTo(0) { inclusive = true }
                         }
                     }
                 )
@@ -305,6 +330,7 @@ fun MainScreen(
                     }
                 )
             }
+
             composable("network") {
                 val networkViewModel = hiltViewModel<NetworkViewModel>()
                 NetworkScreen(
@@ -314,6 +340,7 @@ fun MainScreen(
                     onUserClick = { uid -> navController.navigate("profile/$uid") }
                 )
             }
+
             composable("all_suggestions") {
                 val networkViewModel = hiltViewModel<NetworkViewModel>()
                 SuggestionsScreen(
@@ -322,6 +349,7 @@ fun MainScreen(
                     onUserClick = { uid -> navController.navigate("profile/$uid") }
                 )
             }
+
             composable(
                 "profile/{uid}",
                 arguments = listOf(navArgument("uid") { defaultValue = "" })
@@ -333,11 +361,6 @@ fun MainScreen(
                     authViewModel.getCurrentUserUid() ?: ""
                 else uid
 
-                LaunchedEffect(effectiveUid) {
-                    if (effectiveUid.isNotEmpty()) {
-                        profileViewModel.loadProfile(effectiveUid)
-                    }
-                }
                 ProfileScreen(
                     viewModel = profileViewModel,
                     followViewModel = hiltViewModel<FollowViewModel>(),
@@ -348,17 +371,20 @@ fun MainScreen(
                     onNavigateToProfile = { otherUid -> navController.navigate("profile/$otherUid") }
                 )
             }
+
             composable("discover") {
                 DiscoverScreen(
                     onNavigateToProfile = { uid -> navController.navigate("profile/$uid") },
                     onNavigateToNotifications = { navController.navigate("notifications") }
                 )
             }
+
             composable("notifications") {
                 NotificationsScreen(
                     onBackClick = { navController.popBackStack() }
                 )
             }
+
             composable("createPost") {
                 CreatePostScreen(
                     viewModel = hiltViewModel<CreatePostViewModel>(),
@@ -367,6 +393,7 @@ fun MainScreen(
                     onShowAudiencePicker = {}
                 )
             }
+
             composable("editProfile") {
                 EditProfileScreen(
                     viewModel = hiltViewModel<EditProfileViewModel>(),
@@ -375,6 +402,7 @@ fun MainScreen(
                     onError = {}
                 )
             }
+
             composable("settings") {
                 SettingsScreen(
                     viewModel = hiltViewModel<AuthViewModel>(),
@@ -389,9 +417,17 @@ fun MainScreen(
                         navController.navigate("login") {
                             popUpTo(navController.graph.id) { inclusive = true }
                         }
-                    }
+                    },
+                    onNotifications = { navController.navigate("notificationSettings") }
                 )
             }
+
+            composable("notificationSettings") {
+                NotificationSettingsScreen(
+                    onBack = { navController.popBackStack() }
+                )
+            }
+
             composable(
                 "chat/{otherUserId}/{userName}",
                 arguments = listOf(
@@ -415,6 +451,7 @@ fun MainScreen(
                     onShowToast = { msg -> Toast.makeText(context, msg, Toast.LENGTH_SHORT).show() }
                 )
             }
+
             composable(
                 "call/{userName}/{isVideo}",
                 arguments = listOf(

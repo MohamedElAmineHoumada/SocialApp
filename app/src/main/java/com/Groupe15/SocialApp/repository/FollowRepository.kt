@@ -387,18 +387,40 @@ class FollowRepository @Inject constructor(
         }
     }
 
+    /**
+     * ✅ CORRIGÉ : auparavant, un seul document "à problème" (erreur réseau ponctuelle
+     * sur un chunk, document avec un champ incompatible qui fait planter toObject(), etc.)
+     * faisait échouer la requête whereIn() ou le mapNotNull() de TOUT le chunk, ce qui était
+     * intercepté par le try/catch global et renvoyait emptyList() pour TOUS les ids demandés
+     * — y compris ceux des chunks qui auraient parfaitement fonctionné.
+     *
+     * Symptôme observé : le compteur (abonnés/abonnements) affiche un nombre correct
+     * (calculé séparément par resyncCounts, qui ne vérifie que l'existence des documents),
+     * mais la liste affichée est vide pour CERTAINS comptes seulement — exactement selon
+     * que leurs abonnés/abonnements contiennent ou non un document "à problème".
+     *
+     * Désormais, chaque chunk et chaque document sont traités indépendamment : un échec
+     * isolé est simplement ignoré, sans jamais vider le reste de la liste.
+     */
     suspend fun getUsersByIds(ids: List<String>): List<User> {
         if (ids.isEmpty()) return emptyList()
-        return try {
-            ids.chunked(10).flatMap { chunk ->
-                usersCollection.whereIn(FieldPath.documentId(), chunk).get().await()
-                    .documents.mapNotNull { doc ->
-                        doc.toObject(User::class.java)?.copy(id = doc.id)
+        val result = mutableListOf<User>()
+        for (chunk in ids.chunked(10)) {
+            try {
+                val snapshot = usersCollection.whereIn(FieldPath.documentId(), chunk).get().await()
+                for (doc in snapshot.documents) {
+                    try {
+                        doc.toObject(User::class.java)?.copy(id = doc.id)?.let { result.add(it) }
+                    } catch (e: Exception) {
+                        // Document individuel incompatible : on l'ignore, pas toute la liste.
                     }
+                }
+            } catch (e: Exception) {
+                // Échec ponctuel sur CE chunk (ex: erreur réseau) : on continue avec
+                // les chunks suivants au lieu d'abandonner toute la liste.
             }
-        } catch (e: Exception) {
-            emptyList()
         }
+        return result
     }
 
     // ─────────────────────────────────────────────
