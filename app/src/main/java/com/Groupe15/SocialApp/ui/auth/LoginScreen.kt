@@ -1,34 +1,30 @@
 package com.Groupe15.SocialApp.ui.auth
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Face
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.Groupe15.SocialApp.R
 import com.Groupe15.SocialApp.viewmodel.LoginViewModel
-
-// Couleurs du thème, reprises de la maquette
-private val GradientStart = Color(0xFF6C63FF)
-private val GradientEnd = Color(0xFF8E7CFF)
-private val FieldBackground = Color(0xFFF4F4F8)
-private val SubtitleGray = Color(0xFF8A8A9A)
 
 @Composable
 fun LoginScreen(
@@ -43,216 +39,235 @@ fun LoginScreen(
     val state by viewModel.state.observeAsState(AuthState.Idle)
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+    val focusManager = LocalFocusManager.current
 
+    // Snackbar pour "email de vérification renvoyé"
+    val snackbarHostState = remember { SnackbarHostState() }
     LaunchedEffect(state) {
-        if (state is AuthState.Success) {
-            onSuccess()
+        when (state) {
+            is AuthState.Success -> onSuccess()
+            is AuthState.VerificationEmailSent ->
+                snackbarHostState.showSnackbar("Email de vérification renvoyé !")
+            else -> {}
         }
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color.White)
-            .padding(horizontal = 24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Spacer(modifier = Modifier.height(48.dp))
-
-        // Logo : carré arrondi avec dégradé
-        Box(
+    Scaffold(snackbarHost = { SnackbarHost(snackbarHostState) }) { scaffoldPadding ->
+        Column(
             modifier = Modifier
-                .size(72.dp)
-                .clip(RoundedCornerShape(20.dp))
-                .background(Brush.linearGradient(listOf(GradientStart, GradientEnd))),
-            contentAlignment = Alignment.Center
+                .fillMaxSize()
+                .background(Color(0xFFF8F9FF))
+                .verticalScroll(rememberScrollState())
+                .padding(scaffoldPadding)
+                .padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Icon(
-                imageVector = Icons.Default.Face,
+            Spacer(modifier = Modifier.height(60.dp))
+
+            Image(
+                painter = painterResource(id = R.drawable.logo_afn),
                 contentDescription = "Logo",
-                tint = Color.White,
-                modifier = Modifier.size(36.dp)
+                modifier = Modifier.size(80.dp)
             )
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Text(
-            text = "AFN",
-            fontSize = 26.sp,
-            fontWeight = FontWeight.Bold,
-            color = Color(0xFF2A2A3A)
-        )
-
-        Spacer(modifier = Modifier.height(4.dp))
-
-        Text(
-            text = "Welcome back to your creative community.",
-            fontSize = 13.sp,
-            color = SubtitleGray,
-            textAlign = TextAlign.Center
-        )
-
-        Spacer(modifier = Modifier.height(32.dp))
-
-        // Champ Email
-        StyledTextField(
-            value = email,
-            onValueChange = { email = it },
-            placeholder = "Email address"
-        )
-
-        Spacer(modifier = Modifier.height(14.dp))
-
-        // Champ Password
-        StyledTextField(
-            value = password,
-            onValueChange = { password = it },
-            placeholder = "Password",
-            isPassword = true
-        )
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-            TextButton(onClick = onForgotPasswordClick) {
-                Text("Forgot Password?", fontSize = 13.sp, color = GradientStart)
-            }
-        }
-
-        if (state is AuthState.Error) {
+            Spacer(modifier = Modifier.height(12.dp))
             Text(
-                text = (state as AuthState.Error).message,
-                color = MaterialTheme.colorScheme.error,
-                fontSize = 13.sp,
-                modifier = Modifier.padding(bottom = 8.dp)
+                "AFN",
+                style = MaterialTheme.typography.headlineMedium,
+                color = Color(0xFF6C47FF),
+                fontWeight = FontWeight.Bold
             )
-        }
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                "Ravi de vous revoir ! Connectez-vous pour continuer.",
+                textAlign = TextAlign.Center,
+                color = Color.Gray,
+                fontSize = 14.sp
+            )
+            Spacer(modifier = Modifier.height(40.dp))
 
-        Spacer(modifier = Modifier.height(8.dp))
-
-        // Bouton Login avec dégradé
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(52.dp)
-                .clip(RoundedCornerShape(26.dp))
-                .background(Brush.horizontalGradient(listOf(GradientStart, GradientEnd)))
-                .clickable(enabled = state !is AuthState.Loading) {
-                    viewModel.login(email, password)
-                },
-            contentAlignment = Alignment.Center
-        ) {
-            if (state is AuthState.Loading) {
-                CircularProgressIndicator(
-                    modifier = Modifier.size(22.dp),
-                    color = Color.White,
-                    strokeWidth = 2.dp
+            // ── Champs email / mot de passe ────────────────────────────────
+            CustomLoginTextField(
+                value = email, onValueChange = { email = it },
+                placeholder = "Adresse e-mail",
+                leadingIcon = Icons.Default.Email,
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Email, imeAction = ImeAction.Next
                 )
-            } else {
-                Text("Login", color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            CustomLoginTextField(
+                value = password, onValueChange = { password = it },
+                placeholder = "Mot de passe",
+                leadingIcon = Icons.Default.Lock,
+                isPassword = true,
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Password, imeAction = ImeAction.Done
+                ),
+                keyboardActions = KeyboardActions(onDone = {
+                    focusManager.clearFocus()
+                    if (email.isNotBlank() && password.isNotBlank()) onLoginClick(email, password)
+                })
+            )
+
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                TextButton(onClick = onForgotPasswordClick) {
+                    Text("Mot de passe oublié ?", color = Color(0xFF6C47FF), fontSize = 13.sp)
+                }
             }
-        }
+            Spacer(modifier = Modifier.height(24.dp))
 
-        Spacer(modifier = Modifier.height(20.dp))
+            // ── Bouton Se connecter ────────────────────────────────────────
+            Button(
+                onClick = { onLoginClick(email, password) },
+                modifier = Modifier.fillMaxWidth().height(56.dp),
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
+                contentPadding = PaddingValues(),
+                enabled = state !is AuthState.Loading && email.isNotBlank() && password.isNotBlank()
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(
+                            brush = Brush.horizontalGradient(
+                                listOf(Color(0xFF6C47FF), Color(0xFF9D47FF))
+                            ),
+                            shape = RoundedCornerShape(12.dp)
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (state is AuthState.Loading) {
+                        CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
+                    } else {
+                        Text("Se connecter", fontWeight = FontWeight.Bold, color = Color.White)
+                    }
+                }
+            }
 
-        // Séparateur "Continue with"
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Divider(modifier = Modifier.weight(1f), color = Color(0xFFE5E5EA))
-            Text(
-                text = "  Continue with  ",
-                fontSize = 12.sp,
-                color = SubtitleGray
-            )
-            Divider(modifier = Modifier.weight(1f), color = Color(0xFFE5E5EA))
-        }
+            // ── Bannière "email non vérifié" (connexion email/mdp) ─────────
+            if (state is AuthState.EmailNotVerified) {
+                Spacer(modifier = Modifier.height(16.dp))
+                EmailVerificationBanner(
+                    onResend = { viewModel.resendVerificationEmail() },
+                    onVerified = { viewModel.checkEmailVerified() }
+                )
+            }
 
-        Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(32.dp))
+            Text("Ou continuer avec", color = Color.Gray, fontSize = 12.sp)
+            Spacer(modifier = Modifier.height(16.dp))
 
-        // Boutons sociaux
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            SocialButton(
-                text = "Google",
-                modifier = Modifier.weight(1f),
-                onClick = onGoogleClick
-            )
-            SocialButton(
-                text = "Facebook",
-                modifier = Modifier.weight(1f),
-                onClick = onFacebookClick
-            )
-        }
+            // ── Boutons Google / Facebook ──────────────────────────────────
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                SocialLoginButton(
+                    text = "Google",
+                    icon = R.drawable.ic_google,
+                    modifier = Modifier.weight(1f),
+                    onClick = onGoogleClick
+                )
+                SocialLoginButton(
+                    text = "Facebook",
+                    icon = R.drawable.ic_facebook,
+                    modifier = Modifier.weight(1f),
+                    onClick = onFacebookClick
+                )
+            }
 
-        Spacer(modifier = Modifier.weight(1f))
+            Spacer(modifier = Modifier.weight(1f))
 
-        // Lien vers inscription
-        Row(
-            modifier = Modifier.padding(bottom = 24.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text("Don't have an account? ", fontSize = 13.sp, color = SubtitleGray)
-            Text(
-                "Sign Up",
-                fontSize = 13.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = GradientStart,
-                modifier = Modifier.clickable { onRegisterClick() }
-            )
+            Row(
+                modifier = Modifier.padding(vertical = 24.dp),
+                horizontalArrangement = Arrangement.Center
+            ) {
+                Text("Pas encore de compte ? ", color = Color.Gray, fontSize = 14.sp)
+                Text(
+                    "S'inscrire",
+                    color = Color(0xFF6C47FF),
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.clickable { onRegisterClick() }
+                )
+            }
+
+            if (state is AuthState.Error) {
+                Text(
+                    text = (state as AuthState.Error).message,
+                    color = MaterialTheme.colorScheme.error,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
+                    fontSize = 14.sp
+                )
+            }
         }
     }
 }
 
 @Composable
-private fun StyledTextField(
+fun CustomLoginTextField(
     value: String,
     onValueChange: (String) -> Unit,
     placeholder: String,
-    isPassword: Boolean = false
+    leadingIcon: androidx.compose.ui.graphics.vector.ImageVector,
+    isPassword: Boolean = false,
+    keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
+    keyboardActions: KeyboardActions = KeyboardActions.Default
 ) {
+    var passwordVisible by remember { mutableStateOf(false) }
+
     TextField(
         value = value,
         onValueChange = onValueChange,
-        placeholder = { Text(placeholder, color = SubtitleGray, fontSize = 14.sp) },
-        singleLine = true,
-        visualTransformation = if (isPassword) PasswordVisualTransformation() else androidx.compose.ui.text.input.VisualTransformation.None,
-        keyboardOptions = if (isPassword) {
-            KeyboardOptions(keyboardType = KeyboardType.Password)
-        } else {
-            KeyboardOptions(keyboardType = KeyboardType.Email)
+        modifier = Modifier.fillMaxWidth(),
+        placeholder = { Text(placeholder, color = Color.Gray) },
+        leadingIcon = { Icon(imageVector = leadingIcon, contentDescription = null, tint = Color.Gray) },
+        trailingIcon = {
+            if (isPassword) {
+                val image = if (passwordVisible)
+                    Icons.Filled.Visibility
+                else Icons.Filled.VisibilityOff
+
+                val description = if (passwordVisible) "Masquer le mot de passe" else "Afficher le mot de passe"
+
+                IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                    Icon(imageVector = image, contentDescription = description, tint = Color.Gray)
+                }
+            }
         },
-        shape = RoundedCornerShape(14.dp),
+        shape = RoundedCornerShape(12.dp),
         colors = TextFieldDefaults.colors(
-            focusedContainerColor = FieldBackground,
-            unfocusedContainerColor = FieldBackground,
-            disabledContainerColor = FieldBackground,
+            focusedContainerColor = Color(0xFFF0F2FA),
+            unfocusedContainerColor = Color(0xFFF0F2FA),
             focusedIndicatorColor = Color.Transparent,
-            unfocusedIndicatorColor = Color.Transparent,
-            disabledIndicatorColor = Color.Transparent
+            unfocusedIndicatorColor = Color.Transparent
         ),
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(56.dp)
+        visualTransformation = if (isPassword && !passwordVisible) PasswordVisualTransformation()
+        else androidx.compose.ui.text.input.VisualTransformation.None,
+        singleLine = true,
+        keyboardOptions = keyboardOptions,
+        keyboardActions = keyboardActions
     )
 }
 
 @Composable
-private fun SocialButton(
-    text: String,
-    modifier: Modifier = Modifier,
-    onClick: () -> Unit
-) {
-    Row(
-        modifier = modifier
-            .height(48.dp)
-            .clip(RoundedCornerShape(14.dp))
-            .background(FieldBackground)
-            .clickable { onClick() },
-        horizontalArrangement = Arrangement.Center,
-        verticalAlignment = Alignment.CenterVertically
+fun SocialLoginButton(text: String, icon: Int, modifier: Modifier = Modifier, onClick: () -> Unit) {
+    OutlinedButton(
+        onClick = onClick,
+        modifier = modifier.height(50.dp),
+        shape = RoundedCornerShape(12.dp),
+        border = BorderStroke(1.dp, Color(0xFFE0E0E0))
     ) {
-        Text(text, fontSize = 14.sp, color = Color(0xFF2A2A3A))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(
+                painter = painterResource(id = icon),
+                contentDescription = null,
+                modifier = Modifier.size(20.dp),
+                tint = Color.Unspecified
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(text = text, color = Color.Black, fontWeight = FontWeight.Medium)
+        }
     }
 }

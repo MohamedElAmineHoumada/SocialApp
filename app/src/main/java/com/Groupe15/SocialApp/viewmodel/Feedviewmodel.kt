@@ -136,8 +136,12 @@ class FeedViewModel @Inject constructor(
 
     private fun loadStories() {
         viewModelScope.launch {
-            feedRepository.getStories().collect { stories ->
-                _stories.value = stories
+            try {
+                feedRepository.getStories().collect { stories ->
+                    _stories.value = stories
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
             }
         }
     }
@@ -170,8 +174,12 @@ class FeedViewModel @Inject constructor(
     private fun loadRecentContacts() {
         val uid = currentUserId ?: return
         viewModelScope.launch {
-            val users = followRepository.getFollowingUsers(uid)
-            _recentContacts.value = users
+            try {
+                val users = followRepository.getFollowingUsers(uid)
+                _recentContacts.value = users
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
         }
     }
 

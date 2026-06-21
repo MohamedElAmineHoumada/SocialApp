@@ -30,7 +30,7 @@ class MessageRepository @Inject constructor(
             .collection("chats")
             .document(chatId)
             .collection("messages")
-            .orderBy("timestamp", Query.Direction.ASCENDING)
+            .orderBy("timestamp", Query.Direction.DESCENDING)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
                     // Ne pas fermer le flow sur erreur : garder les messages affichés
@@ -62,15 +62,17 @@ class MessageRepository @Inject constructor(
         chatId: String,
         senderId: String,
         receiverId: String,
-        text: String
+        text: String,
+        type: MessageType = MessageType.TEXT,
+        imageUrl: String = ""
     ) {
         val messageData = hashMapOf(
             "senderId"  to senderId,
             "text"      to text,
-            "imageUrl"  to "",
+            "imageUrl"  to imageUrl,
             "timestamp" to Timestamp.now(),
             "isRead"    to false,
-            "type"      to MessageType.TEXT.name
+            "type"      to type.name
         )
 
         firestore
@@ -80,7 +82,44 @@ class MessageRepository @Inject constructor(
             .add(messageData)
             .await()
 
-        updateConversationSummary(chatId, senderId, receiverId, text)
+        val lastMessage = if (type == MessageType.IMAGE) "Sent an image" else text
+        updateConversationSummary(chatId, senderId, receiverId, lastMessage)
+
+        // Send Push Notification
+        sendPushNotification(receiverId, "Nouveau message", lastMessage, senderId)
+    }
+
+    private suspend fun sendPushNotification(receiverId: String, title: String, body: String, senderId: String) {
+        try {
+            val userDoc = firestore.collection("users").document(receiverId).get().await()
+            val fcmToken = userDoc.getString("fcmToken")
+            
+            if (!fcmToken.isNullOrBlank()) {
+                // Ici, normalement on appelle une Cloud Function ou un backend.
+                // Pour l'exemple, on crée un document dans une collection "outgoing_notifications"
+                // qu'une Cloud Function pourrait écouter.
+                val pushData = hashMapOf(
+                    "to" to fcmToken,
+                    "title" to title,
+                    "body" to body,
+                    "data" to mapOf(
+                        "otherUserId" to senderId,
+                        "type" to "message"
+                    ),
+                    "timestamp" to Timestamp.now()
+                )
+                firestore.collection("outgoing_notifications").add(pushData)
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
+    suspend fun markLastMessageAsRead(chatId: String) {
+        firestore.collection("chats")
+            .document(chatId)
+            .update("isLastMessageRead", true)
+            .await()
     }
 
     private suspend fun updateConversationSummary(
@@ -93,7 +132,8 @@ class MessageRepository @Inject constructor(
             "participants"           to listOf(senderId, receiverId),
             "lastMessage"            to lastMessageText,
             "lastMessageTimestamp"   to Timestamp.now(),
-            "lastSenderId"           to senderId
+            "lastSenderId"           to senderId,
+            "isLastMessageRead"      to false
         )
         firestore.collection("chats").document(chatId).set(summaryData).await()
     }
@@ -123,7 +163,9 @@ class MessageRepository @Inject constructor(
                             otherUserId          = otherUserId,
                             lastMessage          = doc.getString("lastMessage") ?: "",
                             lastMessageTimestamp = doc.getTimestamp("lastMessageTimestamp")
-                                ?: Timestamp.now()
+                                ?: Timestamp.now(),
+                            lastSenderId         = doc.getString("lastSenderId") ?: "",
+                            isLastMessageRead    = doc.getBoolean("isLastMessageRead") ?: false
                         )
                     } catch (e: Exception) {
                         null
@@ -144,5 +186,7 @@ data class ConversationSummary(
     val chatId: String,
     val otherUserId: String,
     val lastMessage: String,
-    val lastMessageTimestamp: Timestamp
+    val lastMessageTimestamp: Timestamp,
+    val lastSenderId: String,
+    val isLastMessageRead: Boolean
 )
