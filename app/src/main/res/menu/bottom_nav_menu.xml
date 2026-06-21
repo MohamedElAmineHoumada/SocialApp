@@ -7,14 +7,14 @@
         android:title="Home"/>
 
     <item
-        android:id="@+id/exploreFragment"
+        android:id="@+id/discoverFragment"
         android:icon="@drawable/ic_search"
-        android:title="Search"/>
+        android:title="Discover"/>
 
     <item
-        android:id="@+id/createPostFragment"
-        android:icon="@drawable/ic_add_circle"
-        android:title="Post"/>
+        android:id="@+id/networkFragment"
+        android:icon="@drawable/ic_people"
+        android:title="Network"/>
 
     <item
         android:id="@+id/messagesFragment"

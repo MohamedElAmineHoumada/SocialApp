@@ -1,9 +1,11 @@
 package com.Groupe15.SocialApp.repository
 
 import com.Groupe15.SocialApp.models.User
+import com.google.firebase.auth.FacebookAuthProvider
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.GoogleAuthProvider
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.messaging.FirebaseMessaging
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
@@ -16,27 +18,44 @@ class AuthRepository @Inject constructor(
     private val auth: FirebaseAuth,
     private val firestore: FirebaseFirestore
 ) {
-
     fun isLoggedIn(): Boolean = auth.currentUser != null
 
+    fun getCurrentUserUid(): String? = auth.currentUser?.uid
+
+    fun isEmailVerified(): Boolean = auth.currentUser?.isEmailVerified == true
+
     fun getCurrentUser(): Flow<User?> = callbackFlow {
-        val uid = auth.currentUser?.uid
-        if (uid == null) {
-            trySend(null)
-            close()
-            return@callbackFlow
-        }
-        val listener = firestore.collection("users").document(uid)
-            .addSnapshotListener { snapshot, _ ->
-                val user = snapshot?.toObject(User::class.java)
-                trySend(user)
+        var docListener: com.google.firebase.firestore.ListenerRegistration? = null
+        val authListener = FirebaseAuth.AuthStateListener { firebaseAuth ->
+            docListener?.remove()
+            val uid = firebaseAuth.currentUser?.uid
+            if (uid != null) {
+                docListener = firestore.collection("users").document(uid)
+                    .addSnapshotListener { snapshot, error ->
+                        if (error == null) trySend(snapshot?.toObject(User::class.java))
+                        else trySend(null)
+                    }
+            } else {
+                trySend(null)
             }
+        }
+        auth.addAuthStateListener(authListener)
+        awaitClose {
+            auth.removeAuthStateListener(authListener)
+            docListener?.remove()
+        }
+    }
+
+    fun getUserById(uid: String): Flow<User?> = callbackFlow {
+        val listener = firestore.collection("users").document(uid)
+            .addSnapshotListener { snapshot, _ -> trySend(snapshot?.toObject(User::class.java)) }
         awaitClose { listener.remove() }
     }
 
     suspend fun login(email: String, password: String): Result<Unit> {
         return try {
             auth.signInWithEmailAndPassword(email, password).await()
+            updateFcmToken()
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
@@ -45,35 +64,187 @@ class AuthRepository @Inject constructor(
 
     suspend fun register(email: String, password: String, displayName: String): Result<Unit> {
         return try {
+            val username = displayName.lowercase().replace(" ", "_")
+                .filter { it.isLetterOrDigit() || it == '_' }
+
             val result = auth.createUserWithEmailAndPassword(email, password).await()
-            val uid = result.user?.uid ?: throw Exception("UID null")
+            val uid = result.user?.uid ?: throw Exception("Échec de la création du compte.")
+
+            val existingUser = firestore.collection("users")
+                .whereEqualTo("username", username).get().await()
+            if (!existingUser.isEmpty) {
+                return Result.failure(Exception("Ce nom d'utilisateur est déjà pris."))
+            }
+
             val user = hashMapOf(
-                "id"              to uid,
-                "email"           to email,
-                "displayName"     to displayName,
-                "username"        to displayName.lowercase().replace(" ", "_"),
-                "bio"             to "",
-                "profileImageUrl" to "",
-                "followersCount"  to 0,
-                "followingCount"  to 0,
-                "postsCount"      to 0
+                "id" to uid, "email" to email, "displayName" to displayName,
+                "username" to username, "bio" to "", "profileImageUrl" to "",
+                "followersCount" to 0, "followingCount" to 0, "postsCount" to 0, "isPrivate" to false,
+                "fcmToken" to ""
             )
             firestore.collection("users").document(uid).set(user).await()
+            updateFcmToken()
+
+            // Envoyer l'email de vérification
+            auth.currentUser?.sendEmailVerification()?.await()
+
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
         }
     }
 
+    /**
+     * Connexion Google via idToken (obtenu depuis Credential Manager).
+     * Crée le document Firestore + envoie email de vérification si nouvel utilisateur.
+     * Google fournit des emails déjà vérifiés, donc on marque isEmailVerified = true.
+     */
     suspend fun signInWithGoogle(idToken: String): Result<Unit> {
         return try {
             val credential = GoogleAuthProvider.getCredential(idToken, null)
-            auth.signInWithCredential(credential).await()
+            val result = auth.signInWithCredential(credential).await()
+            val firebaseUser = result.user ?: throw Exception("Échec de la connexion Google.")
+            val isNew = result.additionalUserInfo?.isNewUser == true
+
+            if (isNew) {
+                // Créer le document Firestore uniquement si nouvel utilisateur
+                createFirestoreUserFromSocial(
+                    uid = firebaseUser.uid,
+                    email = firebaseUser.email ?: "",
+                    displayName = firebaseUser.displayName ?: "Utilisateur",
+                    photoUrl = firebaseUser.photoUrl?.toString() ?: ""
+                )
+                // Ne PAS envoyer d'email de vérification :
+                // Firebase marque automatiquement isEmailVerified = true pour Google OAuth
+            }
+            updateFcmToken()
+            // Que l'utilisateur soit nouveau ou existant → succès
             Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    /**
+     * Connexion Facebook via accessToken (obtenu depuis le SDK Facebook).
+     * Crée le document Firestore si nouvel utilisateur.
+     * Envoie un email de vérification car Facebook ne garantit pas la vérification d'email.
+     */
+    suspend fun signInWithFacebook(accessToken: String): Result<Unit> {
+        return try {
+            val credential = FacebookAuthProvider.getCredential(accessToken)
+            val result = auth.signInWithCredential(credential).await()
+            val firebaseUser = result.user ?: throw Exception("Échec de la connexion Facebook.")
+            val isNew = result.additionalUserInfo?.isNewUser == true
+
+            if (isNew) {
+                createFirestoreUserFromSocial(
+                    uid = firebaseUser.uid,
+                    email = firebaseUser.email ?: "",
+                    displayName = firebaseUser.displayName ?: "Utilisateur",
+                    photoUrl = firebaseUser.photoUrl?.toString() ?: ""
+                )
+                // Facebook ne garantit pas que l'email est vérifié côté Firebase
+                if (!firebaseUser.isEmailVerified && firebaseUser.email?.isNotBlank() == true) {
+                    try { firebaseUser.sendEmailVerification().await() } catch (_: Exception) {}
+                }
+            }
+            updateFcmToken()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    /**
+     * Renvoie l'email de vérification à l'utilisateur courant.
+     */
+    suspend fun resendVerificationEmail(): Result<Unit> {
+        return try {
+            val user = auth.currentUser ?: throw Exception("Aucun utilisateur connecté.")
+            user.sendEmailVerification().await()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    /**
+     * Recharge l'état Firebase de l'utilisateur courant pour vérifier
+     * si son email a été vérifié depuis la dernière session.
+     */
+    suspend fun reloadUser(): Result<Boolean> {
+        return try {
+            auth.currentUser?.reload()?.await()
+            Result.success(auth.currentUser?.isEmailVerified == true)
         } catch (e: Exception) {
             Result.failure(e)
         }
     }
 
     fun logout() = auth.signOut()
+
+    suspend fun resetPassword(email: String): Result<Unit> {
+        return try {
+            auth.sendPasswordResetEmail(email).await()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun deleteAccount(): Result<Unit> {
+        return try {
+            val user = auth.currentUser ?: throw Exception("Aucun utilisateur connecté")
+            val uid = user.uid
+            firestore.collection("users").document(uid).delete().await()
+            user.delete().await()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun updatePrivacyStatus(isPrivate: Boolean): Result<Unit> {
+        return try {
+            val uid = auth.currentUser?.uid ?: throw Exception("Utilisateur non connecté")
+            firestore.collection("users").document(uid).update("isPrivate", isPrivate).await()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun updateFcmToken(token: String? = null): Result<Unit> {
+        return try {
+            val uid = auth.currentUser?.uid ?: return Result.failure(Exception("Non connecté"))
+            val fcmToken = token ?: FirebaseMessaging.getInstance().token.await()
+            firestore.collection("users").document(uid).update("fcmToken", fcmToken).await()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    // ── Helpers privés ───────────────────────────────────────────────────────
+
+    private suspend fun createFirestoreUserFromSocial(
+        uid: String, email: String, displayName: String, photoUrl: String
+    ) {
+        var username = displayName.lowercase().replace(" ", "_")
+            .filter { it.isLetterOrDigit() || it == '_' }
+        if (username.isBlank()) username = "user_${uid.take(6)}"
+
+        val existing = firestore.collection("users")
+            .whereEqualTo("username", username).get().await()
+        if (!existing.isEmpty) username = "${username}_${uid.take(4)}"
+
+        val userData = hashMapOf(
+            "id" to uid, "email" to email, "displayName" to displayName,
+            "username" to username, "bio" to "", "profileImageUrl" to photoUrl,
+            "followersCount" to 0, "followingCount" to 0, "postsCount" to 0, "isPrivate" to false,
+            "fcmToken" to ""
+        )
+        firestore.collection("users").document(uid).set(userData).await()
+    }
 }

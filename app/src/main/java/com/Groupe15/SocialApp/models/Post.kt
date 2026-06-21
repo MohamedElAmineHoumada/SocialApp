@@ -22,7 +22,15 @@ data class Post(
         }
     }
 
-    // Keep compatibility with existing code expecting 'imageUrl'
+    // Compatibilité avec le code existant qui attend 'imageUrl' (1ère image)
     val imageUrl: String
         get() = imageUrls.firstOrNull() ?: ""
+
+    /**
+     * Âge du post en heures, utilisé pour le scoring "For You".
+     */
+    fun getAgeInHours(): Double {
+        val ageMillis = System.currentTimeMillis() - getCreatedAtMillis()
+        return (ageMillis / (1000.0 * 60.0 * 60.0)).coerceAtLeast(0.0)
+    }
 }

@@ -3,7 +3,6 @@ package com.Groupe15.SocialApp.models
 import com.google.firebase.Timestamp
 
 data class Comment(
-
     val commentId : String = "",
     val postId    : String = "",   // ← ajout
     val userId    : String = "",
@@ -13,4 +12,3 @@ data class Comment(
 ) {
     constructor() : this("")  // ← ajout requis par Firestore
 }
-

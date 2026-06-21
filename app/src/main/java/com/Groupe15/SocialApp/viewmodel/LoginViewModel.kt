@@ -22,8 +22,16 @@ class LoginViewModel @Inject constructor(
         viewModelScope.launch {
             _state.value = AuthState.Loading
             val result = authRepository.login(email, password)
-            _state.value = if (result.isSuccess) AuthState.Success
-            else AuthState.Error(result.exceptionOrNull()?.message ?: "Erreur")
+            if (result.isSuccess) {
+                // Vérifier si l'email est vérifié
+                if (!authRepository.isEmailVerified()) {
+                    _state.value = AuthState.EmailNotVerified
+                } else {
+                    _state.value = AuthState.Success
+                }
+            } else {
+                _state.value = AuthState.Error(result.exceptionOrNull()?.message ?: "Erreur de connexion")
+            }
         }
     }
 
@@ -31,8 +39,39 @@ class LoginViewModel @Inject constructor(
         viewModelScope.launch {
             _state.value = AuthState.Loading
             val result = authRepository.signInWithGoogle(idToken)
+            // Google = email toujours vérifié, aller directement au feed
             _state.value = if (result.isSuccess) AuthState.Success
-            else AuthState.Error(result.exceptionOrNull()?.message ?: "Erreur")
+            else AuthState.Error(result.exceptionOrNull()?.message ?: "Erreur Google")
         }
+    }
+
+    fun signInWithFacebook(accessToken: String) {
+        viewModelScope.launch {
+            _state.value = AuthState.Loading
+            val result = authRepository.signInWithFacebook(accessToken)
+            _state.value = if (result.isSuccess) AuthState.Success
+            else AuthState.Error(result.exceptionOrNull()?.message ?: "Erreur Facebook")
+        }
+    }
+
+    fun resendVerificationEmail() {
+        viewModelScope.launch {
+            authRepository.resendVerificationEmail()
+            _state.value = AuthState.VerificationEmailSent
+        }
+    }
+
+    fun checkEmailVerified() {
+        viewModelScope.launch {
+            val result = authRepository.reloadUser()
+            if (result.getOrDefault(false)) {
+                _state.value = AuthState.Success
+            }
+            // sinon : pas encore vérifié, on ne change pas le state
+        }
+    }
+
+    fun resetState() {
+        _state.value = AuthState.Idle
     }
 }
