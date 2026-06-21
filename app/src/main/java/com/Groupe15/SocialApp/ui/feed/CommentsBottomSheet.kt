@@ -4,13 +4,10 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.Toast
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material3.*
@@ -19,13 +16,10 @@ import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.ComposeView
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.fragment.app.activityViewModels
 import coil.compose.AsyncImage
 import com.Groupe15.SocialApp.R
@@ -56,7 +50,6 @@ class CommentsBottomSheet : BottomSheetDialogFragment() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         postId = arguments?.getString(ARG_POST_ID) ?: ""
-        viewModel.selectPost(postId)
     }
 
     override fun onCreateView(
@@ -83,20 +76,31 @@ class CommentsBottomSheet : BottomSheetDialogFragment() {
     }
 }
 
+/**
+ * Hauteur ADAPTATIVE : la zone de commentaires utilise une Column scrollable
+ * avec un plafond (heightIn max), pas une hauteur fixe. Avec peu de commentaires,
+ * la zone reste compacte et le champ "Ajouter un commentaire" est visible
+ * immédiatement, sans scroll. Au-delà du plafond, la liste devient scrollable
+ * pour ne jamais pousser le champ de saisie hors de l'écran.
+ */
 @Composable
 fun CommentsScreen(
     viewModel: FeedViewModel,
     postId: String,
     onDismiss: () -> Unit
 ) {
+    LaunchedEffect(postId) {
+        viewModel.selectPost(postId)
+    }
+
     val comments by viewModel.comments.observeAsState(emptyList())
     var commentText by remember { mutableStateOf("") }
 
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .height(500.dp)
-            .padding(16.dp)
+            .padding(horizontal = 16.dp)
+            .padding(top = 16.dp, bottom = 16.dp)
     ) {
         Text(
             text = "Commentaires",
@@ -105,14 +109,35 @@ fun CommentsScreen(
             modifier = Modifier.padding(bottom = 12.dp)
         )
 
-        LazyColumn(
-            modifier = Modifier
-                .weight(1f)
-                .fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            items(comments) { comment ->
-                CommentItem(comment = comment)
+        if (comments.isEmpty()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(160.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "Aucun commentaire. Soyez le premier à commenter !",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        } else {
+            // Column classique (pas LazyColumn) dans un scroll vertical avec plafond :
+            // contrairement à LazyColumn, une Column mesure correctement son contenu
+            // réel, donc avec peu de commentaires la zone reste compacte et le champ
+            // de saisie est visible sans scroll. Le plafond (320dp) protège l'écran
+            // si la liste devient longue (au-delà, ça scrolle dans cette zone).
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 320.dp)
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                comments.forEach { comment ->
+                    CommentItem(comment = comment)
+                }
             }
         }
 
@@ -123,11 +148,10 @@ fun CommentsScreen(
 
         Row(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 8.dp),
+                .fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            TextField(
+            OutlinedTextField(
                 value = commentText,
                 onValueChange = { commentText = it },
                 modifier = Modifier.weight(1f),
@@ -137,29 +161,26 @@ fun CommentsScreen(
                         style = MaterialTheme.typography.bodyMedium
                     )
                 },
-                colors = TextFieldDefaults.colors(
-                    focusedContainerColor = Color.Transparent,
-                    unfocusedContainerColor = Color.Transparent,
-                    disabledContainerColor = Color.Transparent,
-                    focusedIndicatorColor = Color.Transparent,
-                    unfocusedIndicatorColor = Color.Transparent,
-                    focusedTextColor = MaterialTheme.colorScheme.onSurface,
-                    unfocusedTextColor = MaterialTheme.colorScheme.onSurface
-                ),
+                shape = MaterialTheme.shapes.extraLarge,
                 maxLines = 3
             )
+            Spacer(modifier = Modifier.width(8.dp))
             IconButton(
                 onClick = {
                     if (commentText.trim().isNotEmpty()) {
                         viewModel.addComment(postId, commentText.trim())
                         commentText = ""
                     }
-                }
+                },
+                enabled = commentText.isNotBlank()
             ) {
                 Icon(
                     Icons.AutoMirrored.Filled.Send,
                     contentDescription = "Envoyer",
-                    tint = MaterialTheme.colorScheme.primary
+                    tint = if (commentText.isNotBlank())
+                        MaterialTheme.colorScheme.primary
+                    else
+                        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
                 )
             }
         }

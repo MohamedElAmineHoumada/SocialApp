@@ -6,6 +6,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.Groupe15.SocialApp.viewmodel.CreatePostViewModel
 
@@ -18,6 +19,26 @@ fun CreatePostScreen(
     onShowAudiencePicker: () -> Unit
 ) {
     var postText by remember { mutableStateOf("") }
+    val context = LocalContext.current
+
+    val isPosting by viewModel.isPosting.collectAsState()
+    val postSuccess by viewModel.postSuccess.collectAsState()
+    val error by viewModel.error.collectAsState()
+    val selectedImages by viewModel.selectedImages.collectAsState()
+
+    // Dès que la publication réussit, on revient en arrière automatiquement
+    LaunchedEffect(postSuccess) {
+        if (postSuccess) {
+            onBack()
+        }
+    }
+
+    // Affiche l'erreur si la publication échoue
+    LaunchedEffect(error) {
+        error?.let {
+            android.widget.Toast.makeText(context, it, android.widget.Toast.LENGTH_SHORT).show()
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -30,11 +51,19 @@ fun CreatePostScreen(
                 },
                 actions = {
                     Button(
-                        onClick = { /* Implémenter action de post via ViewModel */ onBack() },
-                        enabled = postText.isNotBlank(),
+                        onClick = { viewModel.createPost(postText) },
+                        enabled = postText.isNotBlank() && !isPosting,
                         modifier = Modifier.padding(end = 8.dp)
                     ) {
-                        Text("Publier")
+                        if (isPosting) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(18.dp),
+                                strokeWidth = 2.dp,
+                                color = MaterialTheme.colorScheme.onPrimary
+                            )
+                        } else {
+                            Text("Publier")
+                        }
                     }
                 }
             )
@@ -58,6 +87,15 @@ fun CreatePostScreen(
                     unfocusedContainerColor = androidx.compose.ui.graphics.Color.Transparent
                 )
             )
+
+            if (selectedImages.isNotEmpty()) {
+                Text(
+                    text = "${selectedImages.size} image(s) sélectionnée(s)",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+            }
 
             Row(
                 modifier = Modifier.fillMaxWidth(),

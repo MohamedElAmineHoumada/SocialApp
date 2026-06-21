@@ -1,10 +1,9 @@
 package com.Groupe15.SocialApp.repository
 
-import com.Groupe15.SocialApp.models.Comment  // ← models au lieu de data.model
+import com.Groupe15.SocialApp.models.Comment
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.firestore.Query
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
@@ -18,19 +17,45 @@ class CommentRepository @Inject constructor(
     private val auth: FirebaseAuth
 ) {
 
+    /**
+     * IMPORTANT : pas d'orderBy() dans la query Firestore.
+     * Un orderBy() sur un champ peut nécessiter un index composite côté Firestore
+     * (selon les règles/autres requêtes du projet) ; si l'index est absent, le
+     * listener reçoit une erreur FAILED_PRECONDITION et ne renvoie JAMAIS de
+     * données — sans crash visible, juste une liste vide en permanence.
+     * On trie donc côté client après réception, ce qui est sans risque.
+     */
     fun getComments(postId: String): Flow<List<Comment>> = callbackFlow {
+        if (postId.isBlank()) {
+            android.util.Log.w("CommentsDebug", "postId vide, abandon")
+            trySend(emptyList())
+            close()
+            return@callbackFlow
+        }
+
         val listener = firestore
             .collection("posts")
             .document(postId)
             .collection("comments")
-            .orderBy("timestamp", Query.Direction.ASCENDING)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
-                    close(error)
+                    android.util.Log.e("CommentsDebug", "Erreur listener comments postId=$postId : ${error.message}", error)
+                    trySend(emptyList())
                     return@addSnapshotListener
                 }
-                val comments = snapshot?.toObjects(Comment::class.java) ?: emptyList()
-                trySend(comments)
+                val comments = snapshot?.documents?.mapNotNull { doc ->
+                    doc.toObject(Comment::class.java)?.let { comment ->
+                        if (comment.commentId.isBlank()) comment.copy(commentId = doc.id) else comment
+                    }
+                } ?: emptyList()
+
+                android.util.Log.d(
+                    "CommentsDebug",
+                    "postId=$postId reçu ${comments.size} commentaires bruts: ${snapshot?.documents?.size}"
+                )
+
+                val sorted = comments.sortedBy { it.timestamp }
+                trySend(sorted)
             }
         awaitClose { listener.remove() }
     }
@@ -55,6 +80,8 @@ class CommentRepository @Inject constructor(
                 timestamp = System.currentTimeMillis()
             )
 
+            android.util.Log.d("CommentsDebug", "Ajout commentaire postId=$postId commentId=${commentRef.id} text=$text")
+
             val postRef = firestore.collection("posts").document(postId)
 
             firestore.runBatch { batch ->
@@ -64,6 +91,7 @@ class CommentRepository @Inject constructor(
 
             Result.success(Unit)
         } catch (e: Exception) {
+            android.util.Log.e("CommentsDebug", "Erreur addComment: ${e.message}", e)
             Result.failure(e)
         }
     }
