@@ -5,6 +5,7 @@ import com.google.firebase.auth.FacebookAuthProvider
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.GoogleAuthProvider
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.messaging.FirebaseMessaging
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
@@ -54,6 +55,7 @@ class AuthRepository @Inject constructor(
     suspend fun login(email: String, password: String): Result<Unit> {
         return try {
             auth.signInWithEmailAndPassword(email, password).await()
+            updateFcmToken()
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
@@ -77,9 +79,11 @@ class AuthRepository @Inject constructor(
             val user = hashMapOf(
                 "id" to uid, "email" to email, "displayName" to displayName,
                 "username" to username, "bio" to "", "profileImageUrl" to "",
-                "followersCount" to 0, "followingCount" to 0, "postsCount" to 0, "isPrivate" to false
+                "followersCount" to 0, "followingCount" to 0, "postsCount" to 0, "isPrivate" to false,
+                "fcmToken" to ""
             )
             firestore.collection("users").document(uid).set(user).await()
+            updateFcmToken()
 
             // Envoyer l'email de vérification
             auth.currentUser?.sendEmailVerification()?.await()
@@ -113,6 +117,7 @@ class AuthRepository @Inject constructor(
                 // Ne PAS envoyer d'email de vérification :
                 // Firebase marque automatiquement isEmailVerified = true pour Google OAuth
             }
+            updateFcmToken()
             // Que l'utilisateur soit nouveau ou existant → succès
             Result.success(Unit)
         } catch (e: Exception) {
@@ -144,6 +149,7 @@ class AuthRepository @Inject constructor(
                     try { firebaseUser.sendEmailVerification().await() } catch (_: Exception) {}
                 }
             }
+            updateFcmToken()
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
@@ -209,6 +215,17 @@ class AuthRepository @Inject constructor(
         }
     }
 
+    suspend fun updateFcmToken(token: String? = null): Result<Unit> {
+        return try {
+            val uid = auth.currentUser?.uid ?: return Result.failure(Exception("Non connecté"))
+            val fcmToken = token ?: FirebaseMessaging.getInstance().token.await()
+            firestore.collection("users").document(uid).update("fcmToken", fcmToken).await()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
     // ── Helpers privés ───────────────────────────────────────────────────────
 
     private suspend fun createFirestoreUserFromSocial(
@@ -225,7 +242,8 @@ class AuthRepository @Inject constructor(
         val userData = hashMapOf(
             "id" to uid, "email" to email, "displayName" to displayName,
             "username" to username, "bio" to "", "profileImageUrl" to photoUrl,
-            "followersCount" to 0, "followingCount" to 0, "postsCount" to 0, "isPrivate" to false
+            "followersCount" to 0, "followingCount" to 0, "postsCount" to 0, "isPrivate" to false,
+            "fcmToken" to ""
         )
         firestore.collection("users").document(uid).set(userData).await()
     }

@@ -15,10 +15,12 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -40,6 +42,7 @@ import com.Groupe15.SocialApp.ui.messages.*
 import com.Groupe15.SocialApp.ui.network.*
 import com.Groupe15.SocialApp.ui.post.*
 import com.Groupe15.SocialApp.ui.profile.*
+import com.Groupe15.SocialApp.ui.notifications.*
 import com.Groupe15.SocialApp.ui.theme.SocialAppTheme
 import com.Groupe15.SocialApp.viewmodel.*
 import com.facebook.*
@@ -51,7 +54,6 @@ import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import androidx.compose.runtime.livedata.observeAsState
 
 @AndroidEntryPoint
 class MainActivity : AppCompatActivity() {
@@ -62,12 +64,10 @@ class MainActivity : AppCompatActivity() {
     // ── Facebook callback manager ──────────────────────────────────────────
     private lateinit var callbackManager: CallbackManager
 
-    // Lambda que l'écran de login va fournir pour transmettre le résultat
     private var onGoogleResult: ((String) -> Unit)? = null
     private var onFacebookResult: ((String) -> Unit)? = null
     private var onSocialError: ((String) -> Unit)? = null
 
-    // Launcher pour Facebook (nécessaire avec le nouveau SDK)
     private val facebookLauncher =
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
             callbackManager.onActivityResult(result.resultCode, result.resultCode, result.data)
@@ -84,7 +84,6 @@ class MainActivity : AppCompatActivity() {
         credentialManager = CredentialManager.create(this)
         callbackManager = CallbackManager.Factory.create()
 
-        // Enregistrer le callback Facebook
         LoginManager.getInstance().registerCallback(callbackManager, object : FacebookCallback<LoginResult> {
             override fun onSuccess(result: LoginResult) {
                 onFacebookResult?.invoke(result.accessToken.token)
@@ -121,9 +120,9 @@ class MainActivity : AppCompatActivity() {
 
     private fun launchGoogleSignIn() {
         val googleIdOption = GetGoogleIdOption.Builder()
-            .setFilterByAuthorizedAccounts(false) // Affiche TOUS les comptes Google du téléphone
+            .setFilterByAuthorizedAccounts(false)
             .setServerClientId(getString(R.string.default_web_client_id))
-            .setAutoSelectEnabled(false) // Forcer le sélecteur de compte
+            .setAutoSelectEnabled(false)
             .build()
 
         val request = GetCredentialRequest.Builder()
@@ -177,8 +176,8 @@ fun MainScreen(
     val noBottomBarRoutes = listOf(
         "login", "register", "forgotPassword", "onboardingWelcome",
         "onboardingDob", "onboardingGender", "onboardingInterests",
-        "chat/{chatId}/{userName}", "createPost", "createStory", "storyViewer",
-        "editProfile", "settings"
+        "chat/{otherUserId}/{userName}", "createPost", "createStory", "storyViewer",
+        "editProfile", "settings", "notifications"
     )
     val showBottomNav = currentDestination?.route !in noBottomBarRoutes &&
             currentDestination?.route?.contains("chat/") == false
@@ -187,13 +186,27 @@ fun MainScreen(
         bottomBar = {
             if (showBottomNav) {
                 val networkViewModel = hiltViewModel<NetworkViewModel>()
+                val messagesViewModel = hiltViewModel<MessagesViewModel>()
+                val notificationViewModel = hiltViewModel<NotificationViewModel>()
+                
                 val followRequests by networkViewModel.followRequests.collectAsState()
+                val conversations by messagesViewModel.conversations.observeAsState(initial = emptyList<Conversation>())
+                val unreadNotificationsCount by notificationViewModel.unreadCount.collectAsState()
+                
+                val unreadMessagesCount = conversations.count { it.hasUnread }
+
                 AnimatedVisibility(
                     visible = true,
                     enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
                     exit = slideOutVertically(targetOffsetY = { it }) + fadeOut()
                 ) {
-                    CustomBottomNavigation(navController, currentDestination, followRequests.size)
+                    CustomBottomNavigation(
+                        navController = navController,
+                        currentDestination = currentDestination,
+                        networkBadgeCount = followRequests.size,
+                        messagesBadgeCount = unreadMessagesCount,
+                        notificationBadgeCount = unreadNotificationsCount
+                    )
                 }
             }
         }
@@ -208,11 +221,11 @@ fun MainScreen(
 
                 LoginScreen(
                     viewModel = loginViewModel,
-                    onLoginClick = { _, _ -> },
+                    onLoginClick = { email, password -> loginViewModel.login(email, password) },
                     onGoogleClick = {
                         onLaunchGoogle(
                             { idToken -> loginViewModel.signInWithGoogle(idToken) },
-                            { error -> loginViewModel.resetState() /* l'erreur s'affiche via state */ }
+                            { error -> loginViewModel.resetState() }
                         )
                     },
                     onFacebookClick = {
@@ -234,9 +247,12 @@ fun MainScreen(
             }
 
             composable("register") {
+                val registerViewModel: RegisterViewModel = hiltViewModel()
                 RegisterScreen(
-                    viewModel = hiltViewModel<RegisterViewModel>(),
-                    onRegisterClick = { _, _, _ -> },
+                    viewModel = registerViewModel,
+                    onRegisterClick = { email, password, name -> 
+                        registerViewModel.register(email, password, name) 
+                    },
                     onLoginClick = { navController.popBackStack() },
                     onSuccess = { navController.navigate("onboardingWelcome") }
                 )
@@ -270,7 +286,6 @@ fun MainScreen(
             composable("feed") {
                 val loginViewModel: LoginViewModel = hiltViewModel()
                 Column {
-                    // Bannière email non vérifié en haut du feed
                     EmailVerificationBannerWrapper(loginViewModel = loginViewModel)
                     FeedScreen(
                         viewModel = hiltViewModel<FeedViewModel>(),
@@ -292,14 +307,19 @@ fun MainScreen(
             }
             composable("network") {
                 val networkViewModel = hiltViewModel<NetworkViewModel>()
-                val followRequests by networkViewModel.followRequests.collectAsState()
-                val suggestions by networkViewModel.suggestions.collectAsState()
                 NetworkScreen(
-                    followRequests = followRequests,
-                    suggestions = suggestions,
-                    onAcceptRequest = { id -> networkViewModel.onAcceptRequest(id) },
-                    onDeclineRequest = { id -> networkViewModel.onDeclineRequest(id) },
-                    onFollowUser = { uid -> networkViewModel.onFollowUser(uid) }
+                    viewModel = networkViewModel,
+                    onSeeAllSuggestions = { navController.navigate("all_suggestions") },
+                    onNavigateToNotifications = { navController.navigate("notifications") },
+                    onUserClick = { uid -> navController.navigate("profile/$uid") }
+                )
+            }
+            composable("all_suggestions") {
+                val networkViewModel = hiltViewModel<NetworkViewModel>()
+                SuggestionsScreen(
+                    viewModel = networkViewModel,
+                    onBack = { navController.popBackStack() },
+                    onUserClick = { uid -> navController.navigate("profile/$uid") }
                 )
             }
             composable(
@@ -314,7 +334,9 @@ fun MainScreen(
                 else uid
 
                 LaunchedEffect(effectiveUid) {
-                    if (effectiveUid.isNotEmpty()) profileViewModel.loadProfile(effectiveUid)
+                    if (effectiveUid.isNotEmpty()) {
+                        profileViewModel.loadProfile(effectiveUid)
+                    }
                 }
                 ProfileScreen(
                     viewModel = profileViewModel,
@@ -329,7 +351,12 @@ fun MainScreen(
             composable("discover") {
                 DiscoverScreen(
                     onNavigateToProfile = { uid -> navController.navigate("profile/$uid") },
-                    onNavigateToNotifications = {}
+                    onNavigateToNotifications = { navController.navigate("notifications") }
+                )
+            }
+            composable("notifications") {
+                NotificationsScreen(
+                    onBackClick = { navController.popBackStack() }
                 )
             }
             composable("createPost") {
@@ -353,23 +380,55 @@ fun MainScreen(
                     viewModel = hiltViewModel<AuthViewModel>(),
                     onBack = { navController.popBackStack() },
                     onShowToast = {},
-                    onAccountDeleted = {}
+                    onAccountDeleted = {
+                        navController.navigate("login") {
+                            popUpTo(navController.graph.id) { inclusive = true }
+                        }
+                    },
+                    onLoggedOut = {
+                        navController.navigate("login") {
+                            popUpTo(navController.graph.id) { inclusive = true }
+                        }
+                    }
                 )
             }
             composable(
-                "chat/{chatId}/{userName}",
+                "chat/{otherUserId}/{userName}",
                 arguments = listOf(
-                    navArgument("chatId") { type = NavType.StringType },
+                    navArgument("otherUserId") { type = NavType.StringType },
                     navArgument("userName") { type = NavType.StringType }
                 )
             ) { backStackEntry ->
+                val otherUserId = backStackEntry.arguments?.getString("otherUserId") ?: ""
                 val userName = backStackEntry.arguments?.getString("userName") ?: "Chat"
+                val authViewModel = hiltViewModel<AuthViewModel>()
+                val currentUserId = authViewModel.getCurrentUserUid() ?: ""
+                val context = LocalContext.current
+
                 ChatScreen(
                     viewModel = hiltViewModel(),
-                    currentUserId = "USER_ID",
+                    currentUserId = currentUserId,
+                    otherUserId = otherUserId,
                     userName = userName,
                     onBack = { navController.popBackStack() },
-                    onShowToast = {}
+                    onCall = { isVideo -> navController.navigate("call/$userName/$isVideo") },
+                    onShowToast = { msg -> Toast.makeText(context, msg, Toast.LENGTH_SHORT).show() }
+                )
+            }
+            composable(
+                "call/{userName}/{isVideo}",
+                arguments = listOf(
+                    navArgument("userName") { type = NavType.StringType },
+                    navArgument("isVideo") { type = NavType.BoolType }
+                )
+            ) { backStackEntry ->
+                val userName = backStackEntry.arguments?.getString("userName") ?: "User"
+                val isVideo = backStackEntry.arguments?.getBoolean("isVideo") ?: false
+                CallScreen(
+                    userName = userName,
+                    userAvatar = "",
+                    isVideoCall = isVideo,
+                    onHangUp = { navController.popBackStack() }
                 )
             }
         }
@@ -382,7 +441,6 @@ fun MainScreen(
  */
 @Composable
 fun EmailVerificationBannerWrapper(loginViewModel: LoginViewModel) {
-    // On surveille l'état du ViewModel pour détecter EmailNotVerified
     val state by loginViewModel.state.observeAsState(initial = com.Groupe15.SocialApp.ui.auth.AuthState.Idle)
 
     if (state is com.Groupe15.SocialApp.ui.auth.AuthState.EmailNotVerified) {
@@ -394,14 +452,16 @@ fun EmailVerificationBannerWrapper(loginViewModel: LoginViewModel) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Bottom navigation (inchangée)
+// Bottom navigation
 // ─────────────────────────────────────────────────────────────────────────────
 
 @Composable
 fun CustomBottomNavigation(
     navController: NavController,
     currentDestination: NavDestination?,
-    badgeCount: Int
+    networkBadgeCount: Int,
+    messagesBadgeCount: Int,
+    notificationBadgeCount: Int = 0
 ) {
     Card(
         modifier = Modifier.fillMaxWidth().height(80.dp),
@@ -413,15 +473,26 @@ fun CustomBottomNavigation(
             val activeColor = MaterialTheme.colorScheme.primary
             val inactiveColor = MaterialTheme.colorScheme.onSurfaceVariant
 
-            BottomNavItem(Modifier.weight(1f), R.drawable.ic_app_logo,
-                stringResource(R.string.nav_home),
-                currentDestination?.hierarchy?.any { it.route == "feed" } == true,
-                activeColor, inactiveColor) { navController.navigate("feed") }
+            BottomNavItem(
+                modifier = Modifier.weight(1f),
+                iconRes = R.drawable.ic_app_logo,
+                label = stringResource(R.string.nav_home),
+                selected = currentDestination?.hierarchy?.any { it.route == "feed" } == true,
+                activeColor = activeColor,
+                inactiveColor = inactiveColor,
+                onClick = { navController.navigate("feed") }
+            )
 
-            BottomNavItem(Modifier.weight(1f), R.drawable.ic_comment,
-                stringResource(R.string.nav_messages),
-                currentDestination?.hierarchy?.any { it.route == "messages" } == true,
-                activeColor, inactiveColor) { navController.navigate("messages") }
+            BottomNavItem(
+                modifier = Modifier.weight(1f),
+                iconRes = R.drawable.ic_comment,
+                label = stringResource(R.string.nav_messages),
+                selected = currentDestination?.hierarchy?.any { it.route == "messages" } == true,
+                activeColor = activeColor,
+                inactiveColor = inactiveColor,
+                badgeCount = messagesBadgeCount,
+                onClick = { navController.navigate("messages") }
+            )
 
             Box(
                 modifier = Modifier.weight(1.2f).fillMaxHeight()
@@ -445,15 +516,26 @@ fun CustomBottomNavigation(
                 }
             }
 
-            BottomNavItem(Modifier.weight(1f), R.drawable.ic_people,
-                stringResource(R.string.nav_network),
-                currentDestination?.hierarchy?.any { it.route == "network" } == true,
-                activeColor, inactiveColor, badgeCount) { navController.navigate("network") }
+            BottomNavItem(
+                modifier = Modifier.weight(1f),
+                iconRes = R.drawable.ic_people,
+                label = stringResource(R.string.nav_network),
+                selected = currentDestination?.hierarchy?.any { it.route == "network" } == true,
+                activeColor = activeColor,
+                inactiveColor = inactiveColor,
+                badgeCount = networkBadgeCount + notificationBadgeCount,
+                onClick = { navController.navigate("network") }
+            )
 
-            BottomNavItem(Modifier.weight(1f), R.drawable.ic_default_avatar,
-                stringResource(R.string.nav_profile),
-                currentDestination?.hierarchy?.any { it.route?.startsWith("profile") == true } == true,
-                activeColor, inactiveColor) { navController.navigate("profile/") }
+            BottomNavItem(
+                modifier = Modifier.weight(1f),
+                iconRes = R.drawable.ic_default_avatar,
+                label = stringResource(R.string.nav_profile),
+                selected = currentDestination?.hierarchy?.any { it.route?.startsWith("profile") == true } == true,
+                activeColor = activeColor,
+                inactiveColor = inactiveColor,
+                onClick = { navController.navigate("profile/") }
+            )
         }
     }
 }

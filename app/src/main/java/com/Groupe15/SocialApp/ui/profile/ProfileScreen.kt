@@ -55,7 +55,7 @@ fun ProfileScreen(
     var showFollowersSheet by remember { mutableStateOf(false) }
     var showFollowingSheet by remember { mutableStateOf(false) }
 
-    // ✅ NOUVEAU : uid de l'utilisateur connecté, pour savoir si "own profile" dans le contexte de la liste
+    // NOUVEAU : uid de l'utilisateur connecté, pour savoir si "own profile" dans le contexte de la liste
     val currentAuthUid = remember { FirebaseAuth.getInstance().currentUser?.uid ?: "" }
 
     var selectedTab by remember { mutableStateOf(ProfileTab.POSTS) }

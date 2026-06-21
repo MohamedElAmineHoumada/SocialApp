@@ -1,11 +1,16 @@
 package com.Groupe15.SocialApp.repository
 
 import com.Groupe15.SocialApp.models.FollowRequest
+import com.Groupe15.SocialApp.models.Notification
 import com.Groupe15.SocialApp.models.User
+import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FieldPath
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -53,6 +58,10 @@ class FollowRepository @Inject constructor(
 
             val batch = firestore.batch()
 
+            // Current user data for notification
+            val currentUserDoc = usersCollection.document(currentUid).get().await()
+            val currentUser = currentUserDoc.toObject(User::class.java)
+
             // Entrée dans following de l'utilisateur courant
             val followingRef = usersCollection
                 .document(currentUid)
@@ -71,12 +80,69 @@ class FollowRepository @Inject constructor(
                 // Mise à jour des compteurs
                 batch.update(usersCollection.document(currentUid), "followingCount", FieldValue.increment(1))
                 batch.update(usersCollection.document(targetUid), "followersCount", FieldValue.increment(1))
+                
+                // Notification for follow (accepted)
+                val notificationRef = usersCollection.document(targetUid).collection("notifications").document()
+                val notification = Notification(
+                    id = notificationRef.id,
+                    type = "follow_accept",
+                    fromUserId = currentUid,
+                    fromUserName = currentUser?.displayName ?: currentUser?.username ?: "Quelqu'un",
+                    fromUserAvatar = currentUser?.profileImageUrl ?: "",
+                    content = "${currentUser?.displayName ?: currentUser?.username} a commencé à vous suivre",
+                    timestamp = Timestamp.now(),
+                    targetId = currentUid
+                )
+                batch.set(notificationRef, notification)
+                
+                // Trigger Push Notification
+                sendPushNotification(targetUid, "Nouvel abonné", "${currentUser?.displayName ?: currentUser?.username} a commencé à vous suivre", currentUid, "follow")
+            } else {
+                // Notification for follow request (pending)
+                val notificationRef = usersCollection.document(targetUid).collection("notifications").document()
+                val notification = Notification(
+                    id = notificationRef.id,
+                    type = "follow_request",
+                    fromUserId = currentUid,
+                    fromUserName = currentUser?.displayName ?: currentUser?.username ?: "Quelqu'un",
+                    fromUserAvatar = currentUser?.profileImageUrl ?: "",
+                    content = "${currentUser?.displayName ?: currentUser?.username} vous demande de vous suivre",
+                    timestamp = Timestamp.now(),
+                    targetId = currentUid
+                )
+                batch.set(notificationRef, notification)
+                
+                // Trigger Push Notification
+                sendPushNotification(targetUid, "Demande de suivi", "${currentUser?.displayName ?: currentUser?.username} souhaite vous suivre", currentUid, "follow_request")
             }
 
             batch.commit().await()
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
+        }
+    }
+
+    private suspend fun sendPushNotification(targetUid: String, title: String, body: String, senderId: String, type: String) {
+        try {
+            val userDoc = usersCollection.document(targetUid).get().await()
+            val fcmToken = userDoc.getString("fcmToken")
+            
+            if (!fcmToken.isNullOrBlank()) {
+                val pushData = hashMapOf(
+                    "to" to fcmToken,
+                    "title" to title,
+                    "body" to body,
+                    "data" to mapOf(
+                        "senderId" to senderId,
+                        "type" to type
+                    ),
+                    "timestamp" to Timestamp.now()
+                )
+                firestore.collection("outgoing_notifications").add(pushData)
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
         }
     }
 
@@ -176,6 +242,10 @@ class FollowRepository @Inject constructor(
                 .collection("following")
                 .document(currentUid)
 
+            // Get current user info for notification
+            val currentUserDoc = usersCollection.document(currentUid).get().await()
+            val currentUser = currentUserDoc.toObject(User::class.java)
+
             firestore.runTransaction { transaction ->
                 val snap = transaction.get(followingRef)
                 if (snap.exists() && snap.getString("status") == "pending") {
@@ -192,6 +262,25 @@ class FollowRepository @Inject constructor(
                     // Met à jour les compteurs
                     transaction.update(usersCollection.document(followerId), "followingCount", FieldValue.increment(1))
                     transaction.update(usersCollection.document(currentUid), "followersCount", FieldValue.increment(1))
+
+                    // Notification for acceptance
+                    val notificationRef = usersCollection.document(followerId).collection("notifications").document()
+                    val notification = Notification(
+                        id = notificationRef.id,
+                        type = "follow_accept",
+                        fromUserId = currentUid,
+                        fromUserName = currentUser?.displayName ?: currentUser?.username ?: "Quelqu'un",
+                        fromUserAvatar = currentUser?.profileImageUrl ?: "",
+                        content = "${currentUser?.displayName ?: currentUser?.username} a accepté votre demande de suivi",
+                        timestamp = Timestamp.now(),
+                        targetId = currentUid
+                    )
+                    transaction.set(notificationRef, notification)
+
+                    // Trigger Push Notification
+                    CoroutineScope(Dispatchers.IO).launch {
+                        sendPushNotification(followerId, "Demande acceptée", "${currentUser?.displayName ?: currentUser?.username} a accepté votre demande", currentUid, "follow_accept")
+                    }
                 }
                 null
             }.await()

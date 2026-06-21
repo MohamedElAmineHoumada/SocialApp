@@ -4,6 +4,7 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.Groupe15.SocialApp.ui.auth.AuthState
 import com.google.firebase.auth.AuthCredential
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
@@ -12,12 +13,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 
-sealed class AuthState {
-    object Idle : AuthState()
-    object Loading : AuthState()
-    object Success : AuthState()
-    data class Error(val message: String) : AuthState()
-}
+
 
 @HiltViewModel
 class RegisterViewModel @Inject constructor(
@@ -27,6 +23,29 @@ class RegisterViewModel @Inject constructor(
 
     private val _state = MutableLiveData<AuthState>(AuthState.Idle)
     val state: LiveData<AuthState> = _state
+
+    private val _verificationCode = MutableLiveData<String?>(null)
+    val verificationCode: LiveData<String?> = _verificationCode
+
+    fun sendVerificationCode(email: String) {
+        viewModelScope.launch {
+            _state.value = AuthState.Loading
+            try {
+                // Simulation d'envoi d'e-mail (dans un vrai projet, utilisez un backend)
+                val code = (1000..9999).random().toString()
+                _verificationCode.value = code
+                // Simulation d'un délai réseau
+                kotlinx.coroutines.delay(1000)
+                _state.value = AuthState.Idle
+            } catch (e: Exception) {
+                _state.value = AuthState.Error("Erreur lors de l'envoi du code")
+            }
+        }
+    }
+
+    fun clearVerificationCode() {
+        _verificationCode.value = null
+    }
 
     /**
      * Inscription classique par email/mot de passe.
