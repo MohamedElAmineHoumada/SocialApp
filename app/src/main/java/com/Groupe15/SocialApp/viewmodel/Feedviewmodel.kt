@@ -13,24 +13,60 @@ import com.Groupe15.SocialApp.models.Story
 import com.Groupe15.SocialApp.repository.CommentRepository
 import com.Groupe15.SocialApp.repository.FeedRepository
 import com.Groupe15.SocialApp.repository.FollowRepository
+import com.Groupe15.SocialApp.repository.PostRepository
+import com.Groupe15.SocialApp.repository.RecommendationRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+
+/**
+ * Onglets disponibles dans le Feed (Home).
+ */
+enum class FeedTab {
+    FOLLOWING,
+    FOR_YOU
+}
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class FeedViewModel @Inject constructor(
     private val feedRepository: FeedRepository,
+    private val postRepository: PostRepository,
+    private val recommendationRepository: RecommendationRepository,
     private val commentRepository: CommentRepository,
     private val followRepository: FollowRepository
 ) : ViewModel() {
 
-    // Posts filtrés : uniquement les utilisateurs suivis + soi-même
-    val posts: LiveData<List<Post>> = feedRepository.getFeedPosts().asLiveData()
+    // ---- Onglet sélectionné (Following / For You) ----
+    private val _selectedTab = MutableStateFlow(FeedTab.FOLLOWING)
+    val selectedTab: LiveData<FeedTab> = _selectedTab.asLiveData()
+
+    fun selectTab(tab: FeedTab) {
+        _selectedTab.value = tab
+    }
+
+    // Posts affichés à l'écran selon l'onglet actif.
+    // NOTE: followingPosts/forYouPosts séparés ont été retirés car ils créaient
+    // 2 listeners Firestore actifs en permanence même non utilisés par l'UI.
+    // On garde uniquement le flow réactif à l'onglet sélectionné.
+    val posts: LiveData<List<Post>> = _selectedTab
+        .flatMapLatest { tab ->
+            android.util.Log.d("FeedDebug", "Onglet sélectionné: $tab")
+            when (tab) {
+                FeedTab.FOLLOWING -> postRepository.getLivePosts()
+                FeedTab.FOR_YOU -> recommendationRepository.getForYouPosts(excludeAlreadyLiked = false)
+            }
+        }
+        .map { list ->
+            android.util.Log.d("FeedDebug", "Posts reçus: ${list.size} -> ${list.map { it.authorUsername }}")
+            list
+        }
+        .asLiveData()
 
     private val _stories = MutableLiveData<List<Story>>(emptyList())
     val stories: LiveData<List<Story>> = _stories
@@ -49,6 +85,10 @@ class FeedViewModel @Inject constructor(
     private val _isLoading = MutableLiveData(false)
     val isLoading: LiveData<Boolean> = _isLoading
 
+    // Likes de l'utilisateur courant pour les posts visibles actuellement (pour l'état du coeur)
+    private val _likedPostIds = MutableLiveData<Set<String>>(emptySet())
+    val likedPostIds: LiveData<Set<String>> = _likedPostIds
+
     val currentUserId: String? get() = feedRepository.currentUserId
 
     init {
@@ -63,7 +103,22 @@ class FeedViewModel @Inject constructor(
 
     fun toggleLike(postId: String) {
         viewModelScope.launch {
-            feedRepository.toggleLike(postId)
+            postRepository.toggleLike(postId)
+            // Met à jour l'état local immédiatement (optimistic UI)
+            val current = _likedPostIds.value.orEmpty().toMutableSet()
+            if (postId in current) current.remove(postId) else current.add(postId)
+            _likedPostIds.value = current
+        }
+    }
+
+    /**
+     * Charge l'état "liké ou non" pour une liste de posts visibles.
+     * À appeler quand la liste de posts change (ex: changement d'onglet).
+     */
+    fun refreshLikedState(postIds: List<String>) {
+        viewModelScope.launch {
+            val liked = postRepository.getLikedPostIds(postIds)
+            _likedPostIds.value = liked
         }
     }
 
@@ -74,7 +129,7 @@ class FeedViewModel @Inject constructor(
     }
 
     fun loadFeed() {
-        // Le Flow callbackFlow dans getLivePosts() écoute en temps réel en permanence.
+        // Les Flow callbackFlow écoutent en temps réel en permanence.
         // loadFeed() reste disponible pour le swipe-to-refresh côté UI.
         _isLoading.value = false
     }

@@ -31,7 +31,11 @@ class FeedRepository @Inject constructor(
             .addSnapshotListener { snapshot, error ->
                 if (error != null) return@addSnapshotListener
                 val posts = snapshot?.documents?.mapNotNull { doc ->
-                    doc.toObject(Post::class.java)
+                    doc.toObject(Post::class.java)?.also { post ->
+                        // Filet de sécurité : si le champ "id" est absent/vide en base
+                        // (anciens documents), on retombe sur l'ID réel du document Firestore.
+                        if (post.postId.isBlank()) post.postId = doc.id
+                    }
                 } ?: emptyList()
                 trySend(posts)
             }
@@ -44,7 +48,11 @@ class FeedRepository @Inject constructor(
             .addSnapshotListener { snapshot, error ->
                 if (error != null) return@addSnapshotListener
                 val stories = snapshot?.documents?.mapNotNull { doc ->
-                    doc.toObject(Story::class.java)
+                    doc.toObject(Story::class.java)?.let { story ->
+                        // storyId est un val (data class) : on utilise copy() si le champ
+                        // "id" est absent/vide en base (anciens documents).
+                        if (story.storyId.isBlank()) story.copy(storyId = doc.id) else story
+                    }
                 } ?: emptyList()
                 trySend(stories)
             }
@@ -91,7 +99,7 @@ class FeedRepository @Inject constructor(
         return try {
             val uid = auth.currentUser?.uid ?: throw Exception("Non connecté")
             val username = auth.currentUser?.displayName ?: "User"
-            
+
             val story = hashMapOf(
                 "userId" to uid,
                 "username" to username,
@@ -100,7 +108,7 @@ class FeedRepository @Inject constructor(
                 "postId" to post.postId,
                 "timestamp" to FieldValue.serverTimestamp()
             )
-            
+
             firestore.collection("stories").add(story).await()
             Result.success(Unit)
         } catch (e: Exception) {
@@ -112,7 +120,7 @@ class FeedRepository @Inject constructor(
         return try {
             val uid = auth.currentUser?.uid ?: throw Exception("Non connecté")
             val saveRef = firestore.collection("users").document(uid).collection("savedPosts").document(postId)
-            
+
             val doc = saveRef.get().await()
             if (doc.exists()) {
                 saveRef.delete().await()

@@ -66,11 +66,18 @@ class ShareBottomSheet : BottomSheetDialogFragment() {
                         color = MaterialTheme.colorScheme.surface,
                         contentColor = MaterialTheme.colorScheme.onSurface
                     ) {
-                        ShareScreen(
-                            viewModel = viewModel,
-                            postId = postId,
-                            onDismiss = { dismiss() }
-                        )
+                        val posts by viewModel.posts.observeAsState(emptyList())
+                        val post = posts.find { it.postId == postId }
+                        if (post != null) {
+                            ShareScreen(
+                                viewModel = viewModel,
+                                post = post,
+                                onDismiss = { dismiss() }
+                            )
+                        } else {
+                            // Post introuvable dans la liste actuelle (ex: changement d'onglet) : on ferme proprement
+                            dismiss()
+                        }
                     }
                 }
             }
@@ -91,11 +98,12 @@ class ShareBottomSheet : BottomSheetDialogFragment() {
 @Composable
 fun ShareScreen(
     viewModel: FeedViewModel,
-    postId: String,
+    post: com.Groupe15.SocialApp.models.Post,
     onDismiss: () -> Unit
 ) {
     val context = LocalContext.current
     val recentContacts by viewModel.recentContacts.observeAsState(emptyList())
+    val postId = post.postId
 
     Column(
         modifier = Modifier
@@ -120,7 +128,7 @@ fun ShareScreen(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "Share",
+                text = "Partager",
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold
             )
@@ -132,7 +140,7 @@ fun ShareScreen(
             ) {
                 Icon(
                     Icons.Default.Close,
-                    contentDescription = "Close",
+                    contentDescription = "Fermer",
                     modifier = Modifier.size(18.dp),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -143,31 +151,28 @@ fun ShareScreen(
 
         // Share to Story Button
         ShareActionButton(
-            title = "Share to Story",
+            title = "Partager en story",
             iconRes = R.drawable.ic_add_circle,
             containerColor = MaterialTheme.colorScheme.primary,
             contentColor = MaterialTheme.colorScheme.onPrimary,
             onClick = {
-                val post = viewModel.posts.value?.find { it.postId == postId }
-                if (post != null) {
-                    viewModel.shareToStory(post)
-                    Toast.makeText(context, "Added to story", Toast.LENGTH_SHORT).show()
-                }
+                viewModel.shareToStory(post)
+                Toast.makeText(context, "Ajouté à la story", Toast.LENGTH_SHORT).show()
                 onDismiss()
             }
         )
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        // Send in Message Button
+        // Send in Message Button — messagerie pas encore connectée
         ShareActionButton(
-            title = "Send in Message",
+            title = "Envoyer en message",
             iconRes = R.drawable.ic_send,
             containerColor = MaterialTheme.colorScheme.surface,
             contentColor = MaterialTheme.colorScheme.onSurface,
             border = true,
             onClick = {
-                Toast.makeText(context, "Opening messages...", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, "Bientôt disponible", Toast.LENGTH_SHORT).show()
                 onDismiss()
             }
         )
@@ -175,7 +180,7 @@ fun ShareScreen(
         Spacer(modifier = Modifier.height(24.dp))
 
         Text(
-            text = "RECENT CONTACTS",
+            text = "CONTACTS RÉCENTS",
             style = MaterialTheme.typography.labelMedium,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -184,15 +189,24 @@ fun ShareScreen(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        LazyRow(
-            horizontalArrangement = Arrangement.spacedBy(16.dp),
-            contentPadding = PaddingValues(bottom = 32.dp)
-        ) {
-            items(recentContacts) { user ->
-                RecentContactItem(user = user, onClick = {
-                    Toast.makeText(context, "Shared with ${user.displayName}", Toast.LENGTH_SHORT).show()
-                    onDismiss()
-                })
+        if (recentContacts.isEmpty()) {
+            Text(
+                text = "Aucun contact pour l'instant",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(bottom = 16.dp)
+            )
+        } else {
+            LazyRow(
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                contentPadding = PaddingValues(bottom = 32.dp)
+            ) {
+                items(recentContacts) { user ->
+                    RecentContactItem(user = user, onClick = {
+                        Toast.makeText(context, "Bientôt disponible", Toast.LENGTH_SHORT).show()
+                        onDismiss()
+                    })
+                }
             }
         }
 
@@ -201,20 +215,31 @@ fun ShareScreen(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            ActionIconItem(label = "Copy Link", iconRes = R.drawable.ic_link, onClick = {
+            ActionIconItem(label = "Copier le lien", iconRes = R.drawable.ic_link, onClick = {
                 val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                 val clip = ClipData.newPlainText("Post Link", "https://socialapp.com/post/$postId")
                 clipboard.setPrimaryClip(clip)
-                Toast.makeText(context, "Link copied", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, "Lien copié", Toast.LENGTH_SHORT).show()
                 onDismiss()
             })
-            ActionIconItem(label = "Save", iconRes = R.drawable.ic_bookmark_outline, onClick = {
+            ActionIconItem(label = "Enregistrer", iconRes = R.drawable.ic_bookmark_outline, onClick = {
                 viewModel.toggleSavePost(postId)
-                Toast.makeText(context, "Post saved", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, "Publication enregistrée", Toast.LENGTH_SHORT).show()
                 onDismiss()
             })
-            ActionIconItem(label = "Email", iconRes = android.R.drawable.ic_dialog_email, onClick = { onDismiss() })
-            ActionIconItem(label = "More", iconRes = R.drawable.ic_more_horizontal, onClick = { onDismiss() })
+            ActionIconItem(label = "Email", iconRes = android.R.drawable.ic_dialog_email, onClick = {
+                Toast.makeText(context, "Bientôt disponible", Toast.LENGTH_SHORT).show()
+                onDismiss()
+            })
+            ActionIconItem(label = "Plus", iconRes = R.drawable.ic_more_horizontal, onClick = {
+                val shareIntent = android.content.Intent().apply {
+                    action = android.content.Intent.ACTION_SEND
+                    type = "text/plain"
+                    putExtra(android.content.Intent.EXTRA_TEXT, "https://socialapp.com/post/$postId")
+                }
+                context.startActivity(android.content.Intent.createChooser(shareIntent, "Partager via"))
+                onDismiss()
+            })
         }
     }
 }
