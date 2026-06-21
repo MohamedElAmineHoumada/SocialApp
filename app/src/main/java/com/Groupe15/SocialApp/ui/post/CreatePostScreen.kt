@@ -24,12 +24,9 @@ import com.Groupe15.SocialApp.viewmodel.CreatePostViewModel
 fun CreatePostScreen(
     viewModel: CreatePostViewModel,
     onBack: () -> Unit,
-    onPickImages: () -> Unit,
-    onShowAudiencePicker: () -> Unit
+    onPickImages: () -> Unit
 ) {
     var postText by remember { mutableStateOf("") }
-    var audience by remember { mutableStateOf("Public") }
-    var showAudienceSheet by remember { mutableStateOf(false) }
     val context = LocalContext.current
 
     val isPosting by viewModel.isPosting.collectAsState()
@@ -37,9 +34,9 @@ fun CreatePostScreen(
     val error by viewModel.error.collectAsState()
     val selectedImages by viewModel.selectedImages.collectAsState()
 
-    // Sélecteur d'images natif Android (Photo Picker) : pas besoin de permission
-    // runtime sur Android 13+, fallback automatique géré par le système sur les
-    // versions plus anciennes.
+    // ✅ Bouton Publier actif si TEXTE seul, IMAGE seule, ou les deux
+    val canPublish = (postText.isNotBlank() || selectedImages.isNotEmpty()) && !isPosting
+
     val imagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickMultipleVisualMedia(maxItems = 5)
     ) { uris ->
@@ -72,7 +69,7 @@ fun CreatePostScreen(
                 actions = {
                     Button(
                         onClick = { viewModel.createPost(postText) },
-                        enabled = postText.isNotBlank() && !isPosting,
+                        enabled = canPublish,
                         modifier = Modifier.padding(end = 8.dp)
                     ) {
                         if (isPosting) {
@@ -143,44 +140,20 @@ fun CreatePostScreen(
                 }
             }
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                OutlinedButton(
-                    onClick = {
-                        imagePickerLauncher.launch(
-                            androidx.activity.result.PickVisualMediaRequest(
-                                ActivityResultContracts.PickVisualMedia.ImageOnly
-                            )
+            // ✅ "Audience" entièrement retiré. Seul "Ajouter Photo" reste, pleine largeur.
+            OutlinedButton(
+                onClick = {
+                    imagePickerLauncher.launch(
+                        androidx.activity.result.PickVisualMediaRequest(
+                            ActivityResultContracts.PickVisualMedia.ImageOnly
                         )
-                        onPickImages()
-                    },
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Text("Ajouter Photo")
-                }
-                OutlinedButton(
-                    onClick = {
-                        showAudienceSheet = true
-                        onShowAudiencePicker()
-                    },
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Text(audience)
-                }
+                    )
+                    onPickImages()
+                },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Ajouter Photo")
             }
-        }
-    }
-
-    if (showAudienceSheet) {
-        ModalBottomSheet(onDismissRequest = { showAudienceSheet = false }) {
-            AudiencePickerScreen(
-                onSelected = { selected ->
-                    audience = selected
-                    showAudienceSheet = false
-                }
-            )
         }
     }
 }

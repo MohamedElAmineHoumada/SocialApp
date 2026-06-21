@@ -389,8 +389,7 @@ fun MainScreen(
                 CreatePostScreen(
                     viewModel = hiltViewModel<CreatePostViewModel>(),
                     onBack = { navController.popBackStack() },
-                    onPickImages = {},
-                    onShowAudiencePicker = {}
+                    onPickImages = {}
                 )
             }
 

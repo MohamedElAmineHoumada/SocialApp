@@ -5,10 +5,12 @@ import androidx.lifecycle.viewModelScope
 import com.Groupe15.SocialApp.models.Post
 import com.Groupe15.SocialApp.models.User
 import com.Groupe15.SocialApp.repository.AuthRepository
+import com.Groupe15.SocialApp.repository.FeedRepository
 import com.Groupe15.SocialApp.repository.FollowRepository
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -20,6 +22,7 @@ import javax.inject.Inject
 class ProfileViewModel @Inject constructor(
     private val authRepository: AuthRepository,
     private val followRepository: FollowRepository,
+    private val feedRepository: FeedRepository, // ✅ NOUVEAU
     private val firestore: FirebaseFirestore,
     private val auth: FirebaseAuth
 ) : ViewModel() {
@@ -36,36 +39,22 @@ class ProfileViewModel @Inject constructor(
     private val _isLoadingPosts = MutableStateFlow(false)
     val isLoadingPosts: StateFlow<Boolean> = _isLoadingPosts.asStateFlow()
 
-    // ✅ NOUVEAU : nombre réel de publications (texte, image, vidéo confondus),
-    // calculé directement depuis Firestore au lieu de se fier au champ statique
-    // postsCount du document User (qui peut se désynchroniser, comme observé
-    // précédemment pour followersCount/followingCount).
-    private val _realPostsCount = MutableStateFlow(0)
-    val realPostsCount: StateFlow<Int> = _realPostsCount.asStateFlow()
+    //  posts sauvegardés (onglet "Saved")
+    private val _savedPosts = MutableStateFlow<List<Post>>(emptyList())
+    val savedPosts: StateFlow<List<Post>> = _savedPosts.asStateFlow()
 
-    // ✅ NOUVEAU : référence vers l'écoute Firestore (listener) en cours, pour pouvoir
-    // l'annuler avant d'en démarrer une nouvelle. Avant ce correctif, loadProfile()
-    // pouvait être appelé plusieurs fois (ex: une fois depuis MainActivity, une fois
-    // depuis ProfileScreen) sans jamais annuler le listener précédent : plusieurs
-    // écoutes Firestore + AuthStateListener restaient actives en parallèle. Avec un
-    // compte fraîchement créé (nouveau compte / Google), cette accumulation de
-    // listeners concurrents pouvait laisser le profil bloqué sur sa valeur initiale
-    // (null) si un ancien listener "périmé" écrasait une émission plus récente,
-    // d'où l'écran qui reste indéfiniment sur le loader.
-    private var profileListenerJob: kotlinx.coroutines.Job? = null
+    private val _isLoadingSaved = MutableStateFlow(false)
+    val isLoadingSaved: StateFlow<Boolean> = _isLoadingSaved.asStateFlow()
+
+    private var savedPostsJob: Job? = null
 
     fun loadProfile(targetUid: String) {
         val currentUid = auth.currentUser?.uid ?: ""
-
-        // Résoudre le vrai UID : si vide ou "me", charger le profil connecté
         val resolvedUid = if (targetUid.isEmpty() || targetUid == "me") currentUid else targetUid
 
         _isOwnProfile.value = resolvedUid == currentUid
 
-        // On annule systématiquement l'écoute précédente avant d'en relancer une :
-        // une seule source de vérité active à la fois pour _profileUser.
-        profileListenerJob?.cancel()
-        profileListenerJob = viewModelScope.launch {
+        viewModelScope.launch {
             if (_isOwnProfile.value) {
                 authRepository.getCurrentUser().collect { user ->
                     _profileUser.value = user
@@ -78,7 +67,6 @@ class ProfileViewModel @Inject constructor(
         }
 
         loadUserPosts(resolvedUid)
-        loadRealPostsCount(resolvedUid)
     }
 
     private fun loadUserPosts(uid: String) {
@@ -100,28 +88,19 @@ class ProfileViewModel @Inject constructor(
         }
     }
 
-    // ✅ NOUVEAU : compte le nombre RÉEL de posts de l'utilisateur (tous types confondus :
-    // texte, image, vidéo — un seul modèle Post couvre tout, distingué seulement par le
-    // contenu de imageUrls/content). Utilise l'agrégation count() de Firestore, qui est
-    // rapide et ne télécharge pas tous les documents (contrairement à .get().size()).
-    private fun loadRealPostsCount(uid: String) {
-        viewModelScope.launch {
-            try {
-                val countSnapshot = firestore.collection("posts")
-                    .whereEqualTo("userId", uid)
-                    .count()
-                    .get(com.google.firebase.firestore.AggregateSource.SERVER)
-                    .await()
-                _realPostsCount.value = countSnapshot.count.toInt()
-            } catch (e: Exception) {
-                // En cas d'échec (ex: ancienne version de Firestore SDK sans count()),
-                // on retombe sur la taille de la liste déjà chargée (limitée à 30)
-                _realPostsCount.value = _userPosts.value.size
+    //  charge les posts sauvegardés en temps réel (uniquement pour son propre profil)
+    fun loadSavedPosts() {
+        if (savedPostsJob != null) return // déjà en écoute
+        savedPostsJob = viewModelScope.launch {
+            _isLoadingSaved.value = true
+            feedRepository.getSavedPostIdsFlow().collect { ids ->
+                val posts = feedRepository.getPostsByIds(ids)
+                _savedPosts.value = posts.sortedByDescending { it.getCreatedAtMillis() }
+                _isLoadingSaved.value = false
             }
         }
     }
 
-    // Appelé par FollowViewModel après follow/unfollow pour rafraîchir les compteurs
     fun refreshProfile() {
         val uid = _profileUser.value?.id ?: return
         loadProfile(uid)

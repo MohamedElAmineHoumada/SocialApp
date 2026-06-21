@@ -6,9 +6,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
@@ -17,6 +14,7 @@ import androidx.compose.material.icons.filled.GridOn
 import androidx.compose.material.icons.filled.LocalOffer
 import androidx.compose.material.icons.filled.PlayCircleOutline
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.outlined.BookmarkBorder
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -31,7 +29,7 @@ import coil.compose.AsyncImage
 import com.Groupe15.SocialApp.models.User
 import com.google.firebase.auth.FirebaseAuth
 
-enum class ProfileTab { POSTS, TAGGED, REELS }
+enum class ProfileTab { POSTS, SAVED, TAGGED, REELS } // SAVED ajouté
 
 @Composable
 fun ProfileScreen(
@@ -48,7 +46,8 @@ fun ProfileScreen(
     val followState by followViewModel.followState.collectAsState()
     val userPosts by viewModel.userPosts.collectAsState()
     val isLoadingPosts by viewModel.isLoadingPosts.collectAsState()
-    val realPostsCount by viewModel.realPostsCount.collectAsState()
+    val savedPosts by viewModel.savedPosts.collectAsState() // ✅ NOUVEAU
+    val isLoadingSaved by viewModel.isLoadingSaved.collectAsState() // ✅ NOUVEAU
 
     val followersList by followViewModel.followersList.collectAsState()
     val followingList by followViewModel.followingList.collectAsState()
@@ -56,7 +55,6 @@ fun ProfileScreen(
     var showFollowersSheet by remember { mutableStateOf(false) }
     var showFollowingSheet by remember { mutableStateOf(false) }
 
-    // NOUVEAU : uid de l'utilisateur connecté, pour savoir si "own profile" dans le contexte de la liste
     val currentAuthUid = remember { FirebaseAuth.getInstance().currentUser?.uid ?: "" }
 
     var selectedTab by remember { mutableStateOf(ProfileTab.POSTS) }
@@ -68,7 +66,6 @@ fun ProfileScreen(
         }
     }
 
-    // Rafraîchir le profil (compteurs) après follow/unfollow
     LaunchedEffect(followState) {
         if (followState is FollowState.FollowSuccess || followState is FollowState.UnfollowSuccess) {
             viewModel.refreshProfile()
@@ -77,9 +74,6 @@ fun ProfileScreen(
 
     val user = profileUser
 
-    // ✅ NOUVEAU : à chaque fois qu'on a un user chargé, on resynchronise ses compteurs
-    // avec le nombre réel de documents dans les sous-collections followers/following.
-    // Corrige automatiquement les écarts du type "10 affiché mais 3 réels".
     LaunchedEffect(user?.id) {
         user?.id?.let { uid ->
             if (uid.isNotEmpty()) {
@@ -88,8 +82,14 @@ fun ProfileScreen(
         }
     }
 
+    //  déclenche le chargement des posts sauvegardés dès qu'on arrive sur son propre profil
+    LaunchedEffect(isOwnProfile) {
+        if (isOwnProfile) {
+            viewModel.loadSavedPosts()
+        }
+    }
+
     Column(modifier = Modifier.fillMaxSize()) {
-        // ── Top App Bar ──────────────────────────────────────────────────
         TopAppBar(
             title = { Text(user?.username ?: "", fontWeight = FontWeight.Bold) },
             actions = {
@@ -108,10 +108,8 @@ fun ProfileScreen(
             return@Column
         }
 
-        // ── Contenu scrollable ───────────────────────────────────────────
         Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
 
-            // Cover photo
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -127,7 +125,6 @@ fun ProfileScreen(
                     )
                 }
 
-                // Photo de profil positionnée sur le bord bas de la cover
                 AsyncImage(
                     model = user.profileImageUrl.ifBlank { null },
                     contentDescription = "Photo de profil",
@@ -142,9 +139,8 @@ fun ProfileScreen(
                 )
             }
 
-            Spacer(modifier = Modifier.height(52.dp)) // compense l'offset de la photo
+            Spacer(modifier = Modifier.height(52.dp))
 
-            // ── Infos du profil ──────────────────────────────────────────
             Column(modifier = Modifier.padding(horizontal = 16.dp)) {
 
                 Text(
@@ -167,13 +163,8 @@ fun ProfileScreen(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // ── Statistiques ─────────────────────────────────────────
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceEvenly
-                ) {
-                    ProfileStat(count = realPostsCount, label = "Publications")
-
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                    ProfileStat(count = user.postsCount, label = "Publications")
                     ProfileStat(
                         count = user.followersCount,
                         label = "Abonnés",
@@ -182,7 +173,6 @@ fun ProfileScreen(
                             showFollowersSheet = true
                         }
                     )
-
                     ProfileStat(
                         count = user.followingCount,
                         label = "Abonnements",
@@ -195,12 +185,8 @@ fun ProfileScreen(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // ── Boutons d'action ──────────────────────────────────────
                 if (isOwnProfile) {
-                    OutlinedButton(
-                        onClick = onEditProfile,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
+                    OutlinedButton(onClick = onEditProfile, modifier = Modifier.fillMaxWidth()) {
                         Text("Modifier le profil")
                     }
                 } else {
@@ -229,10 +215,7 @@ fun ProfileScreen(
                                 Text(if (isFollowing) "Abonné(e)" else "Suivre")
                             }
                         }
-                        OutlinedButton(
-                            onClick = { onMessage(user.username) },
-                            modifier = Modifier.weight(1f)
-                        ) {
+                        OutlinedButton(onClick = { onMessage(user.username) }, modifier = Modifier.weight(1f)) {
                             Text("Message")
                         }
                     }
@@ -250,82 +233,53 @@ fun ProfileScreen(
             Spacer(modifier = Modifier.height(12.dp))
             HorizontalDivider()
 
-            // ── Onglets Posts / Tags / Reels ─────────────────────────────
-            TabRow(
-                selectedTabIndex = selectedTab.ordinal,
-                containerColor = MaterialTheme.colorScheme.surface
-            ) {
-                ProfileTabItem(
-                    icon = Icons.Default.GridOn,
-                    label = "Posts",
-                    selected = selectedTab == ProfileTab.POSTS,
-                    onClick = { selectedTab = ProfileTab.POSTS }
-                )
-                ProfileTabItem(
-                    icon = Icons.Default.LocalOffer,
-                    label = "Tags",
-                    selected = selectedTab == ProfileTab.TAGGED,
-                    onClick = { selectedTab = ProfileTab.TAGGED }
-                )
-                ProfileTabItem(
-                    icon = Icons.Default.PlayCircleOutline,
-                    label = "Reels",
-                    selected = selectedTab == ProfileTab.REELS,
-                    onClick = { selectedTab = ProfileTab.REELS }
-                )
+            //  liste d'onglets dynamique — "Saved" uniquement sur son propre profil
+            val availableTabs = if (isOwnProfile)
+                listOf(ProfileTab.POSTS, ProfileTab.SAVED, ProfileTab.TAGGED, ProfileTab.REELS)
+            else
+                listOf(ProfileTab.POSTS, ProfileTab.TAGGED, ProfileTab.REELS)
+
+            // Si l'onglet sélectionné n'est plus disponible (ex: changement de profil), on revient sur POSTS
+            LaunchedEffect(availableTabs) {
+                if (selectedTab !in availableTabs) selectedTab = ProfileTab.POSTS
             }
 
-            // ── Grille de contenu ────────────────────────────────────────
+            TabRow(
+                selectedTabIndex = availableTabs.indexOf(selectedTab).coerceAtLeast(0),
+                containerColor = MaterialTheme.colorScheme.surface
+            ) {
+                availableTabs.forEach { tab ->
+                    ProfileTabItem(
+                        icon = when (tab) {
+                            ProfileTab.POSTS -> Icons.Default.GridOn
+                            ProfileTab.SAVED -> Icons.Outlined.BookmarkBorder
+                            ProfileTab.TAGGED -> Icons.Default.LocalOffer
+                            ProfileTab.REELS -> Icons.Default.PlayCircleOutline
+                        },
+                        label = tab.name,
+                        selected = selectedTab == tab,
+                        onClick = { selectedTab = tab }
+                    )
+                }
+            }
+
             when (selectedTab) {
                 ProfileTab.POSTS -> {
-                    if (isLoadingPosts) {
-                        Box(
-                            modifier = Modifier.fillMaxWidth().height(200.dp),
-                            contentAlignment = Alignment.Center
-                        ) { CircularProgressIndicator() }
-                    } else if (userPosts.isEmpty()) {
-                        Box(
-                            modifier = Modifier.fillMaxWidth().height(200.dp),
-                            contentAlignment = Alignment.Center
-                        ) { Text("Aucune publication", color = MaterialTheme.colorScheme.onSurfaceVariant) }
-                    } else {
-                        // Grille non-lazy dans un scroll parent
-                        val rows = userPosts.chunked(3)
-                        Column {
-                            rows.forEach { rowPosts ->
-                                Row(modifier = Modifier.fillMaxWidth()) {
-                                    rowPosts.forEach { post ->
-                                        AsyncImage(
-                                            model = post.imageUrls.firstOrNull(),
-                                            contentDescription = null,
-                                            modifier = Modifier
-                                                .weight(1f)
-                                                .aspectRatio(1f)
-                                                .padding(1.dp)
-                                                .background(MaterialTheme.colorScheme.surfaceVariant),
-                                            contentScale = ContentScale.Crop
-                                        )
-                                    }
-                                    // Remplir les cases vides de la dernière ligne
-                                    repeat(3 - rowPosts.size) {
-                                        Spacer(modifier = Modifier.weight(1f).aspectRatio(1f))
-                                    }
-                                }
-                            }
-                        }
-                    }
+                    PostsGrid(posts = userPosts, isLoading = isLoadingPosts, emptyLabel = "Aucune publication")
+                }
+                //  grille des posts sauvegardés
+                ProfileTab.SAVED -> {
+                    PostsGrid(posts = savedPosts, isLoading = isLoadingSaved, emptyLabel = "Aucune publication enregistrée")
                 }
                 ProfileTab.TAGGED -> {
-                    Box(
-                        modifier = Modifier.fillMaxWidth().height(200.dp),
-                        contentAlignment = Alignment.Center
-                    ) { Text("Aucune publication taguée", color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                    Box(modifier = Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
+                        Text("Aucune publication taguée", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
                 }
                 ProfileTab.REELS -> {
-                    Box(
-                        modifier = Modifier.fillMaxWidth().height(200.dp),
-                        contentAlignment = Alignment.Center
-                    ) { Text("Aucun reel", color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                    Box(modifier = Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
+                        Text("Aucun reel", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
                 }
             }
 
@@ -333,50 +287,76 @@ fun ProfileScreen(
         }
     }
 
-    // ── BottomSheet liste des Abonnés ──────────────────────────────────
     if (showFollowersSheet) {
         FollowListBottomSheet(
             title = "Abonnés",
             users = followersList,
             isLoading = isLoadingList,
-            // ✅ NOUVEAU : le bouton "Retirer" n'apparaît que si c'est mon propre profil
-            // (on ne peut retirer un abonné que de SA propre liste)
             showActionButton = isOwnProfile,
             actionLabel = "Retirer",
             onActionClick = { uid -> followViewModel.removeFollowerFromList(uid) },
             onDismiss = { showFollowersSheet = false },
-            onUserClick = { uid ->
-                showFollowersSheet = false
-                onNavigateToProfile(uid)
-            }
+            onUserClick = { uid -> showFollowersSheet = false; onNavigateToProfile(uid) }
         )
     }
 
-    // ── BottomSheet liste des Abonnements ──────────────────────────────
     if (showFollowingSheet) {
         FollowListBottomSheet(
             title = "Abonnements",
             users = followingList,
             isLoading = isLoadingList,
-            // ✅ NOUVEAU : le bouton "Se désabonner" n'apparaît que si c'est mon propre profil
             showActionButton = isOwnProfile,
             actionLabel = "Se désabonner",
             onActionClick = { uid -> followViewModel.unfollowFromList(uid) },
             onDismiss = { showFollowingSheet = false },
-            onUserClick = { uid ->
-                showFollowingSheet = false
-                onNavigateToProfile(uid)
-            }
+            onUserClick = { uid -> showFollowingSheet = false; onNavigateToProfile(uid) }
         )
     }
 }
 
+//  grille factorisée, réutilisée par POSTS et SAVED
 @Composable
-private fun ProfileStat(
-    count: Int,
-    label: String,
-    onClick: (() -> Unit)? = null
+private fun PostsGrid(
+    posts: List<com.Groupe15.SocialApp.models.Post>,
+    isLoading: Boolean,
+    emptyLabel: String
 ) {
+    if (isLoading) {
+        Box(modifier = Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator()
+        }
+    } else if (posts.isEmpty()) {
+        Box(modifier = Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
+            Text(emptyLabel, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    } else {
+        val rows = posts.chunked(3)
+        Column {
+            rows.forEach { rowPosts ->
+                Row(modifier = Modifier.fillMaxWidth()) {
+                    rowPosts.forEach { post ->
+                        AsyncImage(
+                            model = post.imageUrls.firstOrNull(),
+                            contentDescription = null,
+                            modifier = Modifier
+                                .weight(1f)
+                                .aspectRatio(1f)
+                                .padding(1.dp)
+                                .background(MaterialTheme.colorScheme.surfaceVariant),
+                            contentScale = ContentScale.Crop
+                        )
+                    }
+                    repeat(3 - rowPosts.size) {
+                        Spacer(modifier = Modifier.weight(1f).aspectRatio(1f))
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ProfileStat(count: Int, label: String, onClick: (() -> Unit)? = null) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = if (onClick != null) Modifier.clickable { onClick() } else Modifier
@@ -387,12 +367,7 @@ private fun ProfileStat(
 }
 
 @Composable
-private fun ProfileTabItem(
-    icon: ImageVector,
-    label: String,
-    selected: Boolean,
-    onClick: () -> Unit
-) {
+private fun ProfileTabItem(icon: ImageVector, label: String, selected: Boolean, onClick: () -> Unit) {
     Tab(
         selected = selected,
         onClick = onClick,
@@ -407,8 +382,6 @@ private fun ProfileTabItem(
     )
 }
 
-// ✅ MODIFIÉ : BottomSheet avec bouton d'action optionnel (Retirer / Se désabonner)
-// et clic sur la ligne entière pour naviguer vers le profil
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FollowListBottomSheet(
@@ -431,15 +404,13 @@ fun FollowListBottomSheet(
         HorizontalDivider()
 
         if (isLoading) {
-            Box(
-                modifier = Modifier.fillMaxWidth().height(200.dp),
-                contentAlignment = Alignment.Center
-            ) { CircularProgressIndicator() }
+            Box(modifier = Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator()
+            }
         } else if (users.isEmpty()) {
-            Box(
-                modifier = Modifier.fillMaxWidth().height(200.dp),
-                contentAlignment = Alignment.Center
-            ) { Text("Aucun utilisateur", color = MaterialTheme.colorScheme.onSurfaceVariant) }
+            Box(modifier = Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
+                Text("Aucun utilisateur", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
         } else {
             LazyColumn(modifier = Modifier.fillMaxWidth().heightIn(max = 500.dp)) {
                 items(users, key = { it.id }) { followUser ->
@@ -471,8 +442,6 @@ fun FollowListBottomSheet(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
-
-                        // ✅ NOUVEAU : bouton d'action (Retirer / Se désabonner)
                         if (showActionButton) {
                             OutlinedButton(
                                 onClick = { onActionClick(followUser.id) },
