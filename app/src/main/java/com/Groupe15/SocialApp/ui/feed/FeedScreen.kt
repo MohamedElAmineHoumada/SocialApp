@@ -16,6 +16,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.MoreVert
@@ -57,11 +58,11 @@ fun FeedScreen(
     val stories by viewModel.stories.observeAsState(emptyList())
     val isLoading by viewModel.isLoading.observeAsState(false)
     val likedPostIds by viewModel.likedPostIds.observeAsState(emptySet())
+    val savedPostIds by viewModel.savedPostIds.observeAsState(emptySet()) // ✅ NOUVEAU
 
     var commentsPostId by remember { mutableStateOf<String?>(null) }
     var sharePost by remember { mutableStateOf<Post?>(null) }
 
-    // Rafraîchit l'état des likes à chaque fois que la liste de posts visible change
     LaunchedEffect(posts) {
         if (posts.isNotEmpty()) {
             viewModel.refreshLikedState(posts.map { it.postId })
@@ -76,19 +77,14 @@ fun FeedScreen(
 
         Box(modifier = Modifier.fillMaxSize()) {
             if (isLoading) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator()
                 }
             } else if (posts.isEmpty()) {
                 EmptyFeedState(tab = selectedTab)
             } else {
                 LazyColumn(modifier = Modifier.fillMaxSize()) {
-                    item {
-                        StoriesRow(stories = stories)
-                    }
+                    item { StoriesRow(stories = stories) }
 
                     itemsIndexed(posts, key = { index, post ->
                         post.postId.ifBlank { "post_$index" }
@@ -96,6 +92,7 @@ fun FeedScreen(
                         PostCard(
                             post = post,
                             isLiked = post.postId in likedPostIds,
+                            isSaved = post.postId in savedPostIds, // ✅ NOUVEAU
                             onLikeClick = { viewModel.toggleLike(post.postId) },
                             onCommentClick = { commentsPostId = post.postId },
                             onShareClick = { sharePost = post },
@@ -131,19 +128,12 @@ fun FeedScreen(
     }
 }
 
-/**
- * Barre d'onglets "Following / For You", style Instagram (texte centré, soulignement animé).
- */
 @Composable
 private fun FeedTabBar(
     selectedTab: FeedTab,
     onTabSelected: (FeedTab) -> Unit
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(top = 4.dp)
-    ) {
+    Row(modifier = Modifier.fillMaxWidth().padding(top = 4.dp)) {
         FeedTabItem(
             label = "Following",
             selected = selectedTab == FeedTab.FOLLOWING,
@@ -183,9 +173,7 @@ private fun FeedTabItem(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(2.dp)
-                .background(
-                    if (selected) MaterialTheme.colorScheme.onSurface else Color.Transparent
-                )
+                .background(if (selected) MaterialTheme.colorScheme.onSurface else Color.Transparent)
         )
     }
 }
@@ -193,9 +181,7 @@ private fun FeedTabItem(
 @Composable
 private fun EmptyFeedState(tab: FeedTab) {
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(32.dp),
+        modifier = Modifier.fillMaxSize().padding(32.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
@@ -209,8 +195,7 @@ private fun EmptyFeedState(tab: FeedTab) {
         Text(
             text = if (tab == FeedTab.FOLLOWING)
                 "Suis des comptes pour voir leurs publications ici."
-            else
-                "Revenez plus tard, du contenu vous sera proposé.",
+            else "Revenez plus tard, du contenu vous sera proposé.",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -222,9 +207,7 @@ private fun StoriesRow(stories: List<Story>) {
     if (stories.isEmpty()) return
 
     LazyRow(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 12.dp),
+        modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         contentPadding = PaddingValues(horizontal = 16.dp)
     ) {
@@ -247,11 +230,7 @@ private fun StoriesRow(stories: List<Story>) {
                     )
                 }
                 Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = story.username,
-                    style = MaterialTheme.typography.labelSmall,
-                    maxLines = 1
-                )
+                Text(text = story.username, style = MaterialTheme.typography.labelSmall, maxLines = 1)
             }
         }
     }
@@ -261,13 +240,13 @@ private fun StoriesRow(stories: List<Story>) {
 private fun PostCard(
     post: Post,
     isLiked: Boolean,
+    isSaved: Boolean, // ✅ NOUVEAU
     onLikeClick: () -> Unit,
     onCommentClick: () -> Unit,
     onShareClick: () -> Unit,
     onSaveClick: () -> Unit,
     onAuthorClick: () -> Unit
 ) {
-    // Animation du coeur flottant au double-tap
     var showHeartBurst by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
@@ -284,25 +263,29 @@ private fun PostCard(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Row(
-                modifier = Modifier
-                    .weight(1f)
-                    .clickable(onClick = onAuthorClick),
+                modifier = Modifier.weight(1f).clickable(onClick = onAuthorClick),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 AsyncImage(
                     model = post.authorProfileUrl,
                     contentDescription = null,
-                    modifier = Modifier
-                        .size(36.dp)
-                        .clip(CircleShape),
+                    modifier = Modifier.size(36.dp).clip(CircleShape),
                     contentScale = ContentScale.Crop
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(text = post.authorUsername, fontWeight = FontWeight.Bold)
             }
-            IconButton(onClick = { /* TODO: menu options (signaler, masquer...) */ }) {
+            IconButton(onClick = { /* TODO: menu options */ }) {
                 Icon(Icons.Default.MoreVert, contentDescription = "Options")
             }
+        }
+
+        // ---- ✅ Légende AVANT l'image ----
+        if (post.content.isNotBlank()) {
+            Text(
+                text = buildAnnotatedCaption(post.authorUsername, post.content),
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
+            )
         }
 
         // ---- Image avec double-tap pour liker ----
@@ -347,14 +330,6 @@ private fun PostCard(
             }
         }
 
-        // ---- Légende (déplacée avant les boutons d'action) ----
-        if (post.content.isNotBlank()) {
-            Text(
-                text = buildAnnotatedCaption(post.authorUsername, post.content),
-                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
-            )
-        }
-
         // ---- Actions : like, comment, share, save ----
         Row(
             modifier = Modifier
@@ -370,8 +345,13 @@ private fun PostCard(
                 Icon(Icons.Outlined.Send, contentDescription = "Partager")
             }
             Spacer(modifier = Modifier.weight(1f))
+            // ✅ Bouton Save fonctionnel : icône remplie quand sauvegardé
             IconButton(onClick = onSaveClick) {
-                Icon(Icons.Outlined.BookmarkBorder, contentDescription = "Enregistrer")
+                Icon(
+                    imageVector = if (isSaved) Icons.Default.Bookmark else Icons.Outlined.BookmarkBorder,
+                    contentDescription = "Enregistrer",
+                    tint = if (isSaved) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                )
             }
         }
 
@@ -404,9 +384,6 @@ private fun buildAnnotatedCaption(username: String, content: String) =
         append(content)
     }
 
-/**
- * Bouton like animé : scale-bounce au clic, couleur rouge quand actif.
- */
 @Composable
 private fun AnimatedLikeButton(isLiked: Boolean, onClick: () -> Unit) {
     val scale = remember { Animatable(1f) }
@@ -421,9 +398,7 @@ private fun AnimatedLikeButton(isLiked: Boolean, onClick: () -> Unit) {
             imageVector = if (isLiked) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
             contentDescription = "Aimer",
             tint = if (isLiked) Color(0xFFE53935) else MaterialTheme.colorScheme.onSurface,
-            modifier = Modifier
-                .size(26.dp)
-                .scale(scale.value)
+            modifier = Modifier.size(26.dp).scale(scale.value)
         )
     }
 }
