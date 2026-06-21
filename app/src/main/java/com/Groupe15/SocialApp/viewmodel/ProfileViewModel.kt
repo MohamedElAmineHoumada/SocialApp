@@ -43,6 +43,17 @@ class ProfileViewModel @Inject constructor(
     private val _realPostsCount = MutableStateFlow(0)
     val realPostsCount: StateFlow<Int> = _realPostsCount.asStateFlow()
 
+    // ✅ NOUVEAU : référence vers l'écoute Firestore (listener) en cours, pour pouvoir
+    // l'annuler avant d'en démarrer une nouvelle. Avant ce correctif, loadProfile()
+    // pouvait être appelé plusieurs fois (ex: une fois depuis MainActivity, une fois
+    // depuis ProfileScreen) sans jamais annuler le listener précédent : plusieurs
+    // écoutes Firestore + AuthStateListener restaient actives en parallèle. Avec un
+    // compte fraîchement créé (nouveau compte / Google), cette accumulation de
+    // listeners concurrents pouvait laisser le profil bloqué sur sa valeur initiale
+    // (null) si un ancien listener "périmé" écrasait une émission plus récente,
+    // d'où l'écran qui reste indéfiniment sur le loader.
+    private var profileListenerJob: kotlinx.coroutines.Job? = null
+
     fun loadProfile(targetUid: String) {
         val currentUid = auth.currentUser?.uid ?: ""
 
@@ -51,7 +62,10 @@ class ProfileViewModel @Inject constructor(
 
         _isOwnProfile.value = resolvedUid == currentUid
 
-        viewModelScope.launch {
+        // On annule systématiquement l'écoute précédente avant d'en relancer une :
+        // une seule source de vérité active à la fois pour _profileUser.
+        profileListenerJob?.cancel()
+        profileListenerJob = viewModelScope.launch {
             if (_isOwnProfile.value) {
                 authRepository.getCurrentUser().collect { user ->
                     _profileUser.value = user

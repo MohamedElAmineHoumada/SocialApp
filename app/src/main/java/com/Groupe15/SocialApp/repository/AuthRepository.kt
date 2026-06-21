@@ -32,8 +32,47 @@ class AuthRepository @Inject constructor(
             if (uid != null) {
                 docListener = firestore.collection("users").document(uid)
                     .addSnapshotListener { snapshot, error ->
-                        if (error == null) trySend(snapshot?.toObject(User::class.java))
-                        else trySend(null)
+                        if (error != null) { trySend(null); return@addSnapshotListener }
+                        val user = snapshot?.toObject(User::class.java)
+                        if (user != null) {
+                            // Document existe → on l'envoie
+                            trySend(user)
+                        } else if (snapshot != null && !snapshot.exists()) {
+                            // ✅ Document absent (compte créé directement dans Firebase Console
+                            // ou inscription incomplète) → créer un profil minimal automatiquement
+                            val firebaseUser = firebaseAuth.currentUser ?: return@addSnapshotListener
+                            val displayName = firebaseUser.displayName ?: firebaseUser.email?.substringBefore("@") ?: "Utilisateur"
+                            var username = displayName.lowercase().replace(" ", "_")
+                                .filter { it.isLetterOrDigit() || it == '_' }
+                            if (username.isBlank()) username = "user_${uid.take(6)}"
+                            val newUser = hashMapOf(
+                                "id" to uid,
+                                "email" to (firebaseUser.email ?: ""),
+                                "displayName" to displayName,
+                                "username" to username,
+                                "bio" to "",
+                                "profileImageUrl" to (firebaseUser.photoUrl?.toString() ?: ""),
+                                "coverImageUrl" to "",
+                                "website" to "",
+                                "followersCount" to 0,
+                                "followingCount" to 0,
+                                "postsCount" to 0,
+                                "isPrivate" to false,
+                                "role" to "",
+                                "fcmToken" to ""
+                            )
+                            firestore.collection("users").document(uid).set(newUser)
+                                .addOnSuccessListener {
+                                    trySend(
+                                        User(
+                                            id = uid,
+                                            email = firebaseUser.email ?: "",
+                                            displayName = displayName,
+                                            username = username
+                                        )
+                                    )
+                                }
+                        }
                     }
             } else {
                 trySend(null)
@@ -43,22 +82,6 @@ class AuthRepository @Inject constructor(
         awaitClose {
             auth.removeAuthStateListener(authListener)
             docListener?.remove()
-        }
-    }
-
-    fun getUserById(uid: String): Flow<User?> = callbackFlow {
-        val listener = firestore.collection("users").document(uid)
-            .addSnapshotListener { snapshot, _ -> trySend(snapshot?.toObject(User::class.java)) }
-        awaitClose { listener.remove() }
-    }
-
-    suspend fun login(email: String, password: String): Result<Unit> {
-        return try {
-            auth.signInWithEmailAndPassword(email, password).await()
-            updateFcmToken()
-            Result.success(Unit)
-        } catch (e: Exception) {
-            Result.failure(e)
         }
     }
 
@@ -79,13 +102,14 @@ class AuthRepository @Inject constructor(
             val user = hashMapOf(
                 "id" to uid, "email" to email, "displayName" to displayName,
                 "username" to username, "bio" to "", "profileImageUrl" to "",
-                "followersCount" to 0, "followingCount" to 0, "postsCount" to 0, "isPrivate" to false,
-                "fcmToken" to ""
+                "coverImageUrl" to "", "website" to "",
+                "followersCount" to 0, "followingCount" to 0, "postsCount" to 0,
+                "isPrivate" to false, "role" to "", "fcmToken" to ""
             )
             firestore.collection("users").document(uid).set(user).await()
             updateFcmToken()
 
-            // Envoyer l'email de vérification
+            // ✅ Vrai email de vérification Firebase (lien cliquable envoyé par mail)
             auth.currentUser?.sendEmailVerification()?.await()
 
             Result.success(Unit)
@@ -93,6 +117,23 @@ class AuthRepository @Inject constructor(
             Result.failure(e)
         }
     }
+
+    fun getUserById(uid: String): Flow<User?> = callbackFlow {
+        val listener = firestore.collection("users").document(uid)
+            .addSnapshotListener { snapshot, _ -> trySend(snapshot?.toObject(User::class.java)) }
+        awaitClose { listener.remove() }
+    }
+
+    suspend fun login(email: String, password: String): Result<Unit> {
+        return try {
+            auth.signInWithEmailAndPassword(email, password).await()
+            updateFcmToken()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
 
     /**
      * Connexion Google via idToken (obtenu depuis Credential Manager).

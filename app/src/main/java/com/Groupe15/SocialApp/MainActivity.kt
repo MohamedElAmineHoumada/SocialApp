@@ -188,11 +188,11 @@ fun MainScreen(
                 val networkViewModel = hiltViewModel<NetworkViewModel>()
                 val messagesViewModel = hiltViewModel<MessagesViewModel>()
                 val notificationViewModel = hiltViewModel<NotificationViewModel>()
-                
+
                 val followRequests by networkViewModel.followRequests.collectAsState()
                 val conversations by messagesViewModel.conversations.observeAsState(initial = emptyList<Conversation>())
                 val unreadNotificationsCount by notificationViewModel.unreadCount.collectAsState()
-                
+
                 val unreadMessagesCount = conversations.count { it.hasUnread }
 
                 AnimatedVisibility(
@@ -250,10 +250,27 @@ fun MainScreen(
                 val registerViewModel: RegisterViewModel = hiltViewModel()
                 RegisterScreen(
                     viewModel = registerViewModel,
-                    onRegisterClick = { email, password, name -> 
-                        registerViewModel.register(email, password, name) 
+                    onRegisterClick = { email, password, name ->
+                        registerViewModel.register(email, password, name)
                     },
                     onLoginClick = { navController.popBackStack() },
+                    // ✅ NOUVEAU : on réutilise EXACTEMENT le même mécanisme que LoginScreen
+                    // (CredentialManager + CallbackManager uniques, gérés par MainActivity),
+                    // au lieu de l'ancienne implémentation dupliquée qui causait des erreurs
+                    // Facebook (deux CallbackManager enregistrés en parallèle) et un
+                    // comportement Google incohérent pour les nouveaux comptes.
+                    onGoogleClick = {
+                        onLaunchGoogle(
+                            { idToken -> registerViewModel.signInWithGoogle(idToken) },
+                            { error -> registerViewModel.resetState() }
+                        )
+                    },
+                    onFacebookClick = {
+                        onLaunchFacebook(
+                            { accessToken -> registerViewModel.signInWithFacebook(accessToken) },
+                            { error -> registerViewModel.resetState() }
+                        )
+                    },
                     onSuccess = { navController.navigate("onboardingWelcome") }
                 )
             }
@@ -333,11 +350,6 @@ fun MainScreen(
                     authViewModel.getCurrentUserUid() ?: ""
                 else uid
 
-                LaunchedEffect(effectiveUid) {
-                    if (effectiveUid.isNotEmpty()) {
-                        profileViewModel.loadProfile(effectiveUid)
-                    }
-                }
                 ProfileScreen(
                     viewModel = profileViewModel,
                     followViewModel = hiltViewModel<FollowViewModel>(),

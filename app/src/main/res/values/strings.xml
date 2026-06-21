@@ -60,5 +60,5 @@
         IMPORTANT : remplacez cette valeur par le "Web client ID" de votre projet Firebase.
         Trouvez-le dans : Firebase Console → Authentication → Sign-in method → Google → Web SDK configuration
     -->
-    <string name="default_web_client_id">137216888053-sbc9e9rvhq92eo36bqhqf1sed35mu9ti.apps.googleusercontent.com.apps.googleusercontent.com</string>
+    <string name="default_web_client_id">137216888053-sbc9e9rvhq92eo36bqhqf1sed35mu9ti.apps.googleusercontent.com</string>
 </resources>
