@@ -80,7 +80,7 @@ class FollowRepository @Inject constructor(
                 // Mise à jour des compteurs
                 batch.update(usersCollection.document(currentUid), "followingCount", FieldValue.increment(1))
                 batch.update(usersCollection.document(targetUid), "followersCount", FieldValue.increment(1))
-                
+
                 // Notification for follow (accepted)
                 val notificationRef = usersCollection.document(targetUid).collection("notifications").document()
                 val notification = Notification(
@@ -94,7 +94,7 @@ class FollowRepository @Inject constructor(
                     targetId = currentUid
                 )
                 batch.set(notificationRef, notification)
-                
+
                 // Trigger Push Notification
                 sendPushNotification(targetUid, "Nouvel abonné", "${currentUser?.displayName ?: currentUser?.username} a commencé à vous suivre", currentUid, "follow")
             } else {
@@ -111,7 +111,7 @@ class FollowRepository @Inject constructor(
                     targetId = currentUid
                 )
                 batch.set(notificationRef, notification)
-                
+
                 // Trigger Push Notification
                 sendPushNotification(targetUid, "Demande de suivi", "${currentUser?.displayName ?: currentUser?.username} souhaite vous suivre", currentUid, "follow_request")
             }
@@ -127,7 +127,7 @@ class FollowRepository @Inject constructor(
         try {
             val userDoc = usersCollection.document(targetUid).get().await()
             val fcmToken = userDoc.getString("fcmToken")
-            
+
             if (!fcmToken.isNullOrBlank()) {
                 val pushData = hashMapOf(
                     "to" to fcmToken,
@@ -445,24 +445,86 @@ class FollowRepository @Inject constructor(
 
     /**
      * Recalcule followersCount / followingCount à partir du nombre réel
-     * de documents dans les sous-collections. Corrige les écarts éventuels.
+     * de documents VALIDES (dont l'utilisateur cible existe encore) dans les
+     * sous-collections. Corrige les écarts éventuels.
+     *
+     * IMPORTANT : on ne se contente pas de compter les documents bruts
+     * (followersSnapshot.size()), car des relations "fantômes" peuvent exister
+     * si un compte a été supprimé ou n'a jamais été créé correctement
+     * (ex. comptes de test). Un document fantôme ferait gonfler le compteur
+     * sans jamais apparaître dans la liste affichée (getUsersByIds l'ignore
+     * silencieusement car le document users/{uid} n'existe plus).
+     *
+     * On vérifie donc l'existence réelle de chaque utilisateur référencé,
+     * et on supprime au passage les références fantômes pour que ce problème
+     * ne se reproduise plus à l'avenir (nettoyage définitif, pas juste un
+     * correctif d'affichage).
      */
     suspend fun resyncCounts(uid: String): Result<Unit> {
         return try {
-            val followersCount = usersCollection.document(uid).collection("followers").get().await().size()
-            val followingCount = usersCollection.document(uid).collection("following")
-                .whereEqualTo("status", "accepted").get().await().size()
+            if (uid.isEmpty()) return Result.success(Unit)
 
-            usersCollection.document(uid).update(
+            // ✅ Garde de sécurité : si le profil cible n'existe plus du tout
+            // (compte supprimé), on ne tente même pas de le mettre à jour —
+            // ça évite l'erreur Firestore "NOT_FOUND: No document to update"
+            // qui bloquait le chargement du profil indéfiniment.
+            val targetUserDoc = usersCollection.document(uid).get().await()
+            if (!targetUserDoc.exists()) {
+                return Result.success(Unit)
+            }
+
+            val followersSnapshot = usersCollection.document(uid).collection("followers").get().await()
+            val followingSnapshot = usersCollection.document(uid).collection("following")
+                .whereEqualTo("status", "accepted").get().await()
+
+            // Vérifie pour chaque relation que l'utilisateur référencé existe encore.
+            // Supprime la relation si l'utilisateur n'existe plus (nettoyage des fantômes).
+            var validFollowersCount = 0
+            for (doc in followersSnapshot.documents) {
+                val exists = try {
+                    usersCollection.document(doc.id).get().await().exists()
+                } catch (e: Exception) {
+                    false
+                }
+                if (exists) {
+                    validFollowersCount++
+                } else {
+                    // Relation fantôme : on la supprime définitivement (best-effort,
+                    // ne doit jamais faire échouer toute la resynchronisation)
+                    try { doc.reference.delete().await() } catch (e: Exception) { /* ignorer */ }
+                }
+            }
+
+            var validFollowingCount = 0
+            for (doc in followingSnapshot.documents) {
+                val exists = try {
+                    usersCollection.document(doc.id).get().await().exists()
+                } catch (e: Exception) {
+                    false
+                }
+                if (exists) {
+                    validFollowingCount++
+                } else {
+                    try { doc.reference.delete().await() } catch (e: Exception) { /* ignorer */ }
+                }
+            }
+
+            // ✅ set(..., merge = true) au lieu de update() : ne plante jamais même
+            // si le document a été supprimé entre le check d'existence ci-dessus
+            // et cet appel (cas rare mais possible en cas de suppression concurrente).
+            usersCollection.document(uid).set(
                 mapOf(
-                    "followersCount" to followersCount,
-                    "followingCount" to followingCount
-                )
+                    "followersCount" to validFollowersCount,
+                    "followingCount" to validFollowingCount
+                ),
+                com.google.firebase.firestore.SetOptions.merge()
             ).await()
 
             Result.success(Unit)
         } catch (e: Exception) {
-            Result.failure(e)
+            // On ne propage jamais l'erreur : une resynchronisation qui échoue
+            // ne doit pas empêcher l'affichage du profil avec les valeurs existantes.
+            Result.success(Unit)
         }
     }
 }
