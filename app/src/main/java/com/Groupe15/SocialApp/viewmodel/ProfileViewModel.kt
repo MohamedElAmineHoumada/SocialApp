@@ -53,6 +53,8 @@ class ProfileViewModel @Inject constructor(
 
     private var savedPostsJob: Job? = null
 
+    private var postsListener: com.google.firebase.firestore.ListenerRegistration? = null
+
     fun loadProfile(targetUid: String) {
         val currentUid = auth.currentUser?.uid ?: ""
         val resolvedUid = if (targetUid.isEmpty() || targetUid == "me") currentUid else targetUid
@@ -71,29 +73,39 @@ class ProfileViewModel @Inject constructor(
             }
         }
 
-        loadUserPosts(resolvedUid)
+        startListeningToUserPosts(resolvedUid)
         loadUserStories(resolvedUid)
         resyncPostsCount(resolvedUid)
     }
 
-    private fun loadUserPosts(uid: String) {
-        viewModelScope.launch {
-            _isLoadingPosts.value = true
-            try {
-                val snapshot = firestore.collection("posts")
-                    .whereEqualTo("userId", uid)
-                    .limit(50) // Augmenté pour plus de "real posts"
-                    .get()
-                    .await()
-                _userPosts.value = snapshot.toObjects(Post::class.java)
-                    .onEach { post -> if (post.postId.isBlank()) post.postId = snapshot.documents.find { it.toObject(Post::class.java) == post }?.id ?: "" }
-                    .sortedByDescending { it.getCreatedAtMillis() }
-            } catch (e: Exception) {
-                _userPosts.value = emptyList()
-            } finally {
+    private fun startListeningToUserPosts(uid: String) {
+        postsListener?.remove()
+        _isLoadingPosts.value = true
+        
+        postsListener = firestore.collection("posts")
+            .whereEqualTo("userId", uid)
+            .addSnapshotListener { snapshot, error ->
                 _isLoadingPosts.value = false
+                if (error != null) {
+                    _userPosts.value = emptyList()
+                    return@addSnapshotListener
+                }
+                
+                if (snapshot != null) {
+                    val posts = snapshot.documents.mapNotNull { doc ->
+                        doc.toObject(Post::class.java)?.also { post ->
+                            if (post.postId.isBlank()) post.postId = doc.id
+                        }
+                    }.sortedByDescending { it.getCreatedAtMillis() }
+                    _userPosts.value = posts
+                }
             }
-        }
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        postsListener?.remove()
+        savedPostsJob?.cancel()
     }
 
     private fun loadUserStories(uid: String) {

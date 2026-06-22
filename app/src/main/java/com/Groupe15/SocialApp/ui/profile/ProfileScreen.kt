@@ -46,7 +46,8 @@ fun ProfileScreen(
     onEditProfile: () -> Unit,
     onSettings: () -> Unit,
     onMessage: (String) -> Unit,
-    onNavigateToProfile: (String) -> Unit = {}
+    onNavigateToProfile: (String) -> Unit = {},
+    onNavigateToPost: (String) -> Unit = {}
 ) {
     val profileUser by viewModel.currentUser.collectAsState()
     val isOwnProfile by viewModel.isOwnProfile.collectAsState()
@@ -319,11 +320,21 @@ fun ProfileScreen(
 
             when (selectedTab) {
                 ProfileTab.POSTS -> {
-                    PostsGrid(posts = userPosts, isLoading = isLoadingPosts, emptyLabel = "Aucune publication")
+                    PostsGrid(
+                        posts = userPosts,
+                        isLoading = isLoadingPosts,
+                        emptyLabel = "Aucune publication",
+                        onPostClick = onNavigateToPost
+                    )
                 }
                 //  grille des posts sauvegardés
                 ProfileTab.SAVED -> {
-                    PostsGrid(posts = savedPosts, isLoading = isLoadingSaved, emptyLabel = "Aucune publication enregistrée")
+                    PostsGrid(
+                        posts = savedPosts,
+                        isLoading = isLoadingSaved,
+                        emptyLabel = "Aucune publication enregistrée",
+                        onPostClick = onNavigateToPost
+                    )
                 }
                 ProfileTab.TAGGED -> {
                     Box(modifier = Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
@@ -373,7 +384,8 @@ fun ProfileScreen(
 private fun PostsGrid(
     posts: List<com.Groupe15.SocialApp.models.Post>,
     isLoading: Boolean,
-    emptyLabel: String
+    emptyLabel: String,
+    onPostClick: (String) -> Unit = {}
 ) {
     if (isLoading) {
         Box(modifier = Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
@@ -390,13 +402,14 @@ private fun PostsGrid(
                 Row(modifier = Modifier.fillMaxWidth()) {
                     rowPosts.forEach { post ->
                         AsyncImage(
-                            model = post.imageUrls.firstOrNull(),
+                            model = post.imageUrl,
                             contentDescription = null,
                             modifier = Modifier
                                 .weight(1f)
                                 .aspectRatio(1f)
                                 .padding(1.dp)
-                                .background(MaterialTheme.colorScheme.surfaceVariant),
+                                .background(MaterialTheme.colorScheme.surfaceVariant)
+                                .clickable { onPostClick(post.postId) },
                             contentScale = ContentScale.Crop
                         )
                     }

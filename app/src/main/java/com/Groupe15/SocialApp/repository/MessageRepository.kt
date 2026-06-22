@@ -122,6 +122,12 @@ class MessageRepository @Inject constructor(
             .await()
     }
 
+    suspend fun deleteChat(chatId: String) {
+        // Note: This only deletes the conversation summary. 
+        // In a production app, you'd use a Cloud Function to clean up the 'messages' sub-collection.
+        firestore.collection("chats").document(chatId).delete().await()
+    }
+
     private suspend fun updateConversationSummary(
         chatId: String,
         senderId: String,

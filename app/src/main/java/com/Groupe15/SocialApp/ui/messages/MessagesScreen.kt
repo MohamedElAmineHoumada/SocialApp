@@ -8,6 +8,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -31,7 +32,8 @@ private val OnlineGreen = Color(0xFF00E676)
 @Composable
 fun MessagesScreen(
     viewModel: MessagesViewModel,
-    onConversationClick: (Conversation) -> Unit
+    onConversationClick: (Conversation) -> Unit,
+    onCallHistoryClick: () -> Unit
 ) {
     val conversations by viewModel.filteredConversations.observeAsState(emptyList())
     var searchQuery by remember { mutableStateOf("") }
@@ -55,6 +57,13 @@ fun MessagesScreen(
                 fontWeight = FontWeight.Bold,
                 fontSize = 22.sp
             )
+            IconButton(onClick = onCallHistoryClick) {
+                Icon(
+                    imageVector = Icons.Default.History,
+                    contentDescription = "Historique d'appels",
+                    tint = MaterialTheme.colorScheme.onBackground
+                )
+            }
         }
 
         // ── Search ────────────────────────────────────────────────────────

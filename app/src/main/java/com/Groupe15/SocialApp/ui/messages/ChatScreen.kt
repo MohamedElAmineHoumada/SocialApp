@@ -21,10 +21,14 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AddPhotoAlternate
 import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.Videocam
+import androidx.compose.material.icons.filled.DoneAll
 import androidx.compose.material.icons.filled.Gif
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.SentimentSatisfiedAlt
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.DoneAll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
@@ -61,20 +65,36 @@ fun ChatScreen(
     userName: String,
     userAvatar: String = "",
     onBack: () -> Unit,
-    onCall: (Boolean) -> Unit,
-    onShowToast: (String) -> Unit
+    onCall: (Boolean, String) -> Unit,
+    onShowToast: (String) -> Unit,
+    onHistoryClick: () -> Unit = {},
+    callViewModel: com.Groupe15.SocialApp.viewmodel.CallViewModel = androidx.hilt.navigation.compose.hiltViewModel()
 ) {
     val messages by viewModel.messages.observeAsState(emptyList())
+    val currentUserDoc by viewModel.currentUser.observeAsState()
+    val otherUser by viewModel.otherUser.observeAsState()
     var textState by remember { mutableStateOf("") }
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
 
     var showGifPicker by remember { mutableStateOf(false) }
     var showEmojiPicker by remember { mutableStateOf(false) }
+    var showDeleteDialog by remember { mutableStateOf(false) }
     var isRecording by remember { mutableStateOf(false) }
     val sheetState = rememberModalBottomSheetState()
     val keyboardController = LocalSoftwareKeyboardController.current
     val focusManager = LocalFocusManager.current
+
+    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        val granted = permissions.values.all { it }
+        if (granted) {
+            onShowToast("Permissions accordées. Lancement de l'appel...")
+        } else {
+            onShowToast("Permissions micro/caméra refusées")
+        }
+    }
 
     val imagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia()
@@ -100,11 +120,33 @@ fun ChatScreen(
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
+            val displayAvatar = otherUser?.profileImageUrl ?: userAvatar
             ChatTopBar(
                 userName = userName,
-                userAvatar = userAvatar,
+                userAvatar = displayAvatar,
                 onBack = onBack,
-                onCall = onCall
+                onCall = { isVideo, avatar ->
+                    permissionLauncher.launch(
+                        arrayOf(
+                            android.Manifest.permission.RECORD_AUDIO,
+                            android.Manifest.permission.CAMERA
+                        )
+                    )
+                    callViewModel.startCall(
+                        callerId = currentUserId,
+                        callerName = currentUserDoc?.username ?: "Moi",
+                        callerAvatar = currentUserDoc?.profileImageUrl ?: "",
+                        receiverId = otherUserId,
+                        receiverName = userName,
+                        receiverAvatar = avatar,
+                        isVideo = isVideo
+                    )
+                    onCall(isVideo, avatar)
+                },
+                onHistoryClick = onHistoryClick,
+                onDeleteChat = {
+                    showDeleteDialog = true
+                }
             )
         },
         bottomBar = {
@@ -169,6 +211,32 @@ fun ChatScreen(
                 )
             }
         }
+    }
+
+    if (showDeleteDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = false },
+            title = { Text("Supprimer la conversation") },
+            text = { Text("Êtes-vous sûr de vouloir supprimer cette conversation ? Cette action est irréversible.") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showDeleteDialog = false
+                        viewModel.deleteChat {
+                            onBack()
+                        }
+                    },
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text("Supprimer")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteDialog = false }) {
+                    Text("Annuler")
+                }
+            }
+        )
     }
 
     if (showEmojiPicker) {
@@ -304,8 +372,11 @@ private fun ChatTopBar(
     userName: String,
     userAvatar: String,
     onBack: () -> Unit,
-    onCall: (Boolean) -> Unit
+    onCall: (Boolean, String) -> Unit,
+    onHistoryClick: () -> Unit,
+    onDeleteChat: () -> Unit
 ) {
+    var showMenu by remember { mutableStateOf(false) }
     Surface(
         color = MaterialTheme.colorScheme.surface,
         tonalElevation = 2.dp
@@ -354,17 +425,40 @@ private fun ChatTopBar(
                     )
                 }
 
-                IconButton(onClick = { onCall(false) }) {
+                IconButton(onClick = { onCall(false, userAvatar) }) {
                     Icon(Icons.Default.Call, contentDescription = "Appel vocal",
                         tint = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
-                IconButton(onClick = { onCall(true) }) {
+                IconButton(onClick = { onCall(true, userAvatar) }) {
                     Icon(Icons.Default.Videocam, contentDescription = "Appel vidéo",
                         tint = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
-                IconButton(onClick = {}) {
-                    Icon(Icons.Default.MoreVert, contentDescription = "Plus",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                Box {
+                    IconButton(onClick = { showMenu = true }) {
+                        Icon(Icons.Default.MoreVert, contentDescription = "Plus",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    DropdownMenu(
+                        expanded = showMenu,
+                        onDismissRequest = { showMenu = false }
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text("Historique d'appels") },
+                            onClick = {
+                                showMenu = false
+                                onHistoryClick()
+                            },
+                            leadingIcon = { Icon(Icons.Default.Call, contentDescription = null) }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Supprimer la conversation") },
+                            onClick = {
+                                showMenu = false
+                                onDeleteChat()
+                            },
+                            leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.error) }
+                        )
+                    }
                 }
             }
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, thickness = 0.5.dp)
@@ -379,117 +473,105 @@ fun MessageBubble(message: Message, isCurrentUser: Boolean) {
         SimpleDateFormat("HH:mm", Locale.getDefault()).format(message.timestamp.toDate())
     }
 
+    val containerColor = if (isCurrentUser) Color.Transparent else Color(0xFFE9E9EB)
+    val contentColor = if (isCurrentUser) Color.White else Color(0xFF1C1C1E)
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 2.dp),
+            .padding(vertical = 4.dp, horizontal = 8.dp),
         horizontalArrangement = if (isCurrentUser) Arrangement.End else Arrangement.Start
     ) {
         Column(
             horizontalAlignment = if (isCurrentUser) Alignment.End else Alignment.Start,
             modifier = Modifier.widthIn(max = 280.dp)
         ) {
-            when (message.type) {
-                MessageType.IMAGE, MessageType.GIF -> {
-                    ImageMessageBubble(
-                        imageUrl = message.imageUrl,
-                        caption = message.text,
-                        isCurrentUser = isCurrentUser
-                    )
-                }
-                MessageType.VOICE -> {
-                    VoiceMessageBubble(
-                        isCurrentUser = isCurrentUser
-                    )
-                }
-                MessageType.TEXT -> {
-                    Box(
-                        modifier = Modifier
-                            .clip(
-                                RoundedCornerShape(
-                                    topStart = 18.dp,
-                                    topEnd = 18.dp,
-                                    bottomStart = if (isCurrentUser) 18.dp else 4.dp,
-                                    bottomEnd = if (isCurrentUser) 4.dp else 18.dp
-                                )
-                            )
-                            .background(
-                                if (isCurrentUser)
-                                // Bulle envoyée : gradient violet (accent fixe de l'app)
-                                    Brush.linearGradient(listOf(VioletStart, VioletEnd))
-                                else
-                                // Bulle reçue : couleur surfaceVariant du thème (s'adapte dark/light)
-                                    Brush.linearGradient(
-                                        listOf(
-                                            MaterialTheme.colorScheme.surfaceVariant,
-                                            MaterialTheme.colorScheme.surfaceVariant
-                                        )
-                                    )
-                            )
-                            .padding(horizontal = 14.dp, vertical = 10.dp)
-                    ) {
+            val bubbleShape = RoundedCornerShape(
+                topStart = 20.dp,
+                topEnd = 20.dp,
+                bottomStart = if (isCurrentUser) 20.dp else 4.dp,
+                bottomEnd = if (isCurrentUser) 4.dp else 20.dp
+            )
+
+            Surface(
+                shape = bubbleShape,
+                color = containerColor,
+                modifier = Modifier.then(
+                    if (isCurrentUser) Modifier.background(
+                        Brush.linearGradient(listOf(VioletStart, VioletEnd)),
+                        bubbleShape
+                    ) else Modifier
+                )
+            ) {
+                when (message.type) {
+                    MessageType.IMAGE, MessageType.GIF -> {
+                        ImageMessageBubbleContent(
+                            imageUrl = message.imageUrl,
+                            caption = message.text,
+                            isCurrentUser = isCurrentUser
+                        )
+                    }
+                    MessageType.VOICE -> {
+                        VoiceMessageBubbleContent(isCurrentUser = isCurrentUser)
+                    }
+                    MessageType.TEXT -> {
                         Text(
                             text = message.text,
-                            // Bulle envoyée → blanc ; reçue → couleur texte du thème
-                            color = if (isCurrentUser) Color.White
-                            else MaterialTheme.colorScheme.onSurfaceVariant,
+                            color = contentColor,
                             fontSize = 15.sp,
+                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
                             lineHeight = 20.sp
                         )
                     }
                 }
             }
 
-            Text(
-                text = timeLabel,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                fontSize = 11.sp,
-                modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
-            )
+            // Heure et Statut en dessous de la bulle
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.padding(top = 2.dp, start = 4.dp, end = 4.dp)
+            ) {
+                Text(
+                    text = timeLabel,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                    fontSize = 10.sp
+                )
+                if (isCurrentUser) {
+                    Spacer(modifier = Modifier.width(3.dp))
+                    Icon(
+                        imageVector = Icons.Default.DoneAll,
+                        contentDescription = null,
+                        tint = VioletStart,
+                        modifier = Modifier.size(12.dp)
+                    )
+                }
+            }
         }
     }
 }
 
-// ── Voice Message Bubble ──────────────────────────────────────────────────
 @Composable
-private fun VoiceMessageBubble(
-    isCurrentUser: Boolean
-) {
+private fun VoiceMessageBubbleContent(isCurrentUser: Boolean) {
     Row(
-        modifier = Modifier
-            .clip(RoundedCornerShape(18.dp))
-            .background(
-                if (isCurrentUser)
-                    Brush.linearGradient(listOf(VioletStart, VioletEnd))
-                else
-                    Brush.linearGradient(
-                        listOf(
-                            MaterialTheme.colorScheme.surfaceVariant,
-                            MaterialTheme.colorScheme.surfaceVariant
-                        )
-                    )
-            )
-            .padding(horizontal = 12.dp, vertical = 8.dp),
+        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Icon(
             imageVector = Icons.Default.Mic,
             contentDescription = null,
-            tint = if (isCurrentUser) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
+            tint = if (isCurrentUser) Color.White else Color(0xFF1C1C1E),
             modifier = Modifier.size(20.dp)
         )
         Spacer(modifier = Modifier.width(8.dp))
-        // Simulation d'une onde sonore
         Row(verticalAlignment = Alignment.CenterVertically) {
-            repeat(15) { index ->
-                val height = (4..12).random().dp
+            repeat(15) {
+                val height = (4..16).random().dp
                 Box(
                     modifier = Modifier
-                        .width(2.dp)
+                        .width(2.5.dp)
                         .height(height)
                         .background(
-                            if (isCurrentUser) Color.White.copy(alpha = 0.7f)
-                            else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                            if (isCurrentUser) Color.White.copy(alpha = 0.8f) else Color(0xFF1C1C1E).copy(alpha = 0.3f),
                             CircleShape
                         )
                         .padding(horizontal = 1.dp)
@@ -500,54 +582,39 @@ private fun VoiceMessageBubble(
         Spacer(modifier = Modifier.width(8.dp))
         Text(
             text = "0:12",
-            color = if (isCurrentUser) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
+            color = if (isCurrentUser) Color.White else Color(0xFF1C1C1E),
             fontSize = 12.sp
         )
     }
 }
 
-// ── Image Bubble ──────────────────────────────────────────────────────────
 @Composable
-private fun ImageMessageBubble(
+private fun ImageMessageBubbleContent(
     imageUrl: String,
     caption: String,
     isCurrentUser: Boolean
 ) {
-    Column(
-        modifier = Modifier
-            .clip(RoundedCornerShape(16.dp))
-            .background(
-                if (isCurrentUser)
-                    Brush.linearGradient(listOf(VioletStart, VioletEnd))
-                else
-                    Brush.linearGradient(
-                        listOf(
-                            MaterialTheme.colorScheme.surfaceVariant,
-                            MaterialTheme.colorScheme.surfaceVariant
-                        )
-                    )
-            )
-    ) {
+    Column {
         AsyncImage(
             model = imageUrl,
             contentDescription = null,
             modifier = Modifier
                 .fillMaxWidth()
-                .aspectRatio(1.4f)
-                .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp)),
-            contentScale = ContentScale.Crop
+                .padding(4.dp)
+                .clip(RoundedCornerShape(16.dp)),
+            contentScale = ContentScale.FillWidth
         )
-        if (caption.isNotBlank()) {
+        if (caption.isNotBlank() && caption != "Sent an image" && caption != "Sent a GIF") {
             Text(
                 text = caption,
-                color = if (isCurrentUser) Color.White
-                else MaterialTheme.colorScheme.onSurfaceVariant,
-                fontSize = 13.sp,
-                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
+                color = if (isCurrentUser) Color.White else Color(0xFF1C1C1E),
+                fontSize = 14.sp,
+                modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 12.dp, top = 4.dp)
             )
         }
     }
 }
+
 
 // ── Input Bar ─────────────────────────────────────────────────────────────
 @Composable

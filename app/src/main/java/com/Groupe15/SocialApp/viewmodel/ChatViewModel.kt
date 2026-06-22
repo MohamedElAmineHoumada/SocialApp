@@ -3,9 +3,12 @@ package com.Groupe15.SocialApp.viewmodel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.asLiveData
 import androidx.lifecycle.viewModelScope
 import com.Groupe15.SocialApp.models.Message
 import com.Groupe15.SocialApp.models.MessageType
+import com.Groupe15.SocialApp.models.User
+import com.Groupe15.SocialApp.repository.AuthRepository
 import com.Groupe15.SocialApp.repository.MessageRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.catch
@@ -14,11 +17,17 @@ import javax.inject.Inject
 
 @HiltViewModel
 class ChatViewModel @Inject constructor(
-    private val messageRepository: MessageRepository
+    private val messageRepository: MessageRepository,
+    private val authRepository: AuthRepository
 ) : ViewModel() {
 
     private val _messages = MutableLiveData<List<Message>>(emptyList())
     val messages: LiveData<List<Message>> = _messages
+
+    val currentUser: LiveData<User?> = authRepository.getCurrentUser().asLiveData()
+
+    private val _otherUser = MutableLiveData<User?>(null)
+    val otherUser: LiveData<User?> = _otherUser
 
     private val _sendStatus = MutableLiveData<SendStatus>()
     val sendStatus: LiveData<SendStatus> = _sendStatus
@@ -35,7 +44,16 @@ class ChatViewModel @Inject constructor(
         this.currentUserId = currentUserId
         this.otherUserId = otherUserId
         this.currentChatId = messageRepository.getChatId(currentUserId, otherUserId)
+        fetchOtherUser(otherUserId)
         listenToMessages()
+    }
+
+    private fun fetchOtherUser(userId: String) {
+        viewModelScope.launch {
+            authRepository.getUserById(userId).collect { user ->
+                _otherUser.value = user
+            }
+        }
     }
 
     /**
@@ -84,6 +102,17 @@ class ChatViewModel @Inject constructor(
                 _sendStatus.value = SendStatus.Success
             } catch (e: Exception) {
                 _sendStatus.value = SendStatus.Error(e.message ?: "Erreur d'envoi")
+            }
+        }
+    }
+
+    fun deleteChat(onDeleted: () -> Unit) {
+        viewModelScope.launch {
+            try {
+                messageRepository.deleteChat(currentChatId)
+                onDeleted()
+            } catch (e: Exception) {
+                _sendStatus.value = SendStatus.Error("Erreur lors de la suppression")
             }
         }
     }
