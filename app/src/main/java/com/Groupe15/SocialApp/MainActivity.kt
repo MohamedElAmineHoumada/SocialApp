@@ -314,7 +314,11 @@ fun MainScreen(
                 )
             }
 
-            composable("feed") {
+            composable(
+                "feed?postId={postId}",
+                arguments = listOf(navArgument("postId") { nullable = true; defaultValue = null })
+            ) { backStackEntry ->
+                val postId = backStackEntry.arguments?.getString("postId")
                 val loginViewModel: LoginViewModel = hiltViewModel()
                 Column {
                     EmailVerificationBannerWrapper(loginViewModel = loginViewModel)
@@ -323,7 +327,8 @@ fun MainScreen(
                         onNavigateToDiscover = { navController.navigate("discover") },
                         onNavigateToProfile = { uid -> navController.navigate("profile/$uid") },
                         onCommentClick = {},
-                        onShareClick = {}
+                        onShareClick = {},
+                        initialCommentsPostId = postId
                     )
                 }
             }
@@ -390,8 +395,7 @@ fun MainScreen(
                     onBackClick = { navController.popBackStack() },
                     onNavigateToProfile = { uid -> navController.navigate("profile/$uid") },
                     onNavigateToPost = { postId -> 
-                        // TODO: Navigate to specific post screen or feed with scroll
-                        navController.navigate("feed") 
+                        navController.navigate("feed?postId=$postId")
                     }
                 )
             }

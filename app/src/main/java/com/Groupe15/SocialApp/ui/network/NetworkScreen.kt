@@ -195,7 +195,8 @@ fun NetworkContent(
                                     FollowRequestCard(
                                         request = request,
                                         onAccept = { onAcceptRequest(request.id) },
-                                        onDecline = { onDeclineRequest(request.id) }
+                                        onDecline = { onDeclineRequest(request.id) },
+                                        onClick = { onUserClick(request.id) } // assuming id is userId here
                                     )
                                 }
                             }
@@ -352,10 +353,11 @@ fun CategoryChips(
 fun FollowRequestCard(
     request: FollowRequest,
     onAccept: () -> Unit,
-    onDecline: () -> Unit
+    onDecline: () -> Unit,
+    onClick: () -> Unit = {}
 ) {
     Card(
-        modifier = Modifier.width(160.dp),
+        modifier = Modifier.width(160.dp).clickable(onClick = onClick),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)

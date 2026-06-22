@@ -31,10 +31,10 @@ import javax.inject.Singleton
 @Singleton
 class FollowRepository @Inject constructor(
     private val firestore: FirebaseFirestore,
-    private val auth: FirebaseAuth
+    private val auth: FirebaseAuth,
+    private val notificationRepository: NotificationRepository
 ) {
     private val usersCollection = firestore.collection("users")
-    @Inject lateinit var notificationRepository: NotificationRepository
 
     val currentUid get() = auth.currentUser?.uid
 
@@ -82,39 +82,33 @@ class FollowRepository @Inject constructor(
                 batch.update(usersCollection.document(currentUid), "followingCount", FieldValue.increment(1))
                 batch.update(usersCollection.document(targetUid), "followersCount", FieldValue.increment(1))
 
-                // Notification for follow (accepted)
-                val notificationRef = usersCollection.document(targetUid).collection("notifications").document()
-                val notification = Notification(
-                    id = notificationRef.id,
-                    type = "follow_accept",
-                    fromUserId = currentUid,
-                    fromUserName = currentUser?.displayName ?: currentUser?.username ?: "Quelqu'un",
-                    fromUserAvatar = currentUser?.profileImageUrl ?: "",
-                    content = "${currentUser?.displayName ?: currentUser?.username} a commencé à vous suivre",
-                    timestamp = Timestamp.now(),
-                    targetId = currentUid
-                )
-                batch.set(notificationRef, notification)
-
-                // Trigger Push Notification
-                sendPushNotification(targetUid, "Nouvel abonné", "${currentUser?.displayName ?: currentUser?.username} a commencé à vous suivre", currentUid, "follow")
+                // Trigger Notification via repository (respecte les réglages)
+                CoroutineScope(Dispatchers.IO).launch {
+                    notificationRepository.createNotification(
+                        targetUid = targetUid,
+                        type = "follow_accept",
+                        fromUserId = currentUid,
+                        fromUserName = currentUser?.displayName ?: currentUser?.username ?: "Quelqu'un",
+                        fromUserAvatar = currentUser?.profileImageUrl ?: "",
+                        content = "${currentUser?.displayName ?: currentUser?.username} a commencé à vous suivre",
+                        targetId = currentUid
+                    )
+                    sendPushNotification(targetUid, "Nouvel abonné", "${currentUser?.displayName ?: currentUser?.username} a commencé à vous suivre", currentUid, "follow")
+                }
             } else {
                 // Notification for follow request (pending)
-                val notificationRef = usersCollection.document(targetUid).collection("notifications").document()
-                val notification = Notification(
-                    id = notificationRef.id,
-                    type = "follow_request",
-                    fromUserId = currentUid,
-                    fromUserName = currentUser?.displayName ?: currentUser?.username ?: "Quelqu'un",
-                    fromUserAvatar = currentUser?.profileImageUrl ?: "",
-                    content = "${currentUser?.displayName ?: currentUser?.username} vous demande de vous suivre",
-                    timestamp = Timestamp.now(),
-                    targetId = currentUid
-                )
-                batch.set(notificationRef, notification)
-
-                // Trigger Push Notification
-                sendPushNotification(targetUid, "Demande de suivi", "${currentUser?.displayName ?: currentUser?.username} souhaite vous suivre", currentUid, "follow_request")
+                CoroutineScope(Dispatchers.IO).launch {
+                    notificationRepository.createNotification(
+                        targetUid = targetUid,
+                        type = "follow_request",
+                        fromUserId = currentUid,
+                        fromUserName = currentUser?.displayName ?: currentUser?.username ?: "Quelqu'un",
+                        fromUserAvatar = currentUser?.profileImageUrl ?: "",
+                        content = "${currentUser?.displayName ?: currentUser?.username} vous demande de vous suivre",
+                        targetId = currentUid
+                    )
+                    sendPushNotification(targetUid, "Demande de suivi", "${currentUser?.displayName ?: currentUser?.username} souhaite vous suivre", currentUid, "follow_request")
+                }
             }
 
             batch.commit().await()
@@ -218,7 +212,7 @@ class FollowRepository @Inject constructor(
                     .toObject(User::class.java) ?: return@mapNotNull null
 
                 FollowRequest(
-                    id = doc.id,
+                    id = followerId,
                     name = follower.displayName.ifBlank { follower.username },
                     role = follower.role,
                     mutualFriends = 0,
@@ -264,22 +258,17 @@ class FollowRepository @Inject constructor(
                     transaction.update(usersCollection.document(followerId), "followingCount", FieldValue.increment(1))
                     transaction.update(usersCollection.document(currentUid), "followersCount", FieldValue.increment(1))
 
-                    // Notification for acceptance
-                    val notificationRef = usersCollection.document(followerId).collection("notifications").document()
-                    val notification = Notification(
-                        id = notificationRef.id,
-                        type = "follow_accept",
-                        fromUserId = currentUid,
-                        fromUserName = currentUser?.displayName ?: currentUser?.username ?: "Quelqu'un",
-                        fromUserAvatar = currentUser?.profileImageUrl ?: "",
-                        content = "${currentUser?.displayName ?: currentUser?.username} a accepté votre demande de suivi",
-                        timestamp = Timestamp.now(),
-                        targetId = currentUid
-                    )
-                    transaction.set(notificationRef, notification)
-
-                    // Trigger Push Notification
+                    // Trigger Notification via repository (respecte les réglages)
                     CoroutineScope(Dispatchers.IO).launch {
+                        notificationRepository.createNotification(
+                            targetUid = followerId,
+                            type = "follow_accept",
+                            fromUserId = currentUid,
+                            fromUserName = currentUser?.displayName ?: currentUser?.username ?: "Quelqu'un",
+                            fromUserAvatar = currentUser?.profileImageUrl ?: "",
+                            content = "${currentUser?.displayName ?: currentUser?.username} a accepté votre demande de suivi",
+                            targetId = currentUid
+                        )
                         sendPushNotification(followerId, "Demande acceptée", "${currentUser?.displayName ?: currentUser?.username} a accepté votre demande", currentUid, "follow_accept")
                     }
                 }

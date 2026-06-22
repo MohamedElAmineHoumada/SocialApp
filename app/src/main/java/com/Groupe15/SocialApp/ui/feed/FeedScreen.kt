@@ -53,7 +53,8 @@ fun FeedScreen(
     onNavigateToDiscover: () -> Unit,
     onNavigateToProfile: (String) -> Unit,
     onCommentClick: (String) -> Unit,
-    onShareClick: (Post) -> Unit
+    onShareClick: (Post) -> Unit,
+    initialCommentsPostId: String? = null
 ) {
     val selectedTab by viewModel.selectedTab.observeAsState(FeedTab.FOLLOWING)
     val posts by viewModel.posts.observeAsState(emptyList())
@@ -62,7 +63,7 @@ fun FeedScreen(
     val likedPostIds by viewModel.likedPostIds.observeAsState(emptySet())
     val savedPostIds by viewModel.savedPostIds.observeAsState(emptySet())
 
-    var commentsPostId by remember { mutableStateOf<String?>(null) }
+    var commentsPostId by remember { mutableStateOf<String?>(initialCommentsPostId) }
     var sharePost by remember { mutableStateOf<Post?>(null) }
     var storyViewerUserId by remember { mutableStateOf<String?>(null) }
 
