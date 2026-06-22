@@ -14,7 +14,11 @@ data class User(
     val postsCount: Int = 0,
     val isPrivate: Boolean = false,
     val role: String = "", // ex: "UI/UX Designer", "Product Manager" — affiché dans les suggestions
-    val fcmToken: String = ""
+    val fcmToken: String = "",
+    val birthDate: String = "",
+    val gender: String = "",
+    val interests: List<String> = emptyList(),
+    val isOnboardingCompleted: Boolean = false
 ) {
     // Constructeur vide requis par Firestore
     constructor() : this("")

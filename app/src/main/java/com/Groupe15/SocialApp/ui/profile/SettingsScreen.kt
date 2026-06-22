@@ -75,7 +75,7 @@ fun SettingsScreen(
             text = {
                 Column {
                     LanguageOption(
-                        label = "Français",
+                        label = stringResource(R.string.language_french),
                         code = LanguageManager.LANG_FRENCH,
                         selected = currentLanguage == LanguageManager.LANG_FRENCH,
                         onSelect = {
@@ -85,7 +85,7 @@ fun SettingsScreen(
                         }
                     )
                     LanguageOption(
-                        label = "English",
+                        label = stringResource(R.string.language_english),
                         code = LanguageManager.LANG_ENGLISH,
                         selected = currentLanguage == LanguageManager.LANG_ENGLISH,
                         onSelect = {
@@ -95,7 +95,7 @@ fun SettingsScreen(
                         }
                     )
                     LanguageOption(
-                        label = "العربية",
+                        label = stringResource(R.string.language_arabic),
                         code = LanguageManager.LANG_ARABIC,
                         selected = currentLanguage == LanguageManager.LANG_ARABIC,
                         onSelect = {
@@ -135,8 +135,13 @@ fun SettingsScreen(
         ) {
             // Dark mode
             ListItem(
-                headlineContent = { Text("Mode sombre") },
-                supportingContent = { Text(if (isDarkMode) "Activé" else "Désactivé") },
+                headlineContent = { Text(stringResource(R.string.dark_mode)) },
+                supportingContent = {
+                    Text(
+                        if (isDarkMode) stringResource(R.string.enabled)
+                        else stringResource(R.string.disabled)
+                    )
+                },
                 leadingContent = { Icon(Icons.Default.DarkMode, contentDescription = null) },
                 trailingContent = {
                     Switch(
@@ -166,7 +171,7 @@ fun SettingsScreen(
             // Notifications ← maintenant cliquable
             ListItem(
                 headlineContent = { Text(stringResource(R.string.notifications)) },
-                supportingContent = { Text("Gérer les alertes") },
+                supportingContent = { Text(stringResource(R.string.manage_alerts)) },
                 leadingContent = { Icon(Icons.Default.Notifications, contentDescription = null) },
                 modifier = Modifier.clickable { onNotifications() }
             )
@@ -174,14 +179,14 @@ fun SettingsScreen(
 
             // Confidentialité
             ListItem(
-                headlineContent = { Text("Sécurité & Confidentialité") },
+                headlineContent = { Text(stringResource(R.string.security_privacy)) },
                 leadingContent = { Icon(Icons.Default.Lock, contentDescription = null) }
             )
             HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
 
             // Déconnexion
             ListItem(
-                headlineContent = { Text("Se déconnecter") },
+                headlineContent = { Text(stringResource(R.string.log_out)) },
                 leadingContent = {
                     Icon(
                         Icons.AutoMirrored.Filled.Logout,
@@ -198,7 +203,7 @@ fun SettingsScreen(
                         viewModel.signOut()
                         onLoggedOut()
                     }) {
-                        Text("Déconnexion", color = MaterialTheme.colorScheme.error)
+                        Text(stringResource(R.string.log_out), color = MaterialTheme.colorScheme.error)
                     }
                 }
             )
@@ -240,9 +245,10 @@ private fun LanguageOption(
 }
 
 /** Nom affiché pour chaque code de langue dans le sous-titre du ListItem. */
+@Composable
 private fun languageDisplayName(code: String): String = when (code) {
-    LanguageManager.LANG_FRENCH -> "Français"
-    LanguageManager.LANG_ENGLISH -> "English"
-    LanguageManager.LANG_ARABIC -> "العربية"
-    else -> "Français"
+    LanguageManager.LANG_FRENCH -> stringResource(R.string.language_french)
+    LanguageManager.LANG_ENGLISH -> stringResource(R.string.language_english)
+    LanguageManager.LANG_ARABIC -> stringResource(R.string.language_arabic)
+    else -> stringResource(R.string.language_french)
 }

@@ -33,10 +33,12 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
+import com.Groupe15.SocialApp.R
 import com.Groupe15.SocialApp.models.Post
 import com.Groupe15.SocialApp.models.Story
 import com.Groupe15.SocialApp.viewmodel.FeedTab
@@ -135,13 +137,13 @@ private fun FeedTabBar(
 ) {
     Row(modifier = Modifier.fillMaxWidth().padding(top = 4.dp)) {
         FeedTabItem(
-            label = "Following",
+            label = stringResource(R.string.following_tab),
             selected = selectedTab == FeedTab.FOLLOWING,
             modifier = Modifier.weight(1f),
             onClick = { onTabSelected(FeedTab.FOLLOWING) }
         )
         FeedTabItem(
-            label = "For You",
+            label = stringResource(R.string.foryou_tab),
             selected = selectedTab == FeedTab.FOR_YOU,
             modifier = Modifier.weight(1f),
             onClick = { onTabSelected(FeedTab.FOR_YOU) }
@@ -186,16 +188,16 @@ private fun EmptyFeedState(tab: FeedTab) {
         verticalArrangement = Arrangement.Center
     ) {
         Text(
-            text = if (tab == FeedTab.FOLLOWING) "Aucune publication pour l'instant"
-            else "Pas encore de suggestions",
+            text = if (tab == FeedTab.FOLLOWING) stringResource(R.string.no_posts)
+            else stringResource(R.string.no_suggestions),
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold
         )
         Spacer(modifier = Modifier.height(8.dp))
         Text(
             text = if (tab == FeedTab.FOLLOWING)
-                "Suis des comptes pour voir leurs publications ici."
-            else "Revenez plus tard, du contenu vous sera proposé.",
+                stringResource(R.string.follow_to_see_posts)
+            else stringResource(R.string.check_back_later_content),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -276,7 +278,7 @@ private fun PostCard(
                 Text(text = post.authorUsername, fontWeight = FontWeight.Bold)
             }
             IconButton(onClick = { /* TODO: menu options */ }) {
-                Icon(Icons.Default.MoreVert, contentDescription = "Options")
+                Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.options))
             }
         }
 
@@ -339,17 +341,17 @@ private fun PostCard(
         ) {
             AnimatedLikeButton(isLiked = isLiked, onClick = onLikeClick)
             IconButton(onClick = onCommentClick) {
-                Icon(Icons.Outlined.ChatBubbleOutline, contentDescription = "Commenter")
+                Icon(Icons.Outlined.ChatBubbleOutline, contentDescription = stringResource(R.string.comment))
             }
             IconButton(onClick = onShareClick) {
-                Icon(Icons.Outlined.Send, contentDescription = "Partager")
+                Icon(Icons.Outlined.Send, contentDescription = stringResource(R.string.share))
             }
             Spacer(modifier = Modifier.weight(1f))
             // ✅ Bouton Save fonctionnel : icône remplie quand sauvegardé
             IconButton(onClick = onSaveClick) {
                 Icon(
                     imageVector = if (isSaved) Icons.Default.Bookmark else Icons.Outlined.BookmarkBorder,
-                    contentDescription = "Enregistrer",
+                    contentDescription = stringResource(R.string.save),
                     tint = if (isSaved) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
                 )
             }
@@ -357,7 +359,7 @@ private fun PostCard(
 
         if (post.likesCount > 0) {
             Text(
-                text = "${post.likesCount} j'aime",
+                text = stringResource(R.string.likes_count, post.likesCount),
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(horizontal = 12.dp)
             )
@@ -365,7 +367,7 @@ private fun PostCard(
 
         if (post.commentsCount > 0) {
             Text(
-                text = "Voir les ${post.commentsCount} commentaires",
+                text = stringResource(R.string.view_comments, post.commentsCount),
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier
                     .padding(horizontal = 12.dp, vertical = 2.dp)

@@ -10,8 +10,10 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.Groupe15.SocialApp.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -38,10 +40,10 @@ fun NotificationSettingsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Notifications") },
+                title = { Text(stringResource(R.string.notifications)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Retour")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
                 }
             )
@@ -54,23 +56,23 @@ fun NotificationSettingsScreen(
                 .verticalScroll(rememberScrollState())
         ) {
             // ── Section : Notifications push ──────────────────────────────
-            SectionHeader("Notifications push")
+            SectionHeader(stringResource(R.string.push_notifications))
 
             // Pause toutes les notifications
             NotifToggleItem(
-                title = "Tout mettre en pause",
-                subtitle = "Suspendre temporairement les notifications",
+                title = stringResource(R.string.pause_all),
+                subtitle = stringResource(R.string.pause_all_desc),
                 checked = pauseAll,
                 onCheckedChange = { pauseAll = it; save("pause_all", it) }
             )
             HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
 
             // ── Section : Publications & interactions ─────────────────────
-            SectionHeader("Publications & interactions")
+            SectionHeader(stringResource(R.string.posts_interactions))
 
             NotifToggleItem(
-                title = "J'aime",
-                subtitle = "Quand quelqu'un aime votre publication",
+                title = stringResource(R.string.likes),
+                subtitle = stringResource(R.string.likes_desc),
                 checked = notifyLikes && !pauseAll,
                 enabled = !pauseAll,
                 onCheckedChange = { notifyLikes = it; save("notify_likes", it) }
@@ -78,8 +80,8 @@ fun NotificationSettingsScreen(
             HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
 
             NotifToggleItem(
-                title = "Commentaires",
-                subtitle = "Quand quelqu'un commente votre publication",
+                title = stringResource(R.string.comments_title),
+                subtitle = stringResource(R.string.comments_desc),
                 checked = notifyComments && !pauseAll,
                 enabled = !pauseAll,
                 onCheckedChange = { notifyComments = it; save("notify_comments", it) }
@@ -87,11 +89,11 @@ fun NotificationSettingsScreen(
             HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
 
             // ── Section : Abonnements & abonnés ──────────────────────────
-            SectionHeader("Abonnements & abonnés")
+            SectionHeader(stringResource(R.string.follow_sub_section))
 
             NotifToggleItem(
-                title = "Demandes d'abonnement",
-                subtitle = "Quand quelqu'un demande à vous suivre",
+                title = stringResource(R.string.follow_requests),
+                subtitle = stringResource(R.string.follow_requests_desc),
                 checked = notifyFollowRequests && !pauseAll,
                 enabled = !pauseAll,
                 onCheckedChange = { notifyFollowRequests = it; save("notify_follow_requests", it) }
@@ -99,8 +101,8 @@ fun NotificationSettingsScreen(
             HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
 
             NotifToggleItem(
-                title = "Abonnement accepté",
-                subtitle = "Quand quelqu'un accepte votre demande",
+                title = stringResource(R.string.follow_accepted),
+                subtitle = stringResource(R.string.follow_accepted_desc),
                 checked = notifyFollowAccepted && !pauseAll,
                 enabled = !pauseAll,
                 onCheckedChange = { notifyFollowAccepted = it; save("notify_follow_accepted", it) }
@@ -108,11 +110,11 @@ fun NotificationSettingsScreen(
             HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
 
             // ── Section : Messages ────────────────────────────────────────
-            SectionHeader("Messages")
+            SectionHeader(stringResource(R.string.nav_messages))
 
             NotifToggleItem(
-                title = "Messages",
-                subtitle = "Quand vous recevez un nouveau message",
+                title = stringResource(R.string.nav_messages),
+                subtitle = stringResource(R.string.messages_desc),
                 checked = notifyMessages && !pauseAll,
                 enabled = !pauseAll,
                 onCheckedChange = { notifyMessages = it; save("notify_messages", it) }

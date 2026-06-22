@@ -21,9 +21,12 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.Groupe15.SocialApp.R
+import com.Groupe15.SocialApp.viewmodel.OnboardingViewModel
 
 data class Interest(
     val id: String,
@@ -35,18 +38,19 @@ data class Interest(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun OnboardingInterestsScreen(
+    viewModel: OnboardingViewModel,
     onBack: () -> Unit,
     onFinish: () -> Unit
 ) {
     val interests = listOf(
-        Interest("design", "Design", Icons.Default.Palette),
-        Interest("tech", "Tech", Icons.Default.Devices),
-        Interest("lifestyle", "Lifestyle", Icons.Default.AutoAwesome, isFullWidth = true),
-        Interest("photography", "Photography", Icons.Default.CameraAlt),
-        Interest("art", "Art", Icons.Default.Brush),
-        Interest("gaming", "Gaming", Icons.Default.Gamepad, isFullWidth = true),
-        Interest("music", "Musique", Icons.Default.MusicNote),
-        Interest("travel", "Voyage", Icons.Default.Flight)
+        Interest("design", stringResource(R.string.interest_design), Icons.Default.Palette),
+        Interest("tech", stringResource(R.string.interest_tech), Icons.Default.Devices),
+        Interest("lifestyle", stringResource(R.string.interest_lifestyle), Icons.Default.AutoAwesome, isFullWidth = true),
+        Interest("photography", stringResource(R.string.interest_photography), Icons.Default.CameraAlt),
+        Interest("art", stringResource(R.string.interest_art), Icons.Default.Brush),
+        Interest("gaming", stringResource(R.string.interest_gaming), Icons.Default.Gamepad, isFullWidth = true),
+        Interest("music", stringResource(R.string.interest_music), Icons.Default.MusicNote),
+        Interest("travel", stringResource(R.string.interest_travel), Icons.Default.Flight)
     )
 
     var searchQuery by remember { mutableStateOf("") }
@@ -67,13 +71,13 @@ fun OnboardingInterestsScreen(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "ETAPE 3 SUR 3",
+                text = stringResource(R.string.step_x_of_y, 3, 3),
                 style = MaterialTheme.typography.labelMedium,
                 color = Color.Gray,
                 letterSpacing = 1.sp
             )
             Text(
-                text = "100% complet",
+                text = stringResource(R.string.completed_100),
                 style = MaterialTheme.typography.labelMedium,
                 color = Color.Gray
             )
@@ -95,7 +99,7 @@ fun OnboardingInterestsScreen(
         Spacer(modifier = Modifier.height(32.dp))
 
         Text(
-            text = "Centres d'intérêt",
+            text = stringResource(R.string.interests_title),
             fontSize = 28.sp,
             fontWeight = FontWeight.Bold,
             color = Color(0xFF1A1C1E)
@@ -104,7 +108,7 @@ fun OnboardingInterestsScreen(
         Spacer(modifier = Modifier.height(8.dp))
         
         Text(
-            text = "Personnalisez votre flux en choisissant au moins 3 sujets qui vous passionnent.",
+            text = stringResource(R.string.interests_desc),
             fontSize = 15.sp,
             color = Color.Gray,
             lineHeight = 22.sp
@@ -119,7 +123,7 @@ fun OnboardingInterestsScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(56.dp),
-            placeholder = { Text("Rechercher un sujet...", color = Color.Gray, fontSize = 14.sp) },
+            placeholder = { Text(stringResource(R.string.search_topic), color = Color.Gray, fontSize = 14.sp) },
             leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = Color.Gray) },
             shape = RoundedCornerShape(12.dp),
             colors = TextFieldDefaults.colors(
@@ -163,7 +167,7 @@ fun OnboardingInterestsScreen(
 
         // Bottom Action
         Button(
-            onClick = onFinish,
+            onClick = { viewModel.saveInterests(selectedInterests.toList(), onFinish) },
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(vertical = 24.dp)
@@ -188,7 +192,7 @@ fun OnboardingInterestsScreen(
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = "Terminer",
+                    text = stringResource(R.string.finish),
                     color = Color.White,
                     fontWeight = FontWeight.Bold,
                     fontSize = 16.sp

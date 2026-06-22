@@ -16,6 +16,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
@@ -98,7 +99,7 @@ fun RegisterScreen(
                     modifier = Modifier.size(18.dp)
                 )
                 Spacer(modifier = Modifier.width(4.dp))
-                Text(text = "Retour", color = Color.Gray, fontSize = 14.sp)
+                Text(text = stringResource(R.string.back), color = Color.Gray, fontSize = 14.sp)
             }
         }
 
@@ -123,7 +124,7 @@ fun RegisterScreen(
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = "Rejoignez la communauté des curateurs\nmodernes.",
+                text = stringResource(R.string.register_tagline),
                 textAlign = TextAlign.Center,
                 color = Color.Gray,
                 fontSize = 14.sp,
@@ -134,7 +135,7 @@ fun RegisterScreen(
         Spacer(modifier = Modifier.height(32.dp))
 
         // Champ Nom complet
-        Text(text = "Nom complet", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+        Text(text = stringResource(R.string.full_name), fontWeight = FontWeight.Bold, fontSize = 14.sp)
         Spacer(modifier = Modifier.height(8.dp))
         CustomRegisterTextField(
             value = fullName,
@@ -146,7 +147,7 @@ fun RegisterScreen(
         Spacer(modifier = Modifier.height(16.dp))
 
         // Champ Email
-        Text(text = "Adresse e-mail", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+        Text(text = stringResource(R.string.email), fontWeight = FontWeight.Bold, fontSize = 14.sp)
         Spacer(modifier = Modifier.height(8.dp))
         CustomRegisterTextField(
             value = email,
@@ -158,7 +159,7 @@ fun RegisterScreen(
         Spacer(modifier = Modifier.height(16.dp))
 
         // Champ Mot de passe
-        Text(text = "Mot de passe", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+        Text(text = stringResource(R.string.password), fontWeight = FontWeight.Bold, fontSize = 14.sp)
         Spacer(modifier = Modifier.height(8.dp))
         CustomRegisterTextField(
             value = password,
@@ -184,13 +185,13 @@ fun RegisterScreen(
             )
             Text(
                 text = buildAnnotatedString {
-                    append("J'accepte les ")
+                    append(stringResource(R.string.terms_prefix))
                     withStyle(style = SpanStyle(color = Color(0xFF6C47FF), fontWeight = FontWeight.Bold)) {
-                        append("Conditions d'utilisation")
+                        append(stringResource(R.string.terms_of_use))
                     }
-                    append(" et la ")
+                    append(stringResource(R.string.and_the))
                     withStyle(style = SpanStyle(color = Color(0xFF6C47FF), fontWeight = FontWeight.Bold)) {
-                        append("Politique de confidentialité")
+                        append(stringResource(R.string.privacy_policy))
                     }
                     append(".")
                 },
@@ -234,7 +235,7 @@ fun RegisterScreen(
                     )
                 } else {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("S'inscrire", fontWeight = FontWeight.Bold, color = Color.White)
+                        Text(stringResource(R.string.sign_up), fontWeight = FontWeight.Bold, color = Color.White)
                         Spacer(modifier = Modifier.width(8.dp))
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowForward,
@@ -250,7 +251,7 @@ fun RegisterScreen(
 
         // Inscription rapide via réseaux sociaux
         Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-            Text(text = "Inscription rapide", color = Color.Gray, fontSize = 12.sp)
+            Text(text = stringResource(R.string.fast_registration), color = Color.Gray, fontSize = 12.sp)
         }
         Spacer(modifier = Modifier.height(16.dp))
         Row(
@@ -258,13 +259,13 @@ fun RegisterScreen(
             horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             SocialRegisterButton(
-                text = "Google",
+                text = stringResource(R.string.google),
                 icon = R.drawable.ic_app_logo,
                 modifier = Modifier.weight(1f),
                 onClick = onGoogleClick
             )
             SocialRegisterButton(
-                text = "Facebook",
+                text = stringResource(R.string.facebook),
                 icon = R.drawable.ic_people,
                 modifier = Modifier.weight(1f),
                 onClick = onFacebookClick
@@ -278,9 +279,9 @@ fun RegisterScreen(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.Center
         ) {
-            Text(text = "Vous avez déjà un compte ? ", color = Color.Gray, fontSize = 14.sp)
+            Text(text = stringResource(R.string.already_have_account) + " ", color = Color.Gray, fontSize = 14.sp)
             Text(
-                text = "Se connecter",
+                text = stringResource(R.string.log_in),
                 color = Color(0xFF6C47FF),
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Bold,
@@ -329,14 +330,14 @@ fun EmailVerificationUI(
         )
         Spacer(modifier = Modifier.height(24.dp))
         Text(
-            text = "Vérifiez votre e-mail",
+            text = stringResource(R.string.email_sent_title),
             fontSize = 24.sp,
             fontWeight = FontWeight.Bold,
             color = Color.Black
         )
         Spacer(modifier = Modifier.height(8.dp))
         Text(
-            text = "Un lien de vérification a été envoyé à :\n$email\n\nCliquez sur le lien dans cet e-mail pour activer votre compte, puis revenez ici.",
+            text = stringResource(R.string.email_sent_desc, email),
             textAlign = TextAlign.Center,
             color = Color.Gray,
             fontSize = 14.sp,
@@ -354,7 +355,7 @@ fun EmailVerificationUI(
             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6C47FF))
         ) {
             Text(
-                "J'ai vérifié mon e-mail — Continuer",
+                stringResource(R.string.email_verified_continue),
                 fontWeight = FontWeight.Bold,
                 color = Color.White
             )
@@ -363,7 +364,7 @@ fun EmailVerificationUI(
         Spacer(modifier = Modifier.height(16.dp))
 
         TextButton(onClick = onBack) {
-            Text("Modifier l'e-mail", color = Color.Gray)
+            Text(stringResource(R.string.edit_email), color = Color.Gray)
         }
     }
 }

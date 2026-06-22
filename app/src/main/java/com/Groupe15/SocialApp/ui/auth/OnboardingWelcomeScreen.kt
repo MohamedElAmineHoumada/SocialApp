@@ -3,7 +3,9 @@ package com.Groupe15.SocialApp.ui.auth
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material3.*
@@ -16,6 +18,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -35,6 +38,7 @@ fun OnboardingWelcomeScreen(onStart: () -> Unit) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .verticalScroll(rememberScrollState())
                 .padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
@@ -60,7 +64,7 @@ fun OnboardingWelcomeScreen(onStart: () -> Unit) {
             Spacer(modifier = Modifier.height(48.dp))
 
             Text(
-                text = "Bienvenue sur AFN !",
+                text = stringResource(R.string.welcome_to_afn),
                 color = Color(0xFF6C47FF),
                 fontSize = 28.sp,
                 fontWeight = FontWeight.Bold,
@@ -70,7 +74,7 @@ fun OnboardingWelcomeScreen(onStart: () -> Unit) {
             Spacer(modifier = Modifier.height(16.dp))
 
             Text(
-                text = "Votre voyage créatif commence ici. Inspirez, créez et connectez-vous avec le monde.",
+                text = stringResource(R.string.welcome_desc),
                 color = Color.Gray,
                 fontSize = 16.sp,
                 textAlign = TextAlign.Center,
@@ -102,7 +106,7 @@ fun OnboardingWelcomeScreen(onStart: () -> Unit) {
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
-                            text = "Commencer l'exploration",
+                            text = stringResource(R.string.start_exploration),
                             color = Color.White,
                             fontWeight = FontWeight.Bold,
                             fontSize = 16.sp

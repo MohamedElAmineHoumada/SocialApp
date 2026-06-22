@@ -104,7 +104,9 @@ class AuthRepository @Inject constructor(
                 "username" to username, "bio" to "", "profileImageUrl" to "",
                 "coverImageUrl" to "", "website" to "",
                 "followersCount" to 0, "followingCount" to 0, "postsCount" to 0,
-                "isPrivate" to false, "role" to "", "fcmToken" to ""
+                "isPrivate" to false, "role" to "", "fcmToken" to "",
+                "birthDate" to "", "gender" to "", "interests" to emptyList<String>(),
+                "isOnboardingCompleted" to false
             )
             firestore.collection("users").document(uid).set(user).await()
             updateFcmToken()
@@ -274,6 +276,41 @@ class AuthRepository @Inject constructor(
         }
     }
 
+    suspend fun updateBirthDate(birthDate: String): Result<Unit> {
+        return try {
+            val uid = auth.currentUser?.uid ?: throw Exception("Non connecté")
+            firestore.collection("users").document(uid).update("birthDate", birthDate).await()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun updateGender(gender: String): Result<Unit> {
+        return try {
+            val uid = auth.currentUser?.uid ?: throw Exception("Non connecté")
+            firestore.collection("users").document(uid).update("gender", gender).await()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun updateInterests(interests: List<String>): Result<Unit> {
+        return try {
+            val uid = auth.currentUser?.uid ?: throw Exception("Non connecté")
+            firestore.collection("users").document(uid).update(
+                mapOf(
+                    "interests" to interests,
+                    "isOnboardingCompleted" to true
+                )
+            ).await()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
     // ── Helpers privés ───────────────────────────────────────────────────────
 
     private suspend fun createFirestoreUserFromSocial(
@@ -291,7 +328,8 @@ class AuthRepository @Inject constructor(
             "id" to uid, "email" to email, "displayName" to displayName,
             "username" to username, "bio" to "", "profileImageUrl" to photoUrl,
             "followersCount" to 0, "followingCount" to 0, "postsCount" to 0, "isPrivate" to false,
-            "fcmToken" to ""
+            "fcmToken" to "", "birthDate" to "", "gender" to "",
+            "interests" to emptyList<String>(), "isOnboardingCompleted" to false
         )
         firestore.collection("users").document(uid).set(userData).await()
     }

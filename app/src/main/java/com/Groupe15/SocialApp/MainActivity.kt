@@ -89,10 +89,10 @@ class MainActivity : AppCompatActivity() {
                 onFacebookResult?.invoke(result.accessToken.token)
             }
             override fun onCancel() {
-                onSocialError?.invoke("Connexion Facebook annulée")
+                onSocialError?.invoke(getString(R.string.facebook_cancel))
             }
             override fun onError(error: FacebookException) {
-                onSocialError?.invoke(error.message ?: "Erreur Facebook")
+                onSocialError?.invoke(getString(R.string.facebook_error, error.message ?: ""))
             }
         })
 
@@ -139,15 +139,15 @@ class MainActivity : AppCompatActivity() {
                     val googleCredential = GoogleIdTokenCredential.createFrom(credential.data)
                     onGoogleResult?.invoke(googleCredential.idToken)
                 } else {
-                    onSocialError?.invoke("Type de credential inattendu")
+                    onSocialError?.invoke(getString(R.string.unexpected_credential))
                 }
             } catch (e: GetCredentialException) {
                 val msg = when {
                     e.message?.contains("No credentials available") == true ->
-                        "Aucun compte Google disponible sur cet appareil."
+                        getString(R.string.google_no_accounts)
                     e.message?.contains("canceled") == true ->
-                        "Connexion Google annulée."
-                    else -> "Erreur Google : ${e.message}"
+                        getString(R.string.google_cancel)
+                    else -> getString(R.string.google_error, e.message ?: "")
                 }
                 onSocialError?.invoke(msg)
             }
@@ -282,21 +282,27 @@ fun MainScreen(
             }
 
             composable("onboardingDob") {
+                val onboardingViewModel: OnboardingViewModel = hiltViewModel()
                 OnboardingDobScreen(
+                    viewModel = onboardingViewModel,
                     onBack = { navController.popBackStack() },
                     onContinue = { navController.navigate("onboardingGender") }
                 )
             }
 
             composable("onboardingGender") {
+                val onboardingViewModel: OnboardingViewModel = hiltViewModel()
                 OnboardingGenderScreen(
+                    viewModel = onboardingViewModel,
                     onBack = { navController.popBackStack() },
                     onContinue = { navController.navigate("onboardingInterests") }
                 )
             }
 
             composable("onboardingInterests") {
+                val onboardingViewModel: OnboardingViewModel = hiltViewModel()
                 OnboardingInterestsScreen(
+                    viewModel = onboardingViewModel,
                     onBack = { navController.popBackStack() },
                     // ✅ FIX : popUpTo(0) vide toute la back-stack (login + onboarding)
                     // pour que l'utilisateur ne puisse pas revenir en arrière depuis le feed.
