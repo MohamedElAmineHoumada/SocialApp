@@ -450,7 +450,7 @@ private fun PostCard(
                     imageVector = if (isSaved) Icons.Default.Bookmark else Icons.Outlined.BookmarkBorder,
                     contentDescription = "Enregistrer",
                     tint = if (isSaved) MaterialTheme.colorScheme.primary
-                    else MaterialTheme.colorScheme.onSurface
+                    else MaterialTheme.colorScheme.onSurface )
             }
         }
 
