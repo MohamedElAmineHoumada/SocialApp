@@ -9,13 +9,21 @@ import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
+import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
 class MessageRepository @Inject constructor(
-    private val firestore: FirebaseFirestore
+    private val firestore: FirebaseFirestore,
+    private val storage: com.google.firebase.storage.FirebaseStorage
 ) {
+
+    suspend fun uploadAudio(uri: android.net.Uri, userId: String): String {
+        val ref = storage.reference.child("audio_messages/$userId/${UUID.randomUUID()}.m4a")
+        ref.putFile(uri).await()
+        return ref.downloadUrl.await().toString()
+    }
 
     fun getChatId(userId1: String, userId2: String): String {
         return if (userId1 < userId2) "${userId1}_${userId2}" else "${userId2}_${userId1}"
@@ -45,9 +53,11 @@ class MessageRepository @Inject constructor(
                             imageUrl = doc.getString("imageUrl") ?: "",
                             timestamp = doc.getTimestamp("timestamp") ?: Timestamp.now(),
                             isRead   = doc.getBoolean("isRead") ?: false,
+                            isDelivered = doc.getBoolean("isDelivered") ?: false,
                             type     = MessageType.valueOf(
                                 doc.getString("type") ?: MessageType.TEXT.name
-                            )
+                            ),
+                            audioDuration = doc.getLong("audioDuration")?.toInt() ?: 0
                         )
                     } catch (e: Exception) {
                         null
@@ -64,7 +74,8 @@ class MessageRepository @Inject constructor(
         receiverId: String,
         text: String,
         type: MessageType = MessageType.TEXT,
-        imageUrl: String = ""
+        imageUrl: String = "",
+        audioDuration: Int = 0
     ) {
         val messageData = hashMapOf(
             "senderId"  to senderId,
@@ -72,7 +83,9 @@ class MessageRepository @Inject constructor(
             "imageUrl"  to imageUrl,
             "timestamp" to Timestamp.now(),
             "isRead"    to false,
-            "type"      to type.name
+            "isDelivered" to true,
+            "type"      to type.name,
+            "audioDuration" to audioDuration
         )
 
         firestore
@@ -120,6 +133,33 @@ class MessageRepository @Inject constructor(
             .document(chatId)
             .update("isLastMessageRead", true)
             .await()
+    }
+
+    suspend fun markAllMessagesAsRead(chatId: String, currentUserId: String) {
+        try {
+            val unreadMessages = firestore.collection("chats")
+                .document(chatId)
+                .collection("messages")
+                .whereNotEqualTo("senderId", currentUserId)
+                .whereEqualTo("isRead", false)
+                .get()
+                .await()
+
+            if (unreadMessages.isEmpty) return
+
+            val batch = firestore.batch()
+            for (doc in unreadMessages.documents) {
+                batch.update(doc.reference, "isRead", true)
+            }
+            batch.commit().await()
+            
+            // Also update conversation summary
+            firestore.collection("chats").document(chatId)
+                .update("isLastMessageRead", true)
+                .await()
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
 
     suspend fun deleteChat(chatId: String) {

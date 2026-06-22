@@ -10,9 +10,11 @@ import com.Groupe15.SocialApp.models.MessageType
 import com.Groupe15.SocialApp.models.User
 import com.Groupe15.SocialApp.repository.AuthRepository
 import com.Groupe15.SocialApp.repository.MessageRepository
+import com.Groupe15.SocialApp.util.AudioRecorder
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.launch
+import java.io.File
 import javax.inject.Inject
 
 @HiltViewModel
@@ -36,9 +38,38 @@ class ChatViewModel @Inject constructor(
     private var currentUserId: String = ""
     private var otherUserId: String = ""
 
+    private var audioRecorder: AudioRecorder? = null
+    private var audioFile: File? = null
+
+    fun setAudioRecorder(recorder: AudioRecorder) {
+        this.audioRecorder = recorder
+    }
+
+    fun startRecording(cacheDir: File): Boolean {
+        audioFile = File(cacheDir, "temp_audio_${System.currentTimeMillis()}.m4a")
+        return audioFile?.let { audioRecorder?.start(it) } ?: false
+    }
+
+    fun stopRecording(onComplete: (File?) -> Unit) {
+        audioRecorder?.stop()
+        onComplete(audioFile)
+    }
+
+    fun sendVoiceMessage(file: File) {
+        viewModelScope.launch {
+            try {
+                _sendStatus.value = SendStatus.Sending
+                val url = messageRepository.uploadAudio(android.net.Uri.fromFile(file), currentUserId)
+                sendMessage("Voice message", type = MessageType.VOICE, imageUrl = url)
+                _sendStatus.value = SendStatus.Success
+            } catch (e: Exception) {
+                _sendStatus.value = SendStatus.Error(e.message ?: "Failed to upload audio")
+            }
+        }
+    }
+
     /**
      * Initialise le chat avec les IDs des deux participants.
-     * À appeler dans ChatFragment.onViewCreated().
      */
     fun initChat(currentUserId: String, otherUserId: String) {
         this.currentUserId = currentUserId
@@ -46,6 +77,15 @@ class ChatViewModel @Inject constructor(
         this.currentChatId = messageRepository.getChatId(currentUserId, otherUserId)
         fetchOtherUser(otherUserId)
         listenToMessages()
+        listenToOtherUser()
+    }
+
+    private fun listenToOtherUser() {
+        viewModelScope.launch {
+            authRepository.getUserById(otherUserId).collect { user ->
+                _otherUser.value = user
+            }
+        }
     }
 
     private fun fetchOtherUser(userId: String) {
@@ -63,30 +103,30 @@ class ChatViewModel @Inject constructor(
         viewModelScope.launch {
             messageRepository.getMessages(currentChatId)
                 .catch { e ->
-                    // En cas d'erreur réseau, on conserve les derniers messages affichés
                     _sendStatus.value = SendStatus.Error(e.message ?: "Erreur de chargement")
                 }
                 .collect { messages ->
                     _messages.value = messages
-                    markAsRead()
+                    markAllAsRead()
                 }
         }
     }
 
-    private fun markAsRead() {
+    private fun markAllAsRead() {
         viewModelScope.launch {
-            try {
-                messageRepository.markLastMessageAsRead(currentChatId)
-            } catch (e: Exception) {
-                // Ignore
-            }
+            messageRepository.markAllMessagesAsRead(currentChatId, currentUserId)
         }
     }
 
     /**
      * Envoie un message texte ou image vers Firestore.
      */
-    fun sendMessage(text: String, type: MessageType = MessageType.TEXT, imageUrl: String = "") {
+    fun sendMessage(
+        text: String, 
+        type: MessageType = MessageType.TEXT, 
+        imageUrl: String = "",
+        audioDuration: Int = 0
+    ) {
         if (text.isBlank() && type == MessageType.TEXT) return
         viewModelScope.launch {
             try {
@@ -97,7 +137,8 @@ class ChatViewModel @Inject constructor(
                     receiverId = otherUserId,
                     text = text.trim(),
                     type = type,
-                    imageUrl = imageUrl
+                    imageUrl = imageUrl,
+                    audioDuration = audioDuration
                 )
                 _sendStatus.value = SendStatus.Success
             } catch (e: Exception) {

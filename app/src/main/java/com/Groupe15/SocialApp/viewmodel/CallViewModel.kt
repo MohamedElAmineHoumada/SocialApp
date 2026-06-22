@@ -93,6 +93,10 @@ class CallViewModel @Inject constructor(
         _currentCall.value = null
     }
 
+    fun clearIncomingCall() {
+        _incomingCall.value = null
+    }
+
     private val _callHistory = MutableStateFlow<List<Call>>(emptyList())
     val callHistory: StateFlow<List<Call>> = _callHistory.asStateFlow()
 

@@ -22,6 +22,12 @@ class CreatePostViewModel @Inject constructor(
     private val _selectedImages = MutableStateFlow<List<Uri>>(emptyList())
     val selectedImages: StateFlow<List<Uri>> = _selectedImages.asStateFlow()
 
+    private val _selectedVideo = MutableStateFlow<Uri?>(null)
+    val selectedVideo: StateFlow<Uri?> = _selectedVideo.asStateFlow()
+
+    private val _visibility = MutableStateFlow("Public")
+    val visibility: StateFlow<String> = _visibility.asStateFlow()
+
     private val _currentUser = MutableStateFlow<User?>(null)
     val currentUser: StateFlow<User?> = _currentUser.asStateFlow()
 
@@ -48,18 +54,28 @@ class CreatePostViewModel @Inject constructor(
 
     fun addImages(uris: List<Uri>) {
         _selectedImages.value = _selectedImages.value + uris
+        _selectedVideo.value = null // Only one type of media for now or handle both? User asked for text, image or video.
     }
 
     fun removeImage(uri: Uri) {
         _selectedImages.value = _selectedImages.value.filter { it != uri }
     }
 
+    fun setVideo(uri: Uri?) {
+        _selectedVideo.value = uri
+        _selectedImages.value = emptyList()
+    }
+
+    fun setVisibility(value: String) {
+        _visibility.value = value
+    }
+
     fun createPost(caption: String) {
         if (_isPosting.value) return
 
-        // ✅ Validation : il faut AU MOINS du texte OU AU MOINS une image
-        if (caption.isBlank() && _selectedImages.value.isEmpty()) {
-            _error.value = "Ajoute du texte ou une photo pour publier"
+        // ✅ Validation : il faut AU MOINS du texte OU AU MOINS un média
+        if (caption.isBlank() && _selectedImages.value.isEmpty() && _selectedVideo.value == null) {
+            _error.value = "Ajoute du texte, une photo ou une vidéo pour publier"
             return
         }
 
@@ -69,7 +85,9 @@ class CreatePostViewModel @Inject constructor(
             try {
                 postRepository.createPost(
                     caption = caption,
-                    imageUris = _selectedImages.value
+                    imageUris = _selectedImages.value,
+                    videoUri = _selectedVideo.value,
+                    visibility = _visibility.value
                 )
                 _postSuccess.value = true
             } catch (e: Exception) {

@@ -18,7 +18,9 @@ data class User(
     val birthDate: String = "",
     val gender: String = "",
     val interests: List<String> = emptyList(),
-    val isOnboardingCompleted: Boolean = false
+    val isOnboardingCompleted: Boolean = false,
+    val isOnline: Boolean = false,
+    val lastSeen: Long = 0L
 ) {
     // Constructeur vide requis par Firestore
     constructor() : this("")

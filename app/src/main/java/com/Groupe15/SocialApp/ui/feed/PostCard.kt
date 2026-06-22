@@ -10,13 +10,12 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Bookmark
-import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.outlined.BookmarkBorder
 import androidx.compose.material.icons.outlined.ChatBubbleOutline
 import androidx.compose.material.icons.outlined.Send
@@ -29,10 +28,16 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.viewinterop.AndroidView
+import androidx.media3.common.MediaItem
+import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.ui.PlayerView
 import coil.compose.AsyncImage
 import com.Groupe15.SocialApp.R
 import com.Groupe15.SocialApp.models.Post
@@ -50,6 +55,7 @@ fun PostCard(
     onShareClick: () -> Unit,
     onSaveClick: () -> Unit,
     onAuthorClick: () -> Unit,
+    onMediaClick: (Post) -> Unit = {},
     onDeleteClick: (() -> Unit)? = null
 ) {
     var showHeartBurst by remember { mutableStateOf(false) }
@@ -61,7 +67,7 @@ fun PostCard(
             .fillMaxWidth()
             .padding(bottom = 16.dp)
     ) {
-        // ── Header : avatar + username + menu ────────────────────────────
+        // ── Header : avatar + username + visibility + menu ────────────────────────────
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -81,7 +87,20 @@ fun PostCard(
                     contentScale = ContentScale.Crop
                 )
                 Spacer(modifier = Modifier.width(8.dp))
-                Text(text = post.authorUsername, fontWeight = FontWeight.Bold)
+                Column {
+                    Text(text = post.authorUsername, fontWeight = FontWeight.Bold)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        val icon = when (post.visibility) {
+                            "Public" -> Icons.Default.Public
+                            "Friends" -> Icons.Default.Group
+                            "FriendsOfFriends" -> Icons.Default.PeopleOutline
+                            else -> Icons.Default.Lock
+                        }
+                        Icon(icon, null, modifier = Modifier.size(12.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(post.visibility, fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
             }
             Box {
                 IconButton(onClick = { showMenu = true }) {
@@ -114,7 +133,7 @@ fun PostCard(
             }
         }
 
-        // ---- ✅ Légende AVANT l'image ----
+        // ---- Légende ----
         if (post.content.isNotBlank()) {
             Text(
                 text = buildAnnotatedCaption(post.authorUsername, post.content),
@@ -122,45 +141,79 @@ fun PostCard(
             )
         }
 
-        // ---- Image avec double-tap pour liker ----
-        if (post.imageUrl.isNotBlank()) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(380.dp)
-                    .pointerInput(post.postId) {
-                        detectTapGestures(
-                            onDoubleTap = {
-                                if (!isLiked) onLikeClick()
-                                showHeartBurst = true
-                                scope.launch {
-                                    delay(600)
-                                    showHeartBurst = false
-                                }
+        // ---- Media (Carousel or Video) ----
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .wrapContentHeight()
+                .clickable { onMediaClick(post) }
+                .pointerInput(post.postId) {
+                    detectTapGestures(
+                        onDoubleTap = {
+                            if (!isLiked) onLikeClick()
+                            showHeartBurst = true
+                            scope.launch {
+                                delay(600)
+                                showHeartBurst = false
                             }
-                        )
-                    }
-            ) {
-                AsyncImage(
-                    model = post.imageUrl,
-                    contentDescription = null,
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Crop
-                )
-
-                androidx.compose.animation.AnimatedVisibility(
-                    visible = showHeartBurst,
-                    enter = scaleIn(initialScale = 0.5f) + fadeIn(),
-                    exit = scaleOut(targetScale = 1.4f) + fadeOut(tween(300)),
-                    modifier = Modifier.align(Alignment.Center)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Favorite,
-                        contentDescription = null,
-                        tint = Color.White,
-                        modifier = Modifier.size(96.dp)
+                        }
                     )
                 }
+        ) {
+            if (post.videoUrl.isNotBlank()) {
+                Box(modifier = Modifier.fillMaxWidth().aspectRatio(1f)) {
+                    VideoPlayer(videoUrl = post.videoUrl)
+                }
+            } else if (post.imageUrls.isNotEmpty()) {
+                val pagerState = rememberPagerState(pageCount = { post.imageUrls.size })
+                HorizontalPager(
+                    state = pagerState,
+                    modifier = Modifier.fillMaxWidth().aspectRatio(1f)
+                ) { page ->
+                    AsyncImage(
+                        model = post.imageUrls[page],
+                        contentDescription = null,
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
+                }
+                
+                if (post.imageUrls.size > 1) {
+                    // Pager Indicator
+                    Row(
+                        Modifier
+                            .height(20.dp)
+                            .fillMaxWidth()
+                            .align(Alignment.BottomCenter)
+                            .padding(bottom = 8.dp),
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        repeat(post.imageUrls.size) { iteration ->
+                            val color = if (pagerState.currentPage == iteration) Color.White else Color.White.copy(alpha = 0.5f)
+                            Box(
+                                modifier = Modifier
+                                    .padding(2.dp)
+                                    .clip(CircleShape)
+                                    .background(color)
+                                    .size(6.dp)
+                            )
+                        }
+                    }
+                }
+            }
+
+            androidx.compose.animation.AnimatedVisibility(
+                visible = showHeartBurst,
+                enter = scaleIn(initialScale = 0.5f) + fadeIn(),
+                exit = scaleOut(targetScale = 1.4f) + fadeOut(tween(300)),
+                modifier = Modifier.align(Alignment.Center)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Favorite,
+                    contentDescription = null,
+                    tint = Color.White,
+                    modifier = Modifier.size(96.dp)
+                )
             }
         }
 
@@ -179,13 +232,12 @@ fun PostCard(
                 Icon(Icons.Outlined.Send, contentDescription = stringResource(R.string.share))
             }
             Spacer(modifier = Modifier.weight(1f))
-            // ✅ Bouton Save fonctionnel : icône remplie quand sauvegardé
             IconButton(onClick = onSaveClick) {
                 Icon(
                     imageVector = if (isSaved) Icons.Default.Bookmark else Icons.Outlined.BookmarkBorder,
                     contentDescription = stringResource(R.string.save),
-                    tint = if (isSaved) MaterialTheme.colorScheme.primary
-                    else MaterialTheme.colorScheme.onSurface )
+                    tint = if (isSaved) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                )
             }
         }
 
@@ -209,13 +261,56 @@ fun PostCard(
     }
 }
 
+@Composable
+fun VideoPlayer(videoUrl: String) {
+    val context = LocalContext.current
+    val exoPlayer = remember {
+        ExoPlayer.Builder(context).build().apply {
+            setMediaItem(MediaItem.fromUri(videoUrl))
+            prepare()
+            playWhenReady = false
+            repeatMode = ExoPlayer.REPEAT_MODE_ONE
+        }
+    }
+
+    DisposableEffect(Unit) {
+        onDispose { exoPlayer.release() }
+    }
+
+    AndroidView(
+        factory = {
+            PlayerView(context).apply {
+                player = exoPlayer
+                useController = true
+            }
+        },
+        modifier = Modifier.fillMaxSize()
+    )
+}
+
 fun buildAnnotatedCaption(username: String, content: String) =
     androidx.compose.ui.text.buildAnnotatedString {
         withStyle(androidx.compose.ui.text.SpanStyle(fontWeight = FontWeight.Bold)) {
             append(username)
         }
         append("  ")
-        append(content)
+        
+        val hashtagRegex = "#(\\w+)".toRegex()
+        var lastIndex = 0
+        
+        hashtagRegex.findAll(content).forEach { result ->
+            append(content.substring(lastIndex, result.range.first))
+            pushStringAnnotation(tag = "HASHTAG", annotation = result.value)
+            withStyle(androidx.compose.ui.text.SpanStyle(color = Color(0xFF6C47FF), fontWeight = FontWeight.Bold)) {
+                append(result.value)
+            }
+            pop()
+            lastIndex = result.range.last + 1
+        }
+        
+        if (lastIndex < content.length) {
+            append(content.substring(lastIndex))
+        }
     }
 
 @Composable

@@ -59,8 +59,15 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import com.Groupe15.SocialApp.repository.AuthRepository
+import javax.inject.Inject
+
 @AndroidEntryPoint
 class MainActivity : AppCompatActivity() {
+
+    @Inject lateinit var authRepository: AuthRepository
 
     // ── Credential Manager (Google Sign-In moderne) ────────────────────────
     private lateinit var credentialManager: CredentialManager
@@ -84,6 +91,14 @@ class MainActivity : AppCompatActivity() {
             if (isDarkMode) AppCompatDelegate.MODE_NIGHT_YES else AppCompatDelegate.MODE_NIGHT_NO
         )
         super.onCreate(savedInstanceState)
+
+        lifecycle.addObserver(LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                CoroutineScope(Dispatchers.IO).launch { authRepository.updateOnlineStatus(true) }
+            } else if (event == Lifecycle.Event.ON_PAUSE) {
+                CoroutineScope(Dispatchers.IO).launch { authRepository.updateOnlineStatus(false) }
+            }
+        })
 
         credentialManager = CredentialManager.create(this)
         callbackManager = CallbackManager.Factory.create()
@@ -184,6 +199,9 @@ fun MainScreen(
     LaunchedEffect(currentUserId) {
         if (currentUserId != null) {
             callViewModel.observeIncomingCalls(currentUserId)
+        } else {
+            // Reset incoming calls if user is logged out
+            callViewModel.clearIncomingCall()
         }
     }
 
@@ -357,6 +375,7 @@ fun MainScreen(
                         viewModel = hiltViewModel<FeedViewModel>(),
                         onNavigateToDiscover = { navController.navigate("discover") },
                         onNavigateToProfile = { uid -> navController.navigate("profile/$uid") },
+                        onNavigateToPost = { postId -> navController.navigate("postDetail/$postId") },
                         onCommentClick = {},
                         onShareClick = {},
                         initialCommentsPostId = postId
@@ -443,6 +462,7 @@ fun MainScreen(
                     onSettings = { navController.navigate("settings") },
                     onMessage = { name -> navController.navigate("chat/$effectiveUid/$name") },
                     onNavigateToProfile = { otherUid -> navController.navigate("profile/$otherUid") },
+                    onPostClick = { postId -> navController.navigate("postDetail/$postId") },
                     onNavigateToPost = { postId -> navController.navigate("postDetail/$postId") }
                 )
             }

@@ -311,6 +311,21 @@ class AuthRepository @Inject constructor(
         }
     }
 
+    suspend fun updateOnlineStatus(isOnline: Boolean): Result<Unit> {
+        return try {
+            val uid = auth.currentUser?.uid ?: return Result.failure(Exception("Non connecté"))
+            firestore.collection("users").document(uid).update(
+                mapOf(
+                    "isOnline" to isOnline,
+                    "lastSeen" to System.currentTimeMillis()
+                )
+            ).await()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
     // ── Helpers privés ───────────────────────────────────────────────────────
 
     private suspend fun createFirestoreUserFromSocial(

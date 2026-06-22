@@ -6,6 +6,7 @@ import com.google.firebase.Timestamp
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Filter
 import android.util.Log
+import java.util.Date
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
@@ -33,9 +34,13 @@ class CallRepository @Inject constructor(
     }
 
     fun observeIncomingCalls(userId: String): Flow<Call?> = callbackFlow {
+        // Uniquement les appels récents (moins de 1 minute) pour éviter les fantômes au démarrage
+        val oneMinuteAgo = Timestamp(Date(System.currentTimeMillis() - 60 * 1000))
+        
         val listener = callsCollection
             .whereEqualTo("receiverId", userId)
             .whereEqualTo("status", CallStatus.RINGING.name)
+            .whereGreaterThan("timestamp", oneMinuteAgo)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
                     Log.e("CallRepository", "Error observing incoming calls", error)

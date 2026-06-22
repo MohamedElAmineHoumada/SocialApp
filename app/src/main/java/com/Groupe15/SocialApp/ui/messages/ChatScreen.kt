@@ -25,10 +25,11 @@ import androidx.compose.material.icons.filled.DoneAll
 import androidx.compose.material.icons.filled.Gif
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.Check
+import androidx.compose.material.icons.outlined.DoneAll
 import androidx.compose.material.icons.filled.SentimentSatisfiedAlt
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.DoneAll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
@@ -45,10 +46,15 @@ import coil.compose.AsyncImage
 import com.Groupe15.SocialApp.models.Message
 import com.Groupe15.SocialApp.models.MessageType
 import com.Groupe15.SocialApp.viewmodel.ChatViewModel
+import com.Groupe15.SocialApp.util.AudioRecorder
+import com.Groupe15.SocialApp.util.AudioPlayer
 import kotlinx.coroutines.launch
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalContext
 import android.util.Log
+import android.content.pm.PackageManager
+import androidx.core.content.ContextCompat
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -76,6 +82,14 @@ fun ChatScreen(
     var textState by remember { mutableStateOf("") }
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
+
+    val recorder = remember { AudioRecorder(context) }
+    val player = remember { AudioPlayer(context) }
+
+    LaunchedEffect(Unit) {
+        viewModel.setAudioRecorder(recorder)
+    }
 
     var showGifPicker by remember { mutableStateOf(false) }
     var showEmojiPicker by remember { mutableStateOf(false) }
@@ -85,17 +99,35 @@ fun ChatScreen(
     val keyboardController = LocalSoftwareKeyboardController.current
     val focusManager = LocalFocusManager.current
 
-    val permissionLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestMultiplePermissions()
-    ) { permissions ->
-        val granted = permissions.values.all { it }
-        if (granted) {
-            onShowToast("Permissions accordées. Lancement de l'appel...")
-        } else {
-            onShowToast("Permissions micro/caméra refusées")
+    val cameraLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.TakePicturePreview()
+    ) { bitmap ->
+        if (bitmap != null) {
+            onShowToast("Camera captured (uploading logic coming soon)")
         }
     }
 
+    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        val recordAudioGranted = permissions[android.Manifest.permission.RECORD_AUDIO] ?: false
+        val cameraGranted = permissions[android.Manifest.permission.CAMERA] ?: false
+        val locationGranted = permissions[android.Manifest.permission.ACCESS_FINE_LOCATION] ?: false
+        
+        if (recordAudioGranted && cameraGranted) {
+             // Likely a call initiation
+             onShowToast("Permissions micro et caméra accordées.")
+        } else if (recordAudioGranted) {
+            onShowToast("Permission micro accordée. Appuyez à nouveau pour enregistrer.")
+        } else if (cameraGranted) {
+            cameraLauncher.launch(null)
+        } else if (locationGranted) {
+            onShowToast("Permission localisation accordée.")
+        } else if (isRecording) {
+            isRecording = false
+            onShowToast("Permission micro requise")
+        }
+    }
     val imagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia()
     ) { uri ->
@@ -104,8 +136,8 @@ fun ChatScreen(
         }
     }
 
-    // Initialisation du chat
-    LaunchedEffect(currentUserId, otherUserId) {
+    // Initialisation du chat et marquage comme lu
+    LaunchedEffect(currentUserId, otherUserId, messages) {
         viewModel.initChat(currentUserId, otherUserId)
     }
 
@@ -124,6 +156,7 @@ fun ChatScreen(
             ChatTopBar(
                 userName = userName,
                 userAvatar = displayAvatar,
+                isOnline = otherUser?.isOnline ?: false,
                 onBack = onBack,
                 onCall = { isVideo, avatar ->
                     permissionLauncher.launch(
@@ -164,6 +197,30 @@ fun ChatScreen(
                         PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
                     )
                 },
+                onCameraClick = {
+                    val hasPermission = ContextCompat.checkSelfPermission(
+                        context,
+                        android.Manifest.permission.CAMERA
+                    ) == PackageManager.PERMISSION_GRANTED
+                    
+                    if (hasPermission) {
+                        cameraLauncher.launch(null)
+                    } else {
+                        permissionLauncher.launch(arrayOf(android.Manifest.permission.CAMERA))
+                    }
+                },
+                onLocationClick = {
+                    val hasPermission = ContextCompat.checkSelfPermission(
+                        context,
+                        android.Manifest.permission.ACCESS_FINE_LOCATION
+                    ) == PackageManager.PERMISSION_GRANTED
+                    
+                    if (hasPermission) {
+                        onShowToast("Location feature coming soon")
+                    } else {
+                        permissionLauncher.launch(arrayOf(android.Manifest.permission.ACCESS_FINE_LOCATION))
+                    }
+                },
                 onEmojiClick = { 
                     Log.d("ChatInput", "Button clicked: Emoji")
                     focusManager.clearFocus()
@@ -177,15 +234,26 @@ fun ChatScreen(
                     showGifPicker = true
                 },
                 onMicClick = { 
+                    val hasPermission = ContextCompat.checkSelfPermission(
+                        context,
+                        android.Manifest.permission.RECORD_AUDIO
+                    ) == PackageManager.PERMISSION_GRANTED
+
                     if (!isRecording) {
-                        Log.d("ChatInput", "Starting recording")
-                        isRecording = true
-                        onShowToast("Enregistrement démarré...")
+                        if (hasPermission) {
+                            if (viewModel.startRecording(context.cacheDir)) {
+                                isRecording = true
+                            } else {
+                                onShowToast("Erreur lors du démarrage de l'enregistrement")
+                            }
+                        } else {
+                            permissionLauncher.launch(arrayOf(android.Manifest.permission.RECORD_AUDIO))
+                        }
                     } else {
-                        Log.d("ChatInput", "Stopping recording")
                         isRecording = false
-                        viewModel.sendMessage("Voice message", type = MessageType.VOICE)
-                        onShowToast("Message vocal envoyé")
+                        viewModel.stopRecording { file ->
+                            file?.let { viewModel.sendVoiceMessage(it) }
+                        }
                     }
                 },
                 isRecording = isRecording,
@@ -207,7 +275,8 @@ fun ChatScreen(
             items(messages) { message ->
                 MessageBubble(
                     message = message,
-                    isCurrentUser = message.senderId == currentUserId
+                    isCurrentUser = message.senderId == currentUserId,
+                    onPlayAudio = { url -> player.playFile(url) }
                 )
             }
         }
@@ -371,6 +440,7 @@ fun GifPickerContent(onGifSelected: (String) -> Unit) {
 private fun ChatTopBar(
     userName: String,
     userAvatar: String,
+    isOnline: Boolean,
     onBack: () -> Unit,
     onCall: (Boolean, String) -> Unit,
     onHistoryClick: () -> Unit,
@@ -397,17 +467,36 @@ private fun ChatTopBar(
                     )
                 }
 
-                AsyncImage(
-                    model = userAvatar.ifEmpty {
-                        "https://ui-avatars.com/api/?name=$userName&background=6C47FF&color=fff"
-                    },
-                    contentDescription = null,
-                    modifier = Modifier
-                        .size(38.dp)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.surfaceVariant),
-                    contentScale = ContentScale.Crop
-                )
+                Box {
+                    AsyncImage(
+                        model = userAvatar.ifEmpty {
+                            "https://ui-avatars.com/api/?name=$userName&background=6C47FF&color=fff"
+                        },
+                        contentDescription = null,
+                        modifier = Modifier
+                            .size(38.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.surfaceVariant),
+                        contentScale = ContentScale.Crop
+                    )
+                    if (isOnline) {
+                        Box(
+                            modifier = Modifier
+                                .size(12.dp)
+                                .clip(CircleShape)
+                                .background(Color.White)
+                                .padding(2.dp)
+                                .align(Alignment.BottomEnd)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .clip(CircleShape)
+                                    .background(OnlineGreen)
+                            )
+                        }
+                    }
+                }
 
                 Spacer(modifier = Modifier.width(10.dp))
 
@@ -419,8 +508,8 @@ private fun ChatTopBar(
                         fontSize = 16.sp
                     )
                     Text(
-                        text = "Active now",
-                        color = OnlineGreen,
+                        text = if (isOnline) "Active now" else "Offline",
+                        color = if (isOnline) OnlineGreen else MaterialTheme.colorScheme.onSurfaceVariant,
                         fontSize = 12.sp
                     )
                 }
@@ -466,9 +555,12 @@ private fun ChatTopBar(
     }
 }
 
-// ── Message Bubble ────────────────────────────────────────────────────────
 @Composable
-fun MessageBubble(message: Message, isCurrentUser: Boolean) {
+fun MessageBubble(
+    message: Message, 
+    isCurrentUser: Boolean,
+    onPlayAudio: (String) -> Unit = {}
+) {
     val timeLabel = remember(message.timestamp) {
         SimpleDateFormat("HH:mm", Locale.getDefault()).format(message.timestamp.toDate())
     }
@@ -486,47 +578,56 @@ fun MessageBubble(message: Message, isCurrentUser: Boolean) {
             horizontalAlignment = if (isCurrentUser) Alignment.End else Alignment.Start,
             modifier = Modifier.widthIn(max = 280.dp)
         ) {
-            val bubbleShape = RoundedCornerShape(
-                topStart = 20.dp,
-                topEnd = 20.dp,
-                bottomStart = if (isCurrentUser) 20.dp else 4.dp,
-                bottomEnd = if (isCurrentUser) 4.dp else 20.dp
-            )
-
-            Surface(
-                shape = bubbleShape,
-                color = containerColor,
-                modifier = Modifier.then(
-                    if (isCurrentUser) Modifier.background(
-                        Brush.linearGradient(listOf(VioletStart, VioletEnd)),
-                        bubbleShape
-                    ) else Modifier
-                )
-            ) {
-                when (message.type) {
-                    MessageType.IMAGE, MessageType.GIF -> {
-                        ImageMessageBubbleContent(
-                            imageUrl = message.imageUrl,
-                            caption = message.text,
-                            isCurrentUser = isCurrentUser
-                        )
-                    }
-                    MessageType.VOICE -> {
-                        VoiceMessageBubbleContent(isCurrentUser = isCurrentUser)
-                    }
-                    MessageType.TEXT -> {
+            when (message.type) {
+                MessageType.IMAGE, MessageType.GIF -> {
+                    ImageMessageBubbleContent(
+                        imageUrl = message.imageUrl,
+                        caption = message.text,
+                        isCurrentUser = isCurrentUser
+                    )
+                }
+                MessageType.VOICE -> {
+                    VoiceMessageBubble(
+                        isCurrentUser = isCurrentUser,
+                        audioUrl = message.imageUrl,
+                        onPlay = onPlayAudio
+                    )
+                }
+                MessageType.TEXT -> {
+                    Box(
+                        modifier = Modifier
+                            .clip(
+                                RoundedCornerShape(
+                                    topStart = 18.dp,
+                                    topEnd = 18.dp,
+                                    bottomStart = if (isCurrentUser) 18.dp else 4.dp,
+                                    bottomEnd = if (isCurrentUser) 4.dp else 18.dp
+                                )
+                            )
+                            .background(
+                                if (isCurrentUser)
+                                    Brush.linearGradient(listOf(VioletStart, VioletEnd))
+                                else
+                                    Brush.linearGradient(
+                                        listOf(
+                                            MaterialTheme.colorScheme.surfaceVariant,
+                                            MaterialTheme.colorScheme.surfaceVariant
+                                        )
+                                    )
+                            )
+                            .padding(horizontal = 14.dp, vertical = 10.dp)
+                    ) {
                         Text(
                             text = message.text,
-                            color = contentColor,
+                            color = if (isCurrentUser) Color.White
+                            else MaterialTheme.colorScheme.onSurfaceVariant,
                             fontSize = 15.sp,
-                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
                             lineHeight = 20.sp
                         )
                     }
                 }
             }
 
-            // Heure et Statut en dessous de la bulle
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.padding(top = 2.dp, start = 4.dp, end = 4.dp)
@@ -534,16 +635,32 @@ fun MessageBubble(message: Message, isCurrentUser: Boolean) {
                 Text(
                     text = timeLabel,
                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-                    fontSize = 10.sp
+                    fontSize = 11.sp
                 )
                 if (isCurrentUser) {
                     Spacer(modifier = Modifier.width(3.dp))
-                    Icon(
-                        imageVector = Icons.Default.DoneAll,
-                        contentDescription = null,
-                        tint = VioletStart,
-                        modifier = Modifier.size(12.dp)
-                    )
+                    if (message.isRead) {
+                        Icon(
+                            imageVector = Icons.Default.DoneAll,
+                            contentDescription = "Seen",
+                            tint = VioletStart,
+                            modifier = Modifier.size(14.dp)
+                        )
+                    } else if (message.isDelivered) {
+                        Icon(
+                            imageVector = Icons.Outlined.DoneAll,
+                            contentDescription = "Delivered",
+                            modifier = Modifier.size(14.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    } else {
+                        Icon(
+                            imageVector = Icons.Default.Check,
+                            contentDescription = "Sent",
+                            modifier = Modifier.size(14.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
             }
         }
@@ -551,40 +668,56 @@ fun MessageBubble(message: Message, isCurrentUser: Boolean) {
 }
 
 @Composable
-private fun VoiceMessageBubbleContent(isCurrentUser: Boolean) {
+private fun VoiceMessageBubble(
+    isCurrentUser: Boolean,
+    audioUrl: String,
+    onPlay: (String) -> Unit
+) {
+    var isPlaying by remember { mutableStateOf(false) }
+
     Row(
-        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+        modifier = Modifier
+            .clip(RoundedCornerShape(18.dp))
+            .background(
+                if (isCurrentUser)
+                    Brush.linearGradient(listOf(VioletStart, VioletEnd))
+                else
+                    Brush.linearGradient(
+                        listOf(
+                            MaterialTheme.colorScheme.surfaceVariant,
+                            MaterialTheme.colorScheme.surfaceVariant
+                        )
+                    )
+            )
+            .padding(horizontal = 12.dp, vertical = 8.dp)
+            .clickable { 
+                isPlaying = !isPlaying
+                onPlay(audioUrl) 
+            },
         verticalAlignment = Alignment.CenterVertically
     ) {
         Icon(
-            imageVector = Icons.Default.Mic,
+            imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
             contentDescription = null,
-            tint = if (isCurrentUser) Color.White else Color(0xFF1C1C1E),
-            modifier = Modifier.size(20.dp)
+            tint = if (isCurrentUser) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(24.dp)
         )
         Spacer(modifier = Modifier.width(8.dp))
+        // Waveform visualization
         Row(verticalAlignment = Alignment.CenterVertically) {
             repeat(15) {
-                val height = (4..16).random().dp
                 Box(
                     modifier = Modifier
-                        .width(2.5.dp)
-                        .height(height)
+                        .width(2.dp)
+                        .height((4..16).random().dp)
                         .background(
                             if (isCurrentUser) Color.White.copy(alpha = 0.8f) else Color(0xFF1C1C1E).copy(alpha = 0.3f),
                             CircleShape
                         )
-                        .padding(horizontal = 1.dp)
                 )
                 Spacer(modifier = Modifier.width(2.dp))
             }
         }
-        Spacer(modifier = Modifier.width(8.dp))
-        Text(
-            text = "0:12",
-            color = if (isCurrentUser) Color.White else Color(0xFF1C1C1E),
-            fontSize = 12.sp
-        )
     }
 }
 
@@ -623,6 +756,8 @@ fun ChatInputBar(
     onTextChange: (String) -> Unit,
     onSend: () -> Unit,
     onAddClick: () -> Unit,
+    onCameraClick: () -> Unit = {},
+    onLocationClick: () -> Unit = {},
     onEmojiClick: () -> Unit,
     onGifClick: () -> Unit,
     onMicClick: () -> Unit,
@@ -670,12 +805,28 @@ fun ChatInputBar(
                             leadingIcon = { Icon(Icons.Default.AddPhotoAlternate, contentDescription = null) }
                         )
                         DropdownMenuItem(
+                            text = { Text("Camera") },
+                            onClick = {
+                                showAddOptions = false
+                                onCameraClick()
+                            },
+                            leadingIcon = { Icon(Icons.Default.CameraAlt, contentDescription = null) }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Location") },
+                            onClick = {
+                                showAddOptions = false
+                                onLocationClick()
+                            },
+                            leadingIcon = { Icon(Icons.Default.LocationOn, contentDescription = null) }
+                        )
+                        DropdownMenuItem(
                             text = { Text("Files") },
                             onClick = {
                                 showAddOptions = false
                                 onShowToast("Files feature coming soon")
                             },
-                            leadingIcon = { Icon(Icons.Default.Add, contentDescription = null) }
+                            leadingIcon = { Icon(Icons.Default.AttachFile, contentDescription = null) }
                         )
                     }
                 }
