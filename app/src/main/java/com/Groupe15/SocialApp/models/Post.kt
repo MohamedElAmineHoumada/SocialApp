@@ -10,6 +10,9 @@ data class Post(
     var authorProfileUrl: String = "",
     @get:PropertyName("caption") @set:PropertyName("caption") var content: String = "",
     @get:PropertyName("imageUrls") @set:PropertyName("imageUrls") var imageUrls: List<String> = emptyList(),
+    var videoUrl: String = "",
+    var visibility: String = "Public", // Public, Friends, FriendsOfFriends, OnlyMe
+    var hashtags: List<String> = emptyList(),
     var likesCount: Int = 0,
     var commentsCount: Int = 0,
     var createdAt: Any? = null

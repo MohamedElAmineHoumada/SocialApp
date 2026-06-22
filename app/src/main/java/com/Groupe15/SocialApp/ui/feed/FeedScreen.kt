@@ -53,6 +53,7 @@ fun FeedScreen(
     viewModel: FeedViewModel,
     onNavigateToDiscover: () -> Unit,
     onNavigateToProfile: (String) -> Unit,
+    onNavigateToPost: (String) -> Unit,
     onCommentClick: (String) -> Unit,
     onShareClick: (Post) -> Unit,
     initialCommentsPostId: String? = null
@@ -128,7 +129,8 @@ fun FeedScreen(
                             onCommentClick = { commentsPostId = post.postId },
                             onShareClick = { sharePost = post },
                             onSaveClick = { viewModel.toggleSavePost(post.postId) },
-                            onAuthorClick = { onNavigateToProfile(post.authorUid) }
+                            onAuthorClick = { onNavigateToProfile(post.authorUid) },
+                            onMediaClick = { p -> onNavigateToPost(p.postId) }
                         )
                     }
 

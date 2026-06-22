@@ -341,6 +341,7 @@ fun MainScreen(
                         viewModel = hiltViewModel<FeedViewModel>(),
                         onNavigateToDiscover = { navController.navigate("discover") },
                         onNavigateToProfile = { uid -> navController.navigate("profile/$uid") },
+                        onNavigateToPost = { postId -> navController.navigate("postDetail/$postId") },
                         onCommentClick = {},
                         onShareClick = {},
                         initialCommentsPostId = postId
@@ -394,7 +395,8 @@ fun MainScreen(
                     onEditProfile = { navController.navigate("editProfile") },
                     onSettings = { navController.navigate("settings") },
                     onMessage = { name -> navController.navigate("chat/$effectiveUid/$name") },
-                    onNavigateToProfile = { otherUid -> navController.navigate("profile/$otherUid") }
+                    onNavigateToProfile = { otherUid -> navController.navigate("profile/$otherUid") },
+                    onPostClick = { postId -> navController.navigate("postDetail/$postId") }
                 )
             }
 

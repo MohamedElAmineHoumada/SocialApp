@@ -15,6 +15,12 @@ import androidx.compose.material.icons.filled.GridOn
 import androidx.compose.material.icons.filled.LocalOffer
 import androidx.compose.material.icons.filled.PlayCircleOutline
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Public
+import androidx.compose.material.icons.filled.Group
+import androidx.compose.material.icons.filled.PeopleOutline
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Layers
 import androidx.compose.material.icons.outlined.BookmarkBorder
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -46,7 +52,8 @@ fun ProfileScreen(
     onEditProfile: () -> Unit,
     onSettings: () -> Unit,
     onMessage: (String) -> Unit,
-    onNavigateToProfile: (String) -> Unit = {}
+    onNavigateToProfile: (String) -> Unit = {},
+    onPostClick: (String) -> Unit = {}
 ) {
     val profileUser by viewModel.currentUser.collectAsState()
     val isOwnProfile by viewModel.isOwnProfile.collectAsState()
@@ -319,11 +326,11 @@ fun ProfileScreen(
 
             when (selectedTab) {
                 ProfileTab.POSTS -> {
-                    PostsGrid(posts = userPosts, isLoading = isLoadingPosts, emptyLabel = "Aucune publication")
+                    PostsGrid(posts = userPosts, isLoading = isLoadingPosts, emptyLabel = "Aucune publication", onPostClick = onPostClick)
                 }
                 //  grille des posts sauvegardés
                 ProfileTab.SAVED -> {
-                    PostsGrid(posts = savedPosts, isLoading = isLoadingSaved, emptyLabel = "Aucune publication enregistrée")
+                    PostsGrid(posts = savedPosts, isLoading = isLoadingSaved, emptyLabel = "Aucune publication enregistrée", onPostClick = onPostClick)
                 }
                 ProfileTab.TAGGED -> {
                     Box(modifier = Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
@@ -373,7 +380,8 @@ fun ProfileScreen(
 private fun PostsGrid(
     posts: List<com.Groupe15.SocialApp.models.Post>,
     isLoading: Boolean,
-    emptyLabel: String
+    emptyLabel: String,
+    onPostClick: (String) -> Unit
 ) {
     if (isLoading) {
         Box(modifier = Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
@@ -389,16 +397,38 @@ private fun PostsGrid(
             rows.forEach { rowPosts ->
                 Row(modifier = Modifier.fillMaxWidth()) {
                     rowPosts.forEach { post ->
-                        AsyncImage(
-                            model = post.imageUrls.firstOrNull(),
-                            contentDescription = null,
+                        Box(
                             modifier = Modifier
                                 .weight(1f)
                                 .aspectRatio(1f)
                                 .padding(1.dp)
-                                .background(MaterialTheme.colorScheme.surfaceVariant),
-                            contentScale = ContentScale.Crop
-                        )
+                                .clickable { onPostClick(post.postId) }
+                        ) {
+                            AsyncImage(
+                                model = post.imageUrls.firstOrNull(),
+                                contentDescription = null,
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(MaterialTheme.colorScheme.surfaceVariant),
+                                contentScale = ContentScale.Crop
+                            )
+                            // Indicator for carousel or video
+                            if (post.imageUrls.size > 1) {
+                                Icon(
+                                    Icons.Default.Layers,
+                                    contentDescription = null,
+                                    modifier = Modifier.align(Alignment.TopEnd).padding(4.dp).size(16.dp),
+                                    tint = Color.White
+                                )
+                            } else if (post.videoUrl.isNotBlank()) {
+                                Icon(
+                                    Icons.Default.PlayArrow,
+                                    contentDescription = null,
+                                    modifier = Modifier.align(Alignment.TopEnd).padding(4.dp).size(16.dp),
+                                    tint = Color.White
+                                )
+                            }
+                        }
                     }
                     repeat(3 - rowPosts.size) {
                         Spacer(modifier = Modifier.weight(1f).aspectRatio(1f))

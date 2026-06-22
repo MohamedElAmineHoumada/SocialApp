@@ -103,7 +103,12 @@ class PostRepository @Inject constructor(
         awaitClose { listener.remove() }
     }
 
-    suspend fun createPost(caption: String, imageUris: List<Uri> = emptyList()): Result<Unit> {
+    suspend fun createPost(
+        caption: String, 
+        imageUris: List<Uri> = emptyList(),
+        videoUri: Uri? = null,
+        visibility: String = "Public"
+    ): Result<Unit> {
         return try {
             val uid = auth.currentUser?.uid
                 ?: return Result.failure(Exception("Non connecté"))
@@ -121,6 +126,15 @@ class PostRepository @Inject constructor(
                 ref.downloadUrl.await().toString()
             }
 
+            var videoUrl = ""
+            videoUri?.let { uri ->
+                val ref = storage.reference.child("posts/$uid/${UUID.randomUUID()}.mp4")
+                ref.putFile(uri).await()
+                videoUrl = ref.downloadUrl.await().toString()
+            }
+
+            val hashtags = extractHashtags(caption)
+
             val postId = firestore.collection("posts").document().id
             val post = Post(
                 postId           = postId,
@@ -129,6 +143,9 @@ class PostRepository @Inject constructor(
                 authorProfileUrl = profileImageUrl,
                 content          = caption,
                 imageUrls        = imageUrls,
+                videoUrl         = videoUrl,
+                visibility       = visibility,
+                hashtags         = hashtags,
                 createdAt        = Timestamp.now()
             )
             firestore.collection("posts").document(postId).set(post).await()
@@ -136,6 +153,11 @@ class PostRepository @Inject constructor(
         } catch (e: Exception) {
             Result.failure(e)
         }
+    }
+
+    private fun extractHashtags(text: String): List<String> {
+        val hashtagRegex = "#(\\w+)".toRegex()
+        return hashtagRegex.findAll(text).map { it.groupValues[1] }.toList()
     }
 
     suspend fun toggleLike(postId: String) {

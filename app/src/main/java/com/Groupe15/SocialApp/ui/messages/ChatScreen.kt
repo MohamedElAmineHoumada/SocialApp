@@ -92,6 +92,14 @@ fun ChatScreen(
     val keyboardController = LocalSoftwareKeyboardController.current
     val focusManager = LocalFocusManager.current
 
+    val cameraLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.TakePicturePreview()
+    ) { bitmap ->
+        if (bitmap != null) {
+            onShowToast("Camera captured (uploading logic coming soon)")
+        }
+    }
+
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
     ) { permissions ->
@@ -101,17 +109,20 @@ fun ChatScreen(
         
         if (recordAudioGranted) {
             onShowToast("Permission micro accordée. Appuyez à nouveau pour enregistrer.")
+        } else if (cameraGranted) {
+            cameraLauncher.launch(null)
+        } else if (locationGranted) {
+            onShowToast("Permission localisation accordée.")
         } else if (isRecording) {
             isRecording = false
             onShowToast("Permission micro requise")
         }
     }
 
-    val cameraLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.TakePicturePreview()
-    ) { bitmap ->
-        // Handle captured bitmap if needed
-        onShowToast("Camera captured (uploading logic coming soon)")
+    val requestPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        // Handle single permission result if needed
     }
 
     val imagePickerLauncher = rememberLauncherForActivityResult(
@@ -122,8 +133,8 @@ fun ChatScreen(
         }
     }
 
-    // Initialisation du chat
-    LaunchedEffect(currentUserId, otherUserId) {
+    // Initialisation du chat et marquage comme lu
+    LaunchedEffect(currentUserId, otherUserId, messages) {
         viewModel.initChat(currentUserId, otherUserId)
     }
 
@@ -162,10 +173,28 @@ fun ChatScreen(
                     )
                 },
                 onCameraClick = {
-                    permissionLauncher.launch(arrayOf(android.Manifest.permission.CAMERA))
+                    val hasPermission = ContextCompat.checkSelfPermission(
+                        context,
+                        android.Manifest.permission.CAMERA
+                    ) == PackageManager.PERMISSION_GRANTED
+                    
+                    if (hasPermission) {
+                        cameraLauncher.launch(null)
+                    } else {
+                        permissionLauncher.launch(arrayOf(android.Manifest.permission.CAMERA))
+                    }
                 },
                 onLocationClick = {
-                    permissionLauncher.launch(arrayOf(android.Manifest.permission.ACCESS_FINE_LOCATION))
+                    val hasPermission = ContextCompat.checkSelfPermission(
+                        context,
+                        android.Manifest.permission.ACCESS_FINE_LOCATION
+                    ) == PackageManager.PERMISSION_GRANTED
+                    
+                    if (hasPermission) {
+                        onShowToast("Location feature coming soon")
+                    } else {
+                        permissionLauncher.launch(arrayOf(android.Manifest.permission.ACCESS_FINE_LOCATION))
+                    }
                 },
                 onEmojiClick = { 
                     Log.d("ChatInput", "Button clicked: Emoji")
