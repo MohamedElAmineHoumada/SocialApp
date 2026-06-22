@@ -9,6 +9,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -22,6 +24,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.Groupe15.SocialApp.models.Story
+import com.google.firebase.auth.FirebaseAuth
 
 private const val STORY_DURATION_MS = 5_000
 
@@ -30,6 +33,7 @@ private const val STORY_DURATION_MS = 5_000
 fun StoryViewerScreen(
     stories: List<Story>,
     initialIndex: Int = 0,
+    onDeleteStory: (String) -> Unit = {},
     onClose: () -> Unit
 ) {
     if (stories.isEmpty()) {
@@ -37,20 +41,31 @@ fun StoryViewerScreen(
         return
     }
 
+    val currentUserId = FirebaseAuth.getInstance().currentUser?.uid
     val safeInitial = initialIndex.coerceIn(0, stories.lastIndex)
     var currentIndex by remember { mutableIntStateOf(safeInitial) }
     val story = stories[currentIndex]
 
+    var showDeleteDialog by remember { mutableStateOf(false) }
     val progress = remember(currentIndex) { Animatable(0f) }
 
-    LaunchedEffect(currentIndex) {
-        progress.snapTo(0f)
-        progress.animateTo(
-            targetValue = 1f,
-            animationSpec = tween(durationMillis = STORY_DURATION_MS, easing = LinearEasing)
-        )
-        if (currentIndex < stories.lastIndex) currentIndex++
-        else onClose()
+    LaunchedEffect(currentIndex, showDeleteDialog) {
+        if (!showDeleteDialog) {
+            progress.animateTo(
+                targetValue = 1f,
+                animationSpec = tween(
+                    durationMillis = ((1f - progress.value) * STORY_DURATION_MS).toInt(),
+                    easing = LinearEasing
+                )
+            )
+            if (currentIndex < stories.lastIndex) {
+                currentIndex++
+            } else {
+                onClose()
+            }
+        } else {
+            progress.stop()
+        }
     }
 
     Box(
@@ -60,7 +75,7 @@ fun StoryViewerScreen(
     ) {
         // ── Image ─────────────────────────────────────────────────────────
         AsyncImage(
-            model = story.mediaUrl,
+            model = story.displayMediaUrl,
             contentDescription = null,
             modifier = Modifier.fillMaxSize(),
             contentScale = ContentScale.Fit
@@ -160,6 +175,19 @@ fun StoryViewerScreen(
                         )
                     }
                 }
+
+                if (story.userId == currentUserId) {
+                    IconButton(onClick = {
+                        showDeleteDialog = true
+                    }) {
+                        Icon(
+                            Icons.Default.Delete,
+                            contentDescription = "Supprimer",
+                            tint = Color.White
+                        )
+                    }
+                }
+
                 IconButton(onClick = onClose) {
                     Icon(
                         Icons.Default.Close,
@@ -168,6 +196,39 @@ fun StoryViewerScreen(
                     )
                 }
             }
+        }
+
+        if (showDeleteDialog) {
+            AlertDialog(
+                onDismissRequest = { showDeleteDialog = false },
+                title = { Text("Supprimer la story") },
+                text = { Text("Voulez-vous vraiment supprimer cette story ?") },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            showDeleteDialog = false
+                            onDeleteStory(story.storyId)
+                            if (stories.size > 1) {
+                                if (currentIndex < stories.lastIndex) {
+                                    // Pas besoin de changer d'index, la liste va se réduire
+                                } else {
+                                    currentIndex--
+                                }
+                            } else {
+                                onClose()
+                            }
+                        },
+                        colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                    ) {
+                        Text("Supprimer")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showDeleteDialog = false }) {
+                        Text("Annuler")
+                    }
+                }
+            )
         }
 
         // ── Texte superposé (optionnel) ───────────────────────────────────

@@ -47,6 +47,10 @@ import com.Groupe15.SocialApp.viewmodel.FeedViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
+import android.widget.Toast
+import androidx.compose.ui.platform.LocalContext
+import com.Groupe15.SocialApp.viewmodel.FeedUiEvent
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FeedScreen(
@@ -57,6 +61,7 @@ fun FeedScreen(
     onShareClick: (Post) -> Unit,
     initialCommentsPostId: String? = null
 ) {
+    val context = LocalContext.current
     val selectedTab by viewModel.selectedTab.observeAsState(FeedTab.FOLLOWING)
     val posts by viewModel.posts.observeAsState(emptyList())
     val stories by viewModel.stories.observeAsState(emptyList())
@@ -67,6 +72,16 @@ fun FeedScreen(
     var commentsPostId by remember { mutableStateOf<String?>(initialCommentsPostId) }
     var sharePost by remember { mutableStateOf<Post?>(null) }
     var storyViewerUserId by remember { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(Unit) {
+        viewModel.uiEvent.collect { event ->
+            when (event) {
+                is FeedUiEvent.ShowToast -> {
+                    Toast.makeText(context, event.message, Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+    }
 
     LaunchedEffect(posts) {
         if (posts.isNotEmpty()) {
@@ -83,6 +98,7 @@ fun FeedScreen(
         if (userStories.isNotEmpty()) {
             StoryViewerScreen(
                 stories = userStories,
+                onDeleteStory = { storyId -> viewModel.deleteStory(storyId) },
                 onClose = { storyViewerUserId = null }
             )
         } else {
@@ -124,11 +140,13 @@ fun FeedScreen(
                             post = post,
                             isLiked = post.postId in likedPostIds,
                             isSaved = post.postId in savedPostIds,
+                            currentUserId = viewModel.currentUserId,
                             onLikeClick = { viewModel.toggleLike(post.postId) },
                             onCommentClick = { commentsPostId = post.postId },
                             onShareClick = { sharePost = post },
                             onSaveClick = { viewModel.toggleSavePost(post.postId) },
-                            onAuthorClick = { onNavigateToProfile(post.authorUid) }
+                            onAuthorClick = { onNavigateToProfile(post.authorUid) },
+                            onDeleteClick = { viewModel.deletePost(post.postId) }
                         )
                     }
 

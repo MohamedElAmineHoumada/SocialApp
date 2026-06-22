@@ -129,6 +129,7 @@ class PostRepository @Inject constructor(
                 authorProfileUrl = profileImageUrl,
                 content          = caption,
                 imageUrls        = imageUrls,
+                oldImageUrl      = imageUrls.firstOrNull() ?: "", // Pour la compatibilité ascendante
                 createdAt        = Timestamp.now()
             )
             firestore.collection("posts").document(postId).set(post).await()
@@ -210,5 +211,50 @@ class PostRepository @Inject constructor(
             }
         }
         return liked
+    }
+
+    suspend fun deletePost(postId: String): Result<Unit> {
+        return try {
+            val uid = auth.currentUser?.uid ?: throw Exception("Non connecté")
+            if (postId.isBlank()) throw Exception("ID du post vide")
+            
+            val postRef = firestore.collection("posts").document(postId)
+            val postDoc = postRef.get().await()
+            
+            if (!postDoc.exists()) return Result.success(Unit)
+            
+            val authorUid = postDoc.getString("userId") ?: ""
+            if (authorUid != uid) {
+                throw Exception("Vous n'êtes pas l'auteur de ce post")
+            }
+
+            // Récupérer les URLs d'images
+            val imageUrls = postDoc.get("imageUrls") as? List<String> ?: emptyList()
+            val oldImageUrl = postDoc.getString("imageUrl") ?: ""
+            val allImages = (imageUrls + oldImageUrl).filter { it.isNotBlank() }.distinct()
+
+            // Supprimer les images
+            allImages.forEach { url ->
+                try {
+                    storage.getReferenceFromUrl(url).delete().await()
+                } catch (e: Exception) {
+                    // Ignorer les erreurs de suppression de fichiers si déjà supprimés
+                }
+            }
+
+            // Supprimer le document
+            postRef.delete().await()
+
+            // Supprimer les likes et commentaires
+            val likesSnapshot = postRef.collection("likes").get().await()
+            likesSnapshot.documents.forEach { it.reference.delete() }
+
+            val commentsSnapshot = postRef.collection("comments").get().await()
+            commentsSnapshot.documents.forEach { it.reference.delete() }
+
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
     }
 }

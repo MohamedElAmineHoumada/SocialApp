@@ -26,9 +26,16 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
+
 enum class FeedTab {
     FOLLOWING,
     FOR_YOU
+}
+
+sealed class FeedUiEvent {
+    data class ShowToast(val message: String) : FeedUiEvent()
 }
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -41,6 +48,9 @@ class FeedViewModel @Inject constructor(
     private val followRepository: FollowRepository,
     private val messageRepository: MessageRepository // ✅ NOUVEAU
 ) : ViewModel() {
+
+    private val _uiEvent = MutableSharedFlow<FeedUiEvent>()
+    val uiEvent = _uiEvent.asSharedFlow()
 
     private val _selectedTab = MutableStateFlow(FeedTab.FOLLOWING)
     val selectedTab: LiveData<FeedTab> = _selectedTab.asLiveData()
@@ -180,6 +190,28 @@ class FeedViewModel @Inject constructor(
     fun toggleSavePost(postId: String) {
         viewModelScope.launch {
             feedRepository.toggleSavePost(postId)
+        }
+    }
+
+    fun deletePost(postId: String) {
+        viewModelScope.launch {
+            val result = postRepository.deletePost(postId)
+            if (result.isSuccess) {
+                _uiEvent.emit(FeedUiEvent.ShowToast("Publication supprimée"))
+            } else {
+                _uiEvent.emit(FeedUiEvent.ShowToast("Erreur : ${result.exceptionOrNull()?.message}"))
+            }
+        }
+    }
+
+    fun deleteStory(storyId: String) {
+        viewModelScope.launch {
+            val result = feedRepository.deleteStory(storyId)
+            if (result.isSuccess) {
+                _uiEvent.emit(FeedUiEvent.ShowToast("Story supprimée"))
+            } else {
+                _uiEvent.emit(FeedUiEvent.ShowToast("Erreur : ${result.exceptionOrNull()?.message}"))
+            }
         }
     }
 
