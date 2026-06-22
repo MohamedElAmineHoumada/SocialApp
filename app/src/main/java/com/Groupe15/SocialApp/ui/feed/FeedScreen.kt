@@ -7,6 +7,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
@@ -30,15 +31,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
-import com.Groupe15.SocialApp.R
 import com.Groupe15.SocialApp.models.Post
 import com.Groupe15.SocialApp.models.Story
 import com.Groupe15.SocialApp.viewmodel.FeedTab
@@ -60,10 +60,11 @@ fun FeedScreen(
     val stories by viewModel.stories.observeAsState(emptyList())
     val isLoading by viewModel.isLoading.observeAsState(false)
     val likedPostIds by viewModel.likedPostIds.observeAsState(emptySet())
-    val savedPostIds by viewModel.savedPostIds.observeAsState(emptySet()) // ✅ NOUVEAU
+    val savedPostIds by viewModel.savedPostIds.observeAsState(emptySet())
 
     var commentsPostId by remember { mutableStateOf<String?>(null) }
     var sharePost by remember { mutableStateOf<Post?>(null) }
+    var storyViewerUserId by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(posts) {
         if (posts.isNotEmpty()) {
@@ -71,6 +72,24 @@ fun FeedScreen(
         }
     }
 
+    // Pas de remember() — recalculé à chaque recomposition
+    val storiesByUser = stories.groupBy { it.userId }
+
+    // ── Story Viewer — affiché EN PREMIER (par-dessus tout) ──────────────
+    if (storyViewerUserId != null) {
+        val userStories = storiesByUser[storyViewerUserId].orEmpty()
+        if (userStories.isNotEmpty()) {
+            StoryViewerScreen(
+                stories = userStories,
+                onClose = { storyViewerUserId = null }
+            )
+        } else {
+            LaunchedEffect(storyViewerUserId) { storyViewerUserId = null }
+        }
+        return
+    }
+
+    // ── Feed normal ───────────────────────────────────────────────────────
     Column(modifier = Modifier.fillMaxSize()) {
         FeedTabBar(
             selectedTab = selectedTab,
@@ -86,7 +105,15 @@ fun FeedScreen(
                 EmptyFeedState(tab = selectedTab)
             } else {
                 LazyColumn(modifier = Modifier.fillMaxSize()) {
-                    item { StoriesRow(stories = stories) }
+                    item {
+                        StoriesRow(
+                            stories = stories,
+                            // ✅ tap court → ouvre le viewer
+                            onStoryClick = { userId -> storyViewerUserId = userId },
+                            // ✅ tap long → navigue vers le profil
+                            onProfileClick = { userId -> onNavigateToProfile(userId) }
+                        )
+                    }
 
                     itemsIndexed(posts, key = { index, post ->
                         post.postId.ifBlank { "post_$index" }
@@ -94,7 +121,7 @@ fun FeedScreen(
                         PostCard(
                             post = post,
                             isLiked = post.postId in likedPostIds,
-                            isSaved = post.postId in savedPostIds, // ✅ NOUVEAU
+                            isSaved = post.postId in savedPostIds,
                             onLikeClick = { viewModel.toggleLike(post.postId) },
                             onCommentClick = { commentsPostId = post.postId },
                             onShareClick = { sharePost = post },
@@ -109,16 +136,22 @@ fun FeedScreen(
         }
     }
 
+    // ── Commentaires ──────────────────────────────────────────────────────
     commentsPostId?.let { postId ->
         ModalBottomSheet(onDismissRequest = { commentsPostId = null }) {
             CommentsScreen(
                 viewModel = viewModel,
                 postId = postId,
-                onDismiss = { commentsPostId = null }
+                onDismiss = { commentsPostId = null },
+                onNavigateToProfile = { uid ->
+                    commentsPostId = null
+                    onNavigateToProfile(uid)
+                }
             )
         }
     }
 
+    // ── Partage ───────────────────────────────────────────────────────────
     sharePost?.let { post ->
         ModalBottomSheet(onDismissRequest = { sharePost = null }) {
             ShareScreen(
@@ -130,6 +163,10 @@ fun FeedScreen(
     }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Tab bar
+// ─────────────────────────────────────────────────────────────────────────────
+
 @Composable
 private fun FeedTabBar(
     selectedTab: FeedTab,
@@ -137,13 +174,13 @@ private fun FeedTabBar(
 ) {
     Row(modifier = Modifier.fillMaxWidth().padding(top = 4.dp)) {
         FeedTabItem(
-            label = stringResource(R.string.following_tab),
+            label = "Following",
             selected = selectedTab == FeedTab.FOLLOWING,
             modifier = Modifier.weight(1f),
             onClick = { onTabSelected(FeedTab.FOLLOWING) }
         )
         FeedTabItem(
-            label = stringResource(R.string.foryou_tab),
+            label = "For You",
             selected = selectedTab == FeedTab.FOR_YOU,
             modifier = Modifier.weight(1f),
             onClick = { onTabSelected(FeedTab.FOR_YOU) }
@@ -175,10 +212,16 @@ private fun FeedTabItem(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(2.dp)
-                .background(if (selected) MaterialTheme.colorScheme.onSurface else Color.Transparent)
+                .background(
+                    if (selected) MaterialTheme.colorScheme.onSurface else Color.Transparent
+                )
         )
     }
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// État vide
+// ─────────────────────────────────────────────────────────────────────────────
 
 @Composable
 private fun EmptyFeedState(tab: FeedTab) {
@@ -188,61 +231,113 @@ private fun EmptyFeedState(tab: FeedTab) {
         verticalArrangement = Arrangement.Center
     ) {
         Text(
-            text = if (tab == FeedTab.FOLLOWING) stringResource(R.string.no_posts)
-            else stringResource(R.string.no_suggestions),
+            text = if (tab == FeedTab.FOLLOWING) "Aucune publication pour l'instant"
+            else "Pas encore de suggestions",
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold
         )
         Spacer(modifier = Modifier.height(8.dp))
         Text(
             text = if (tab == FeedTab.FOLLOWING)
-                stringResource(R.string.follow_to_see_posts)
-            else stringResource(R.string.check_back_later_content),
+                "Suis des comptes pour voir leurs publications ici."
+            else "Revenez plus tard, du contenu vous sera proposé.",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Stories Row
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * [onStoryClick]   → tap court sur la bulle  → ouvre le StoryViewerScreen
+ * [onProfileClick] → tap long sur la bulle   → navigue vers profile/{userId}
+ */
 @Composable
-private fun StoriesRow(stories: List<Story>) {
+private fun StoriesRow(
+    stories: List<Story>,
+    onStoryClick: (String) -> Unit,
+    onProfileClick: (String) -> Unit
+) {
     if (stories.isEmpty()) return
+
+    val uniqueStories: List<Story> = stories
+        .groupBy { it.userId }
+        .values
+        .mapNotNull { it.maxByOrNull { s -> s.timestamp?.seconds ?: 0L } }
 
     LazyRow(
         modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         contentPadding = PaddingValues(horizontal = 16.dp)
     ) {
-        items(stories, key = { it.storyId.ifBlank { "story_${stories.indexOf(it)}" } }) { story ->
+        items(
+            uniqueStories,
+            key = { it.userId.ifBlank { "story_${uniqueStories.indexOf(it)}" } }
+        ) { story ->
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.width(68.dp)
+                modifier = Modifier
+                    .width(72.dp)
+                    // ✅ pointerInput pour gérer tap court ET tap long sur la même zone
+                    .pointerInput(story.userId) {
+                        detectTapGestures(
+                            onTap = { onStoryClick(story.userId) },
+                            onLongPress = { onProfileClick(story.userId) }
+                        )
+                    }
             ) {
+                // Anneau dégradé autour de l'avatar
                 Box(
                     modifier = Modifier
-                        .size(64.dp)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.surfaceVariant)
+                        .size(68.dp)
+                        .background(
+                            brush = Brush.sweepGradient(
+                                listOf(
+                                    Color(0xFF6C47FF),
+                                    Color(0xFFE91E8C),
+                                    Color(0xFFFFC107),
+                                    Color(0xFF6C47FF)
+                                )
+                            ),
+                            shape = CircleShape
+                        )
+                        .padding(3.dp)
                 ) {
                     AsyncImage(
-                        model = story.userProfileUrl,
+                        model = story.userProfileUrl.ifBlank { null },
                         contentDescription = story.username,
-                        modifier = Modifier.fillMaxSize(),
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.surfaceVariant),
                         contentScale = ContentScale.Crop
                     )
                 }
                 Spacer(modifier = Modifier.height(4.dp))
-                Text(text = story.username, style = MaterialTheme.typography.labelSmall, maxLines = 1)
+                // ✅ clic sur le nom → profil aussi
+                Text(
+                    text = story.username,
+                    style = MaterialTheme.typography.labelSmall,
+                    maxLines = 1,
+                    modifier = Modifier.clickable { onProfileClick(story.userId) }
+                )
             }
         }
     }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// PostCard
+// ─────────────────────────────────────────────────────────────────────────────
+
 @Composable
 private fun PostCard(
     post: Post,
     isLiked: Boolean,
-    isSaved: Boolean, // ✅ NOUVEAU
+    isSaved: Boolean,
     onLikeClick: () -> Unit,
     onCommentClick: () -> Unit,
     onShareClick: () -> Unit,
@@ -257,7 +352,7 @@ private fun PostCard(
             .fillMaxWidth()
             .padding(bottom = 16.dp)
     ) {
-        // ---- Header : avatar + username + menu ----
+        // ── Header : avatar + username + menu ────────────────────────────
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -265,7 +360,9 @@ private fun PostCard(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Row(
-                modifier = Modifier.weight(1f).clickable(onClick = onAuthorClick),
+                modifier = Modifier
+                    .weight(1f)
+                    .clickable(onClick = onAuthorClick),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 AsyncImage(
@@ -278,7 +375,7 @@ private fun PostCard(
                 Text(text = post.authorUsername, fontWeight = FontWeight.Bold)
             }
             IconButton(onClick = { /* TODO: menu options */ }) {
-                Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.options))
+                Icon(Icons.Default.MoreVert, contentDescription = "Options")
             }
         }
 
@@ -341,25 +438,25 @@ private fun PostCard(
         ) {
             AnimatedLikeButton(isLiked = isLiked, onClick = onLikeClick)
             IconButton(onClick = onCommentClick) {
-                Icon(Icons.Outlined.ChatBubbleOutline, contentDescription = stringResource(R.string.comment))
+                Icon(Icons.Outlined.ChatBubbleOutline, contentDescription = "Commenter")
             }
             IconButton(onClick = onShareClick) {
-                Icon(Icons.Outlined.Send, contentDescription = stringResource(R.string.share))
+                Icon(Icons.Outlined.Send, contentDescription = "Partager")
             }
             Spacer(modifier = Modifier.weight(1f))
             // ✅ Bouton Save fonctionnel : icône remplie quand sauvegardé
             IconButton(onClick = onSaveClick) {
                 Icon(
                     imageVector = if (isSaved) Icons.Default.Bookmark else Icons.Outlined.BookmarkBorder,
-                    contentDescription = stringResource(R.string.save),
-                    tint = if (isSaved) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
-                )
+                    contentDescription = "Enregistrer",
+                    tint = if (isSaved) MaterialTheme.colorScheme.primary
+                    else MaterialTheme.colorScheme.onSurface
             }
         }
 
         if (post.likesCount > 0) {
             Text(
-                text = stringResource(R.string.likes_count, post.likesCount),
+                text = "${post.likesCount} j'aime",
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(horizontal = 12.dp)
             )
@@ -367,7 +464,7 @@ private fun PostCard(
 
         if (post.commentsCount > 0) {
             Text(
-                text = stringResource(R.string.view_comments, post.commentsCount),
+                text = "Voir les ${post.commentsCount} commentaires",
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier
                     .padding(horizontal = 12.dp, vertical = 2.dp)
@@ -376,6 +473,10 @@ private fun PostCard(
         }
     }
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Helpers
+// ─────────────────────────────────────────────────────────────────────────────
 
 private fun buildAnnotatedCaption(username: String, content: String) =
     androidx.compose.ui.text.buildAnnotatedString {
@@ -400,7 +501,9 @@ private fun AnimatedLikeButton(isLiked: Boolean, onClick: () -> Unit) {
             imageVector = if (isLiked) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
             contentDescription = "Aimer",
             tint = if (isLiked) Color(0xFFE53935) else MaterialTheme.colorScheme.onSurface,
-            modifier = Modifier.size(26.dp).scale(scale.value)
+            modifier = Modifier
+                .size(26.dp)
+                .scale(scale.value)
         )
     }
 }

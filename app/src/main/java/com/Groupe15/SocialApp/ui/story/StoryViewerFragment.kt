@@ -4,11 +4,13 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.platform.ComposeView
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.navigation.fragment.findNavController
+import com.Groupe15.SocialApp.ui.feed.StoryViewerScreen
 import com.Groupe15.SocialApp.viewmodel.FeedViewModel
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -23,12 +25,14 @@ class StoryViewerFragment : Fragment() {
         savedInstanceState: Bundle?
     ): View {
         val initialIndex = arguments?.getInt("initialIndex") ?: 0
-        
+
         return ComposeView(requireContext()).apply {
             setContent {
-                val storiesState = viewModel.stories.observeAsState(initial = emptyList())
+
+                val stories by viewModel.stories.observeAsState(initial = emptyList())
+
                 StoryViewerScreen(
-                    stories = storiesState.value,
+                    stories = stories,
                     initialIndex = initialIndex,
                     onClose = { findNavController().navigateUp() }
                 )

@@ -4,6 +4,7 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -67,7 +68,8 @@ class CommentsBottomSheet : BottomSheetDialogFragment() {
                         CommentsScreen(
                             viewModel = viewModel,
                             postId = postId,
-                            onDismiss = { dismiss() }
+                            onDismiss = { dismiss() },
+                            onNavigateToProfile = { /* Fragment context : navigation gérée par l'hôte */ }
                         )
                     }
                 }
@@ -78,16 +80,17 @@ class CommentsBottomSheet : BottomSheetDialogFragment() {
 
 /**
  * Hauteur ADAPTATIVE : la zone de commentaires utilise une Column scrollable
- * avec un plafond (heightIn max), pas une hauteur fixe. Avec peu de commentaires,
- * la zone reste compacte et le champ "Ajouter un commentaire" est visible
- * immédiatement, sans scroll. Au-delà du plafond, la liste devient scrollable
- * pour ne jamais pousser le champ de saisie hors de l'écran.
+ * avec un plafond (heightIn max), pas une hauteur fixe.
+ *
+ * [onNavigateToProfile] : appelé avec l'uid de l'auteur quand on clique
+ * sur son avatar ou son nom dans la liste.
  */
 @Composable
 fun CommentsScreen(
     viewModel: FeedViewModel,
     postId: String,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    onNavigateToProfile: (String) -> Unit = {}
 ) {
     LaunchedEffect(postId) {
         viewModel.selectPost(postId)
@@ -123,11 +126,6 @@ fun CommentsScreen(
                 )
             }
         } else {
-            // Column classique (pas LazyColumn) dans un scroll vertical avec plafond :
-            // contrairement à LazyColumn, une Column mesure correctement son contenu
-            // réel, donc avec peu de commentaires la zone reste compacte et le champ
-            // de saisie est visible sans scroll. Le plafond (320dp) protège l'écran
-            // si la liste devient longue (au-delà, ça scrolle dans cette zone).
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -136,7 +134,15 @@ fun CommentsScreen(
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 comments.forEach { comment ->
-                    CommentItem(comment = comment)
+                    CommentItem(
+                        comment = comment,
+                        onUserClick = { uid ->
+                            if (uid.isNotBlank()) {
+                                onDismiss()
+                                onNavigateToProfile(uid)
+                            }
+                        }
+                    )
                 }
             }
         }
@@ -147,8 +153,7 @@ fun CommentsScreen(
         )
 
         Row(
-            modifier = Modifier
-                .fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
             OutlinedTextField(
@@ -188,25 +193,32 @@ fun CommentsScreen(
 }
 
 @Composable
-fun CommentItem(comment: Comment) {
+fun CommentItem(
+    comment: Comment,
+    onUserClick: (String) -> Unit = {}
+) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.Top
     ) {
+        // ── Avatar cliquable ──────────────────────────────────────────────
         AsyncImage(
-            model = R.drawable.ic_default_avatar,
+            model = comment.userProfileUrl.ifBlank { R.drawable.ic_default_avatar },
             contentDescription = null,
             modifier = Modifier
                 .size(36.dp)
-                .clip(CircleShape),
+                .clip(CircleShape)
+                .clickable { onUserClick(comment.userId) },
             contentScale = ContentScale.Crop
         )
         Spacer(modifier = Modifier.width(12.dp))
         Column {
+            // ── Nom cliquable ─────────────────────────────────────────────
             Text(
                 text = comment.username.ifEmpty { "Utilisateur" },
                 style = MaterialTheme.typography.labelLarge,
-                fontWeight = FontWeight.Bold
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.clickable { onUserClick(comment.userId) }
             )
             Text(
                 text = comment.text,
