@@ -58,6 +58,7 @@ class FeedRepository @Inject constructor(
     suspend fun createStory(mediaUri: Uri, text: String?, filter: String): Result<Unit> {
         return try {
             val uid = auth.currentUser?.uid ?: throw Exception("Non connecté")
+            // ✅ Lecture Firestore — source de vérité pour username et photo
             val userDoc = firestore.collection("users").document(uid).get().await()
             val username = userDoc.getString("username") ?: "User"
             val profileUrl = userDoc.getString("profileImageUrl") ?: ""
@@ -89,12 +90,18 @@ class FeedRepository @Inject constructor(
     suspend fun shareToStory(post: Post): Result<Unit> {
         return try {
             val uid = auth.currentUser?.uid ?: throw Exception("Non connecté")
-            val username = auth.currentUser?.displayName ?: "User"
+
+            // ✅ FIX BUG PHOTO : lecture Firestore au lieu de auth.currentUser?.photoUrl
+            // auth.currentUser?.photoUrl est souvent null pour les comptes email/password
+            // alors que profileImageUrl dans Firestore est toujours à jour
+            val userDoc = firestore.collection("users").document(uid).get().await()
+            val username = userDoc.getString("username") ?: auth.currentUser?.displayName ?: "User"
+            val profileUrl = userDoc.getString("profileImageUrl") ?: ""
 
             val story = hashMapOf(
                 "userId" to uid,
                 "username" to username,
-                "userProfileUrl" to (auth.currentUser?.photoUrl?.toString() ?: ""),
+                "userProfileUrl" to profileUrl,   // ✅ depuis Firestore, jamais vide
                 "mediaUrl" to post.imageUrl,
                 "postId" to post.postId,
                 "timestamp" to FieldValue.serverTimestamp()
@@ -110,13 +117,16 @@ class FeedRepository @Inject constructor(
     suspend fun toggleSavePost(postId: String): Result<Unit> {
         return try {
             val uid = auth.currentUser?.uid ?: throw Exception("Non connecté")
-            val saveRef = firestore.collection("users").document(uid).collection("savedPosts").document(postId)
+            val saveRef = firestore.collection("users").document(uid)
+                .collection("savedPosts").document(postId)
 
             val doc = saveRef.get().await()
             if (doc.exists()) {
                 saveRef.delete().await()
             } else {
-                saveRef.set(mapOf("postId" to postId, "timestamp" to FieldValue.serverTimestamp())).await()
+                saveRef.set(
+                    mapOf("postId" to postId, "timestamp" to FieldValue.serverTimestamp())
+                ).await()
             }
             Result.success(Unit)
         } catch (e: Exception) {
@@ -124,7 +134,6 @@ class FeedRepository @Inject constructor(
         }
     }
 
-    // ✅ NOUVEAU : écoute en temps réel les IDs des posts sauvegardés de l'utilisateur courant
     fun getSavedPostIdsFlow(): Flow<List<String>> = callbackFlow {
         val uid = auth.currentUser?.uid ?: run {
             trySend(emptyList())
@@ -142,7 +151,6 @@ class FeedRepository @Inject constructor(
         awaitClose { listener.remove() }
     }
 
-    // ✅ NOUVEAU : récupère les posts correspondant à une liste d'IDs (pour l'onglet "Saved")
     suspend fun getPostsByIds(postIds: List<String>): List<Post> {
         if (postIds.isEmpty()) return emptyList()
         val results = mutableListOf<Post>()

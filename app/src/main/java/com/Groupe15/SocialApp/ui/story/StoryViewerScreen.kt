@@ -1,8 +1,10 @@
-package com.Groupe15.SocialApp.ui.story
+package com.Groupe15.SocialApp.ui.feed
 
-import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
@@ -13,13 +15,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.Groupe15.SocialApp.models.Story
-import kotlinx.coroutines.delay
+
+private const val STORY_DURATION_MS = 5_000
+
 
 @Composable
 fun StoryViewerScreen(
@@ -27,121 +32,159 @@ fun StoryViewerScreen(
     initialIndex: Int = 0,
     onClose: () -> Unit
 ) {
-    var currentIndex by remember { mutableStateOf(initialIndex) }
-    val currentStory = stories.getOrNull(currentIndex)
-    var progress by remember { mutableStateOf(0f) }
-
-    LaunchedEffect(currentIndex) {
-        progress = 0f
-        val duration = 5000L // 5 seconds per story
-        val step = 0.01f
-        val delayMillis = duration / 100
-
-        for (i in 1..100) {
-            delay(delayMillis)
-            progress = i * step
-        }
-
-        if (currentIndex < stories.size - 1) {
-            currentIndex++
-        } else {
-            onClose()
-        }
+    if (stories.isEmpty()) {
+        onClose()
+        return
     }
 
-    Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
-        if (currentStory != null) {
-            AsyncImage(
-                model = currentStory.mediaUrl,
-                contentDescription = null,
-                modifier = Modifier.fillMaxSize(),
-                contentScale = ContentScale.Crop
+    val safeInitial = initialIndex.coerceIn(0, stories.lastIndex)
+    var currentIndex by remember { mutableIntStateOf(safeInitial) }
+    val story = stories[currentIndex]
+
+    val progress = remember(currentIndex) { Animatable(0f) }
+
+    LaunchedEffect(currentIndex) {
+        progress.snapTo(0f)
+        progress.animateTo(
+            targetValue = 1f,
+            animationSpec = tween(durationMillis = STORY_DURATION_MS, easing = LinearEasing)
+        )
+        if (currentIndex < stories.lastIndex) currentIndex++
+        else onClose()
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black)
+    ) {
+        // ── Image ─────────────────────────────────────────────────────────
+        AsyncImage(
+            model = story.mediaUrl,
+            contentDescription = null,
+            modifier = Modifier.fillMaxSize(),
+            contentScale = ContentScale.Fit
+        )
+
+        // ── Tap gauche / droite ───────────────────────────────────────────
+        Row(modifier = Modifier.fillMaxSize()) {
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight()
+                    .pointerInput(currentIndex) {
+                        detectTapGestures {
+                            if (currentIndex > 0) currentIndex-- else onClose()
+                        }
+                    }
             )
-
-            // User Info
-            Row(
+            Box(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 40.dp, start = 16.dp, end = 16.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                AsyncImage(
-                    model = currentStory.userProfileUrl,
-                    contentDescription = null,
-                    modifier = Modifier.size(32.dp).clip(CircleShape)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = currentStory.username,
-                    color = Color.White,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 14.sp
-                )
-                Spacer(modifier = Modifier.weight(1f))
-                IconButton(onClick = onClose) {
-                    Icon(Icons.Default.Close, contentDescription = "Close", tint = Color.White)
-                }
-            }
+                    .weight(1f)
+                    .fillMaxHeight()
+                    .pointerInput(currentIndex) {
+                        detectTapGestures {
+                            if (currentIndex < stories.lastIndex) currentIndex++
+                            else onClose()
+                        }
+                    }
+            )
+        }
 
-            // Progress Bars
+        // ── Overlay haut : barres + header ────────────────────────────────
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .align(Alignment.TopStart)
+                .statusBarsPadding()
+                .padding(horizontal = 8.dp, vertical = 8.dp)
+        ) {
+            // Barres de progression
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 30.dp, start = 8.dp, end = 8.dp),
+                modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 stories.forEachIndexed { index, _ ->
+                    val segmentProgress = when {
+                        index < currentIndex -> 1f
+                        index == currentIndex -> progress.value
+                        else -> 0f
+                    }
                     LinearProgressIndicator(
-                        progress = {
-                            when {
-                                index < currentIndex -> 1f
-                                index == currentIndex -> progress
-                                else -> 0f
-                            }
-                        },
-                        modifier = Modifier.weight(1f).height(2.dp),
+                        progress = { segmentProgress },
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(2.dp)
+                            .clip(CircleShape),
                         color = Color.White,
-                        trackColor = Color.White.copy(alpha = 0.3f),
+                        trackColor = Color.White.copy(alpha = 0.35f)
                     )
                 }
             }
 
-            // Navigation Areas
-            Row(modifier = Modifier.fillMaxSize()) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxHeight()
-                        .weight(1f)
-                        .clickable {
-                            if (currentIndex > 0) currentIndex--
-                        }
-                )
-                Box(
-                    modifier = Modifier
-                        .fillMaxHeight()
-                        .weight(1f)
-                        .clickable {
-                            if (currentIndex < stories.size - 1) currentIndex++
-                            else onClose()
-                        }
-                )
-            }
+            Spacer(modifier = Modifier.height(12.dp))
 
-            // Story Text
-            if (!currentStory.text.isNullOrEmpty()) {
-                Box(
+            // Header : avatar + nom + heure + bouton fermer
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                AsyncImage(
+                    model = story.userProfileUrl,
+                    contentDescription = null,
                     modifier = Modifier
-                        .fillMaxSize()
-                        .padding(bottom = 80.dp),
-                    contentAlignment = Alignment.Center
-                ) {
+                        .size(36.dp)
+                        .clip(CircleShape)
+                        .background(Color.Gray),
+                    contentScale = ContentScale.Crop
+                )
+                Spacer(modifier = Modifier.width(10.dp))
+                Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = currentStory.text,
+                        text = story.username,
                         color = Color.White,
-                        fontSize = 24.sp,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 14.sp
+                    )
+                    story.timestamp?.let { ts ->
+                        val minutes = ((System.currentTimeMillis() / 1000 - ts.seconds) / 60).toInt()
+                        val label = when {
+                            minutes < 1  -> "À l'instant"
+                            minutes < 60 -> "Il y a $minutes min"
+                            else         -> "Il y a ${minutes / 60} h"
+                        }
+                        Text(
+                            text = label,
+                            color = Color.White.copy(alpha = 0.7f),
+                            fontSize = 12.sp
+                        )
+                    }
+                }
+                IconButton(onClick = onClose) {
+                    Icon(
+                        Icons.Default.Close,
+                        contentDescription = "Fermer",
+                        tint = Color.White
                     )
                 }
+            }
+        }
+
+        // ── Texte superposé (optionnel) ───────────────────────────────────
+        story.text?.takeIf { it.isNotBlank() }?.let { txt ->
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .background(Color.Black.copy(alpha = 0.45f))
+                    .padding(horizontal = 20.dp, vertical = 16.dp)
+            ) {
+                Text(
+                    text = txt,
+                    color = Color.White,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Medium
+                )
             }
         }
     }
