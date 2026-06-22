@@ -34,6 +34,7 @@ class FollowRepository @Inject constructor(
     private val auth: FirebaseAuth
 ) {
     private val usersCollection = firestore.collection("users")
+    @Inject lateinit var notificationRepository: NotificationRepository
 
     val currentUid get() = auth.currentUser?.uid
 

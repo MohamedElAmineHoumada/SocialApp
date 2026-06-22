@@ -387,7 +387,12 @@ fun MainScreen(
 
             composable("notifications") {
                 NotificationsScreen(
-                    onBackClick = { navController.popBackStack() }
+                    onBackClick = { navController.popBackStack() },
+                    onNavigateToProfile = { uid -> navController.navigate("profile/$uid") },
+                    onNavigateToPost = { postId -> 
+                        // TODO: Navigate to specific post screen or feed with scroll
+                        navController.navigate("feed") 
+                    }
                 )
             }
 

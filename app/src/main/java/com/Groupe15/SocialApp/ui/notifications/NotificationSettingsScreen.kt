@@ -20,8 +20,10 @@ import com.Groupe15.SocialApp.R
 fun NotificationSettingsScreen(
     onBack: () -> Unit
 ) {
+    val auth = com.google.firebase.auth.FirebaseAuth.getInstance()
+    val uid = auth.currentUser?.uid ?: ""
     val context = LocalContext.current
-    val prefs = context.getSharedPreferences("notification_settings", Context.MODE_PRIVATE)
+    val prefs = context.getSharedPreferences("notification_settings_$uid", Context.MODE_PRIVATE)
 
     // Global toggle
     var pauseAll by remember { mutableStateOf(prefs.getBoolean("pause_all", false)) }

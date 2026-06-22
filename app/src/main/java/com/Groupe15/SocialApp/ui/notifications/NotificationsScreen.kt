@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ClearAll
@@ -33,9 +34,13 @@ import java.util.*
 @Composable
 fun NotificationsScreen(
     onBackClick: () -> Unit,
+    onNavigateToProfile: (String) -> Unit,
+    onNavigateToPost: (String) -> Unit,
     viewModel: NotificationViewModel = hiltViewModel()
 ) {
     val notifications by viewModel.notifications.collectAsState()
+    val followingMap by viewModel.followingMap.collectAsState()
+    val followedByMap by viewModel.followedByMap.collectAsState()
 
     Scaffold(
         topBar = {
@@ -64,10 +69,21 @@ fun NotificationsScreen(
                     .fillMaxSize()
                     .padding(padding)
             ) {
-                items(notifications) { notification ->
+                items(notifications, key = { it.id }) { notification ->
                     NotificationItem(
                         notification = notification,
-                        onClick = { viewModel.markAsRead(notification.id) }
+                        isFollowing = followingMap[notification.fromUserId] ?: false,
+                        isFollowedBy = followedByMap[notification.fromUserId] ?: false,
+                        onClick = {
+                            viewModel.markAsRead(notification.id)
+                            when (notification.type) {
+                                "follow_request", "follow_accept" -> onNavigateToProfile(notification.fromUserId)
+                                "like", "comment" -> onNavigateToPost(notification.targetId)
+                                else -> onNavigateToProfile(notification.fromUserId)
+                            }
+                        },
+                        onUserClick = { onNavigateToProfile(notification.fromUserId) },
+                        onFollowClick = { viewModel.toggleFollow(notification.fromUserId) }
                     )
                     HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), thickness = 0.5.dp)
                 }
@@ -79,7 +95,11 @@ fun NotificationsScreen(
 @Composable
 fun NotificationItem(
     notification: Notification,
-    onClick: () -> Unit
+    isFollowing: Boolean,
+    isFollowedBy: Boolean,
+    onClick: () -> Unit,
+    onUserClick: () -> Unit,
+    onFollowClick: () -> Unit
 ) {
     Row(
         modifier = Modifier
@@ -94,7 +114,8 @@ fun NotificationItem(
             contentDescription = null,
             modifier = Modifier
                 .size(48.dp)
-                .clip(CircleShape),
+                .clip(CircleShape)
+                .clickable { onUserClick() },
             contentScale = ContentScale.Crop
         )
         
@@ -112,8 +133,29 @@ fun NotificationItem(
                 color = Color.Gray
             )
         }
+
+        if (notification.type == "follow_request" || notification.type == "follow_accept") {
+            if (!isFollowing) {
+                Button(
+                    onClick = onFollowClick,
+                    modifier = Modifier.height(32.dp),
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp),
+                    shape = RoundedCornerShape(8.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = if (isFollowedBy) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.primary
+                    )
+                ) {
+                    Text(
+                        text = if (isFollowedBy) "Follow Back" else "Follow",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = Color.White
+                    )
+                }
+            }
+        }
         
         if (!notification.isRead) {
+            Spacer(modifier = Modifier.width(8.dp))
             Box(
                 modifier = Modifier
                     .size(8.dp)
