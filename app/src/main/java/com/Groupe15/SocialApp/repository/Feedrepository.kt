@@ -190,6 +190,18 @@ class FeedRepository @Inject constructor(
         return results
     }
 
+    fun getPostByIdFlow(postId: String): Flow<Post?> = callbackFlow {
+        val listener = firestore.collection("posts").document(postId)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) return@addSnapshotListener
+                val post = snapshot?.toObject(Post::class.java)?.also {
+                    if (it.postId.isBlank()) it.postId = snapshot.id
+                }
+                trySend(post)
+            }
+        awaitClose { listener.remove() }
+    }
+
     suspend fun toggleLike(postId: String) {
         val uid = auth.currentUser?.uid ?: return
         val postRef = firestore.collection("posts").document(postId)

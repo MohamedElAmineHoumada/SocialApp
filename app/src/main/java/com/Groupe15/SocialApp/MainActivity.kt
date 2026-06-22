@@ -395,8 +395,21 @@ fun MainScreen(
                     onBackClick = { navController.popBackStack() },
                     onNavigateToProfile = { uid -> navController.navigate("profile/$uid") },
                     onNavigateToPost = { postId -> 
-                        navController.navigate("feed?postId=$postId")
+                        navController.navigate("postDetail/$postId") 
                     }
+                )
+            }
+
+            composable(
+                "postDetail/{postId}",
+                arguments = listOf(navArgument("postId") { type = NavType.StringType })
+            ) { backStackEntry ->
+                val postId = backStackEntry.arguments?.getString("postId") ?: ""
+                PostDetailScreen(
+                    viewModel = hiltViewModel(),
+                    postId = postId,
+                    onBack = { navController.popBackStack() },
+                    onNavigateToProfile = { uid -> navController.navigate("profile/$uid") }
                 )
             }
 

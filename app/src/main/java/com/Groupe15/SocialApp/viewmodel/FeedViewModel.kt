@@ -65,6 +65,13 @@ class FeedViewModel @Inject constructor(
     val recentContacts: LiveData<List<com.Groupe15.SocialApp.models.User>> = _recentContacts
 
     private val _selectedPostId = MutableStateFlow<String?>(null)
+    val selectedPost: LiveData<Post?> = _selectedPostId
+        .flatMapLatest { postId ->
+            if (postId != null) feedRepository.getPostByIdFlow(postId)
+            else flowOf(null)
+        }
+        .asLiveData()
+
     val comments: LiveData<List<Comment>> = _selectedPostId
         .flatMapLatest { postId ->
             if (postId != null) commentRepository.getComments(postId)

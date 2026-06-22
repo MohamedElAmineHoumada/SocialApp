@@ -44,10 +44,24 @@ class NotificationRepository @Inject constructor(
         if (!shouldNotify) return
 
         try {
-            val notifRef = firestore.collection("users")
-                .document(targetUid)
-                .collection("notifications")
-                .document()
+            val deterministicId = when (type) {
+                "like" -> "like_${fromUserId}_$targetId"
+                "follow_request" -> "follow_req_$fromUserId"
+                "follow_accept" -> "follow_acc_$fromUserId"
+                else -> null
+            }
+
+            val notifRef = if (deterministicId != null) {
+                firestore.collection("users")
+                    .document(targetUid)
+                    .collection("notifications")
+                    .document(deterministicId)
+            } else {
+                firestore.collection("users")
+                    .document(targetUid)
+                    .collection("notifications")
+                    .document()
+            }
 
             val notification = Notification(
                 id = notifRef.id,
