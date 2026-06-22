@@ -55,6 +55,22 @@ class FeedRepository @Inject constructor(
         awaitClose { listener.remove() }
     }
 
+    suspend fun getStoriesByUserId(userId: String): List<Story> {
+        return try {
+            val snapshot = firestore.collection("stories")
+                .whereEqualTo("userId", userId)
+                .get()
+                .await()
+            snapshot.documents.mapNotNull { doc ->
+                doc.toObject(Story::class.java)?.let { story ->
+                    if (story.storyId.isBlank()) story.copy(storyId = doc.id) else story
+                }
+            }.sortedByDescending { it.timestamp?.seconds ?: 0L }
+        } catch (e: Exception) {
+            emptyList()
+        }
+    }
+
     suspend fun createStory(mediaUri: Uri, text: String?, filter: String): Result<Unit> {
         return try {
             val uid = auth.currentUser?.uid ?: throw Exception("Non connecté")
@@ -172,6 +188,18 @@ class FeedRepository @Inject constructor(
             }
         }
         return results
+    }
+
+    fun getPostByIdFlow(postId: String): Flow<Post?> = callbackFlow {
+        val listener = firestore.collection("posts").document(postId)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) return@addSnapshotListener
+                val post = snapshot?.toObject(Post::class.java)?.also {
+                    if (it.postId.isBlank()) it.postId = snapshot.id
+                }
+                trySend(post)
+            }
+        awaitClose { listener.remove() }
     }
 
     suspend fun toggleLike(postId: String) {

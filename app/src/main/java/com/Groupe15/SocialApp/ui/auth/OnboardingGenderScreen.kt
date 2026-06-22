@@ -4,7 +4,9 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Info
@@ -14,14 +16,17 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.Groupe15.SocialApp.R
+import com.Groupe15.SocialApp.viewmodel.OnboardingViewModel
 
 @Composable
 fun OnboardingGenderScreen(
+    viewModel: OnboardingViewModel,
     onBack: () -> Unit,
     onContinue: () -> Unit
 ) {
@@ -31,6 +36,7 @@ fun OnboardingGenderScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(Color.White)
+            .verticalScroll(rememberScrollState())
             .padding(24.dp)
     ) {
         // Custom Top Bar with Progress
@@ -43,7 +49,7 @@ fun OnboardingGenderScreen(
             IconButton(onClick = onBack) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = "Retour",
+                    contentDescription = stringResource(R.string.back),
                     tint = Color.Black
                 )
             }
@@ -75,7 +81,7 @@ fun OnboardingGenderScreen(
         Spacer(modifier = Modifier.height(40.dp))
 
         Text(
-            text = "Identité",
+            text = stringResource(R.string.identity_title),
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Bold,
             color = Color(0xFF1A1A1A)
@@ -84,7 +90,7 @@ fun OnboardingGenderScreen(
         Spacer(modifier = Modifier.height(8.dp))
         
         Text(
-            text = "Dites-nous en plus sur vous. Cela nous aide à personnaliser votre expérience.",
+            text = stringResource(R.string.identity_desc),
             style = MaterialTheme.typography.bodyMedium,
             color = Color.Gray,
             lineHeight = 20.sp
@@ -98,14 +104,14 @@ fun OnboardingGenderScreen(
             horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             GenderCard(
-                label = "Femme",
+                label = stringResource(R.string.female),
                 iconRes = R.drawable.ic_female,
                 isSelected = selectedGender == "Femme",
                 modifier = Modifier.weight(1f),
                 onClick = { selectedGender = "Femme" }
             )
             GenderCard(
-                label = "Homme",
+                label = stringResource(R.string.male),
                 iconRes = R.drawable.ic_male,
                 isSelected = selectedGender == "Homme",
                 modifier = Modifier.weight(1f),
@@ -133,7 +139,7 @@ fun OnboardingGenderScreen(
                 )
                 Spacer(modifier = Modifier.width(12.dp))
                 Text(
-                    text = "Votre identité est utilisée pour vous proposer du contenu pertinent et pour notre engagement envers la diversité. Vous pouvez changer cela plus tard dans vos paramètres.",
+                    text = stringResource(R.string.identity_usage_full),
                     fontSize = 12.sp,
                     color = Color(0xFF4A4A4A),
                     lineHeight = 18.sp
@@ -145,7 +151,7 @@ fun OnboardingGenderScreen(
 
         // Continue Button
         Button(
-            onClick = onContinue,
+            onClick = { viewModel.saveGender(selectedGender, onContinue) },
             modifier = Modifier
                 .fillMaxWidth()
                 .height(56.dp),
@@ -157,7 +163,7 @@ fun OnboardingGenderScreen(
             enabled = selectedGender.isNotEmpty()
         ) {
             Text(
-                text = "Continuer",
+                text = stringResource(R.string.continue_btn),
                 fontWeight = FontWeight.Bold,
                 fontSize = 16.sp
             )

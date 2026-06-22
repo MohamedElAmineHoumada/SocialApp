@@ -31,7 +31,8 @@ import javax.inject.Singleton
 @Singleton
 class FollowRepository @Inject constructor(
     private val firestore: FirebaseFirestore,
-    private val auth: FirebaseAuth
+    private val auth: FirebaseAuth,
+    private val notificationRepository: NotificationRepository
 ) {
     private val usersCollection = firestore.collection("users")
 
@@ -81,39 +82,33 @@ class FollowRepository @Inject constructor(
                 batch.update(usersCollection.document(currentUid), "followingCount", FieldValue.increment(1))
                 batch.update(usersCollection.document(targetUid), "followersCount", FieldValue.increment(1))
 
-                // Notification for follow (accepted)
-                val notificationRef = usersCollection.document(targetUid).collection("notifications").document()
-                val notification = Notification(
-                    id = notificationRef.id,
-                    type = "follow_accept",
-                    fromUserId = currentUid,
-                    fromUserName = currentUser?.displayName ?: currentUser?.username ?: "Quelqu'un",
-                    fromUserAvatar = currentUser?.profileImageUrl ?: "",
-                    content = "${currentUser?.displayName ?: currentUser?.username} a commencé à vous suivre",
-                    timestamp = Timestamp.now(),
-                    targetId = currentUid
-                )
-                batch.set(notificationRef, notification)
-
-                // Trigger Push Notification
-                sendPushNotification(targetUid, "Nouvel abonné", "${currentUser?.displayName ?: currentUser?.username} a commencé à vous suivre", currentUid, "follow")
+                // Trigger Notification via repository (respecte les réglages)
+                CoroutineScope(Dispatchers.IO).launch {
+                    notificationRepository.createNotification(
+                        targetUid = targetUid,
+                        type = "follow_accept",
+                        fromUserId = currentUid,
+                        fromUserName = currentUser?.displayName ?: currentUser?.username ?: "Quelqu'un",
+                        fromUserAvatar = currentUser?.profileImageUrl ?: "",
+                        content = "${currentUser?.displayName ?: currentUser?.username} a commencé à vous suivre",
+                        targetId = currentUid
+                    )
+                    sendPushNotification(targetUid, "Nouvel abonné", "${currentUser?.displayName ?: currentUser?.username} a commencé à vous suivre", currentUid, "follow")
+                }
             } else {
                 // Notification for follow request (pending)
-                val notificationRef = usersCollection.document(targetUid).collection("notifications").document()
-                val notification = Notification(
-                    id = notificationRef.id,
-                    type = "follow_request",
-                    fromUserId = currentUid,
-                    fromUserName = currentUser?.displayName ?: currentUser?.username ?: "Quelqu'un",
-                    fromUserAvatar = currentUser?.profileImageUrl ?: "",
-                    content = "${currentUser?.displayName ?: currentUser?.username} vous demande de vous suivre",
-                    timestamp = Timestamp.now(),
-                    targetId = currentUid
-                )
-                batch.set(notificationRef, notification)
-
-                // Trigger Push Notification
-                sendPushNotification(targetUid, "Demande de suivi", "${currentUser?.displayName ?: currentUser?.username} souhaite vous suivre", currentUid, "follow_request")
+                CoroutineScope(Dispatchers.IO).launch {
+                    notificationRepository.createNotification(
+                        targetUid = targetUid,
+                        type = "follow_request",
+                        fromUserId = currentUid,
+                        fromUserName = currentUser?.displayName ?: currentUser?.username ?: "Quelqu'un",
+                        fromUserAvatar = currentUser?.profileImageUrl ?: "",
+                        content = "${currentUser?.displayName ?: currentUser?.username} vous demande de vous suivre",
+                        targetId = currentUid
+                    )
+                    sendPushNotification(targetUid, "Demande de suivi", "${currentUser?.displayName ?: currentUser?.username} souhaite vous suivre", currentUid, "follow_request")
+                }
             }
 
             batch.commit().await()
@@ -217,7 +212,7 @@ class FollowRepository @Inject constructor(
                     .toObject(User::class.java) ?: return@mapNotNull null
 
                 FollowRequest(
-                    id = doc.id,
+                    id = followerId,
                     name = follower.displayName.ifBlank { follower.username },
                     role = follower.role,
                     mutualFriends = 0,
@@ -263,22 +258,17 @@ class FollowRepository @Inject constructor(
                     transaction.update(usersCollection.document(followerId), "followingCount", FieldValue.increment(1))
                     transaction.update(usersCollection.document(currentUid), "followersCount", FieldValue.increment(1))
 
-                    // Notification for acceptance
-                    val notificationRef = usersCollection.document(followerId).collection("notifications").document()
-                    val notification = Notification(
-                        id = notificationRef.id,
-                        type = "follow_accept",
-                        fromUserId = currentUid,
-                        fromUserName = currentUser?.displayName ?: currentUser?.username ?: "Quelqu'un",
-                        fromUserAvatar = currentUser?.profileImageUrl ?: "",
-                        content = "${currentUser?.displayName ?: currentUser?.username} a accepté votre demande de suivi",
-                        timestamp = Timestamp.now(),
-                        targetId = currentUid
-                    )
-                    transaction.set(notificationRef, notification)
-
-                    // Trigger Push Notification
+                    // Trigger Notification via repository (respecte les réglages)
                     CoroutineScope(Dispatchers.IO).launch {
+                        notificationRepository.createNotification(
+                            targetUid = followerId,
+                            type = "follow_accept",
+                            fromUserId = currentUid,
+                            fromUserName = currentUser?.displayName ?: currentUser?.username ?: "Quelqu'un",
+                            fromUserAvatar = currentUser?.profileImageUrl ?: "",
+                            content = "${currentUser?.displayName ?: currentUser?.username} a accepté votre demande de suivi",
+                            targetId = currentUid
+                        )
                         sendPushNotification(followerId, "Demande acceptée", "${currentUser?.displayName ?: currentUser?.username} a accepté votre demande", currentUid, "follow_accept")
                     }
                 }
@@ -353,6 +343,25 @@ class FollowRepository @Inject constructor(
         }
     }
 
+    /**
+     * Indique si l'utilisateur courant est suivi par [targetUid].
+     * (L'inverse de isFollowing)
+     */
+    suspend fun isFollowedBy(targetUid: String): Boolean {
+        return try {
+            val currentUid = currentUid ?: return false
+            val doc = usersCollection
+                .document(targetUid)
+                .collection("following")
+                .document(currentUid)
+                .get()
+                .await()
+            doc.exists() && doc.getString("status") == "accepted"
+        } catch (e: Exception) {
+            false
+        }
+    }
+
     suspend fun getFollowers(uid: String): List<String> {
         return try {
             usersCollection.document(uid).collection("followers").get().await()
@@ -387,18 +396,40 @@ class FollowRepository @Inject constructor(
         }
     }
 
+    /**
+     * ✅ CORRIGÉ : auparavant, un seul document "à problème" (erreur réseau ponctuelle
+     * sur un chunk, document avec un champ incompatible qui fait planter toObject(), etc.)
+     * faisait échouer la requête whereIn() ou le mapNotNull() de TOUT le chunk, ce qui était
+     * intercepté par le try/catch global et renvoyait emptyList() pour TOUS les ids demandés
+     * — y compris ceux des chunks qui auraient parfaitement fonctionné.
+     *
+     * Symptôme observé : le compteur (abonnés/abonnements) affiche un nombre correct
+     * (calculé séparément par resyncCounts, qui ne vérifie que l'existence des documents),
+     * mais la liste affichée est vide pour CERTAINS comptes seulement — exactement selon
+     * que leurs abonnés/abonnements contiennent ou non un document "à problème".
+     *
+     * Désormais, chaque chunk et chaque document sont traités indépendamment : un échec
+     * isolé est simplement ignoré, sans jamais vider le reste de la liste.
+     */
     suspend fun getUsersByIds(ids: List<String>): List<User> {
         if (ids.isEmpty()) return emptyList()
-        return try {
-            ids.chunked(10).flatMap { chunk ->
-                usersCollection.whereIn(FieldPath.documentId(), chunk).get().await()
-                    .documents.mapNotNull { doc ->
-                        doc.toObject(User::class.java)?.copy(id = doc.id)
+        val result = mutableListOf<User>()
+        for (chunk in ids.chunked(10)) {
+            try {
+                val snapshot = usersCollection.whereIn(FieldPath.documentId(), chunk).get().await()
+                for (doc in snapshot.documents) {
+                    try {
+                        doc.toObject(User::class.java)?.copy(id = doc.id)?.let { result.add(it) }
+                    } catch (e: Exception) {
+                        // Document individuel incompatible : on l'ignore, pas toute la liste.
                     }
+                }
+            } catch (e: Exception) {
+                // Échec ponctuel sur CE chunk (ex: erreur réseau) : on continue avec
+                // les chunks suivants au lieu d'abandonner toute la liste.
             }
-        } catch (e: Exception) {
-            emptyList()
         }
+        return result
     }
 
     // ─────────────────────────────────────────────

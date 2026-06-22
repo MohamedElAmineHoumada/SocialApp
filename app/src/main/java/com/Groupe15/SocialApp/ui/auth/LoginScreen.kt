@@ -16,6 +16,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -78,7 +79,7 @@ fun LoginScreen(
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                "Ravi de vous revoir ! Connectez-vous pour continuer.",
+                stringResource(R.string.login_welcome_back),
                 textAlign = TextAlign.Center,
                 color = Color.Gray,
                 fontSize = 14.sp
@@ -88,7 +89,7 @@ fun LoginScreen(
             // ── Champs email / mot de passe ────────────────────────────────
             CustomLoginTextField(
                 value = email, onValueChange = { email = it },
-                placeholder = "Adresse e-mail",
+                placeholder = stringResource(R.string.email),
                 leadingIcon = Icons.Default.Email,
                 keyboardOptions = KeyboardOptions(
                     keyboardType = KeyboardType.Email, imeAction = ImeAction.Next
@@ -97,7 +98,7 @@ fun LoginScreen(
             Spacer(modifier = Modifier.height(16.dp))
             CustomLoginTextField(
                 value = password, onValueChange = { password = it },
-                placeholder = "Mot de passe",
+                placeholder = stringResource(R.string.password),
                 leadingIcon = Icons.Default.Lock,
                 isPassword = true,
                 keyboardOptions = KeyboardOptions(
@@ -111,7 +112,7 @@ fun LoginScreen(
 
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                 TextButton(onClick = onForgotPasswordClick) {
-                    Text("Mot de passe oublié ?", color = Color(0xFF6C47FF), fontSize = 13.sp)
+                    Text(stringResource(R.string.forgot_password_q), color = Color(0xFF6C47FF), fontSize = 13.sp)
                 }
             }
             Spacer(modifier = Modifier.height(24.dp))
@@ -139,7 +140,7 @@ fun LoginScreen(
                     if (state is AuthState.Loading) {
                         CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
                     } else {
-                        Text("Se connecter", fontWeight = FontWeight.Bold, color = Color.White)
+                        Text(stringResource(R.string.log_in), fontWeight = FontWeight.Bold, color = Color.White)
                     }
                 }
             }
@@ -154,7 +155,7 @@ fun LoginScreen(
             }
 
             Spacer(modifier = Modifier.height(32.dp))
-            Text("Ou continuer avec", color = Color.Gray, fontSize = 12.sp)
+            Text(stringResource(R.string.or_continue_with), color = Color.Gray, fontSize = 12.sp)
             Spacer(modifier = Modifier.height(16.dp))
 
             // ── Boutons Google / Facebook ──────────────────────────────────
@@ -163,13 +164,13 @@ fun LoginScreen(
                 horizontalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 SocialLoginButton(
-                    text = "Google",
+                    text = stringResource(R.string.google),
                     icon = R.drawable.ic_google,
                     modifier = Modifier.weight(1f),
                     onClick = onGoogleClick
                 )
                 SocialLoginButton(
-                    text = "Facebook",
+                    text = stringResource(R.string.facebook),
                     icon = R.drawable.ic_facebook,
                     modifier = Modifier.weight(1f),
                     onClick = onFacebookClick
@@ -182,9 +183,9 @@ fun LoginScreen(
                 modifier = Modifier.padding(vertical = 24.dp),
                 horizontalArrangement = Arrangement.Center
             ) {
-                Text("Pas encore de compte ? ", color = Color.Gray, fontSize = 14.sp)
+                Text(stringResource(R.string.dont_have_account) + " ", color = Color.Gray, fontSize = 14.sp)
                 Text(
-                    "S'inscrire",
+                    stringResource(R.string.sign_up),
                     color = Color(0xFF6C47FF),
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Bold,

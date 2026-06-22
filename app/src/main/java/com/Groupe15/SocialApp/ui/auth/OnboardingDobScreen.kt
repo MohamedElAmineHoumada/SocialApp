@@ -10,6 +10,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
@@ -24,16 +26,19 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.Groupe15.SocialApp.R
+import com.Groupe15.SocialApp.viewmodel.OnboardingViewModel
 import java.util.Calendar
 
 @Composable
 fun OnboardingDobScreen(
+    viewModel: OnboardingViewModel,
     onBack: () -> Unit,
     onContinue: () -> Unit
 ) {
@@ -60,14 +65,25 @@ fun OnboardingDobScreen(
     }
 
     val months = listOf(
-        "Jan", "Fév", "Mar", "Avr", "Mai", "Juin",
-        "Juil", "Août", "Sep", "Oct", "Nov", "Déc"
+        stringResource(R.string.mon_jan),
+        stringResource(R.string.mon_feb),
+        stringResource(R.string.mon_mar),
+        stringResource(R.string.mon_apr),
+        stringResource(R.string.mon_may),
+        stringResource(R.string.mon_jun),
+        stringResource(R.string.mon_jul),
+        stringResource(R.string.mon_aug),
+        stringResource(R.string.mon_sep),
+        stringResource(R.string.mon_oct),
+        stringResource(R.string.mon_nov),
+        stringResource(R.string.mon_dec)
     )
 
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(Color.White)
+            .verticalScroll(rememberScrollState())
             .padding(24.dp)
     ) {
         // Top Bar
@@ -79,7 +95,7 @@ fun OnboardingDobScreen(
             verticalAlignment = Alignment.CenterVertically
         ) {
             IconButton(onClick = onBack) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Retour")
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
             }
             Image(
                 painter = painterResource(id = R.drawable.logo_afn),
@@ -114,25 +130,25 @@ fun OnboardingDobScreen(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
-                    text = "Étape 2 sur 2",
+                    text = stringResource(R.string.step_x_of_y, 2, 2),
                     fontSize = 12.sp,
                     color = Color(0xFF6C47FF),
                     fontWeight = FontWeight.Bold
                 )
-                Text(text = "100% complété", fontSize = 12.sp, color = Color.Gray)
+                Text(text = stringResource(R.string.completed_100), fontSize = 12.sp, color = Color.Gray)
             }
         }
 
         Spacer(modifier = Modifier.height(32.dp))
 
         Text(
-            text = "Date de Naissance",
+            text = stringResource(R.string.birth_date),
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Bold
         )
         Spacer(modifier = Modifier.height(8.dp))
         Text(
-            text = "Nous avons besoin de votre âge pour personnaliser votre expérience sur AFN.",
+            text = stringResource(R.string.birth_date_desc),
             style = MaterialTheme.typography.bodyMedium,
             color = Color.Gray
         )
@@ -156,7 +172,7 @@ fun OnboardingDobScreen(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceEvenly
                 ) {
-                    DatePartDisplay("JOUR", day.toString().padStart(2, '0'))
+                    DatePartDisplay(stringResource(R.string.day_label), day.toString().padStart(2, '0'))
                     Text(
                         ":",
                         fontSize = 24.sp,
@@ -164,7 +180,7 @@ fun OnboardingDobScreen(
                         color = Color(0xFF6C47FF),
                         modifier = Modifier.padding(top = 20.dp)
                     )
-                    DatePartDisplay("MOIS", month.toString().padStart(2, '0'))
+                    DatePartDisplay(stringResource(R.string.month_label), month.toString().padStart(2, '0'))
                     Text(
                         ":",
                         fontSize = 24.sp,
@@ -172,7 +188,7 @@ fun OnboardingDobScreen(
                         color = Color(0xFF6C47FF),
                         modifier = Modifier.padding(top = 20.dp)
                     )
-                    DatePartDisplay("ANNÉE", year.toString())
+                    DatePartDisplay(stringResource(R.string.year_label), year.toString())
                 }
 
                 Spacer(modifier = Modifier.height(32.dp))
@@ -220,7 +236,7 @@ fun OnboardingDobScreen(
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                "Vous devez avoir au moins 13 ans.",
+                                stringResource(R.string.min_age_warning),
                                 fontSize = 12.sp,
                                 color = if (showError && !isAgeValid) Color.Red else Color(0xFF4A4A4A)
                             )
@@ -229,7 +245,7 @@ fun OnboardingDobScreen(
 
                     AnimatedVisibility(visible = showError && !isAgeValid) {
                         Text(
-                            text = "Désolé, vous n'avez pas l'âge requis pour rejoindre AFN.",
+                            text = stringResource(R.string.age_requirement_error),
                             color = Color.Red,
                             fontSize = 11.sp,
                             modifier = Modifier.padding(top = 8.dp),
@@ -255,7 +271,7 @@ fun OnboardingDobScreen(
                 AvatarStack()
                 Spacer(modifier = Modifier.width(12.dp))
                 Text(
-                    text = "Rejoignez des milliers de créateurs déjà inscrits.",
+                    text = stringResource(R.string.join_community_desc),
                     fontSize = 12.sp,
                     color = Color.Gray,
                     modifier = Modifier.weight(1f)
@@ -269,10 +285,11 @@ fun OnboardingDobScreen(
         Button(
             onClick = {
                 if (isAgeValid) {
-                    onContinue()
+                    val birthDate = "$day/${month.toString().padStart(2, '0')}/$year"
+                    viewModel.saveBirthDate(birthDate, onContinue)
                 } else {
                     showError = true
-                    Toast.makeText(context, "Vous devez avoir au moins 13 ans.", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, context.getString(R.string.min_age_warning), Toast.LENGTH_SHORT).show()
                 }
             },
             modifier = Modifier
@@ -298,7 +315,7 @@ fun OnboardingDobScreen(
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        "Continuer",
+                        stringResource(R.string.continue_btn),
                         fontWeight = FontWeight.Bold,
                         fontSize = 16.sp,
                         color = Color.White
@@ -315,7 +332,7 @@ fun OnboardingDobScreen(
 
         Spacer(modifier = Modifier.height(16.dp))
         Text(
-            text = "Pourquoi demandons-nous cela ?",
+            text = stringResource(R.string.why_ask_this),
             modifier = Modifier.fillMaxWidth(),
             textAlign = TextAlign.Center,
             color = Color.Gray,

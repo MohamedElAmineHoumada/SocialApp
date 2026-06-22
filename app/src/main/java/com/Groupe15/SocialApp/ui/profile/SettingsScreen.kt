@@ -2,11 +2,14 @@ package com.Groupe15.SocialApp.ui.profile
 
 import android.content.Context
 import androidx.appcompat.app.AppCompatDelegate
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.DarkMode
+import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material3.*
@@ -14,7 +17,10 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.Groupe15.SocialApp.R
+import com.Groupe15.SocialApp.util.LanguageManager
 import com.Groupe15.SocialApp.viewmodel.AuthViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -24,7 +30,8 @@ fun SettingsScreen(
     onBack: () -> Unit,
     onShowToast: () -> Unit,
     onAccountDeleted: () -> Unit,
-    onLoggedOut: () -> Unit = {}
+    onLoggedOut: () -> Unit = {},
+    onNotifications: () -> Unit = {}   // ← nouveau paramètre
 ) {
     val context = LocalContext.current
     val prefs = context.getSharedPreferences("settings", Context.MODE_PRIVATE)
@@ -34,12 +41,17 @@ fun SettingsScreen(
     }
     var showDeleteDialog by remember { mutableStateOf(false) }
 
-    // Dialog confirmation suppression
+    // ✅ NOUVEAU : état du dialog de sélection de langue
+    var showLanguageDialog by remember { mutableStateOf(false) }
+    var currentLanguage by remember {
+        mutableStateOf(LanguageManager.getSavedLanguage(context) ?: LanguageManager.LANG_FRENCH)
+    }
+
     if (showDeleteDialog) {
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
-            title = { Text("Supprimer le compte") },
-            text = { Text("Cette action est irréversible. Toutes vos données seront supprimées.") },
+            title = { Text(stringResource(R.string.delete_account)) },
+            text = { Text(stringResource(R.string.delete_account_warning)) },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -47,10 +59,57 @@ fun SettingsScreen(
                         viewModel.deleteAccount()
                         onAccountDeleted()
                     }
-                ) { Text("Supprimer", color = MaterialTheme.colorScheme.error) }
+                ) { Text(stringResource(R.string.delete), color = MaterialTheme.colorScheme.error) }
             },
             dismissButton = {
-                TextButton(onClick = { showDeleteDialog = false }) { Text("Annuler") }
+                TextButton(onClick = { showDeleteDialog = false }) { Text(stringResource(R.string.cancel)) }
+            }
+        )
+    }
+
+    // ✅ NOUVEAU : dialog de sélection de langue
+    if (showLanguageDialog) {
+        AlertDialog(
+            onDismissRequest = { showLanguageDialog = false },
+            title = { Text(stringResource(R.string.change_language)) },
+            text = {
+                Column {
+                    LanguageOption(
+                        label = stringResource(R.string.language_french),
+                        code = LanguageManager.LANG_FRENCH,
+                        selected = currentLanguage == LanguageManager.LANG_FRENCH,
+                        onSelect = {
+                            currentLanguage = LanguageManager.LANG_FRENCH
+                            LanguageManager.setLanguage(context, LanguageManager.LANG_FRENCH)
+                            showLanguageDialog = false
+                        }
+                    )
+                    LanguageOption(
+                        label = stringResource(R.string.language_english),
+                        code = LanguageManager.LANG_ENGLISH,
+                        selected = currentLanguage == LanguageManager.LANG_ENGLISH,
+                        onSelect = {
+                            currentLanguage = LanguageManager.LANG_ENGLISH
+                            LanguageManager.setLanguage(context, LanguageManager.LANG_ENGLISH)
+                            showLanguageDialog = false
+                        }
+                    )
+                    LanguageOption(
+                        label = stringResource(R.string.language_arabic),
+                        code = LanguageManager.LANG_ARABIC,
+                        selected = currentLanguage == LanguageManager.LANG_ARABIC,
+                        onSelect = {
+                            currentLanguage = LanguageManager.LANG_ARABIC
+                            LanguageManager.setLanguage(context, LanguageManager.LANG_ARABIC)
+                            showLanguageDialog = false
+                        }
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showLanguageDialog = false }) {
+                    Text(stringResource(R.string.cancel))
+                }
             }
         )
     }
@@ -58,10 +117,10 @@ fun SettingsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Paramètres") },
+                title = { Text(stringResource(R.string.settings_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Retour")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
                 }
             )
@@ -76,8 +135,13 @@ fun SettingsScreen(
         ) {
             // Dark mode
             ListItem(
-                headlineContent = { Text("Mode sombre") },
-                supportingContent = { Text(if (isDarkMode) "Activé" else "Désactivé") },
+                headlineContent = { Text(stringResource(R.string.dark_mode)) },
+                supportingContent = {
+                    Text(
+                        if (isDarkMode) stringResource(R.string.enabled)
+                        else stringResource(R.string.disabled)
+                    )
+                },
                 leadingContent = { Icon(Icons.Default.DarkMode, contentDescription = null) },
                 trailingContent = {
                     Switch(
@@ -95,24 +159,34 @@ fun SettingsScreen(
             )
             HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
 
-            // Notifications
+            // ✅ NOUVEAU : Langue de l'application
             ListItem(
-                headlineContent = { Text("Notifications") },
-                supportingContent = { Text("Gérer les alertes") },
-                leadingContent = { Icon(Icons.Default.Notifications, contentDescription = null) }
+                headlineContent = { Text(stringResource(R.string.change_language)) },
+                supportingContent = { Text(languageDisplayName(currentLanguage)) },
+                leadingContent = { Icon(Icons.Default.Language, contentDescription = null) },
+                modifier = Modifier.clickable { showLanguageDialog = true }
+            )
+            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+
+            // Notifications ← maintenant cliquable
+            ListItem(
+                headlineContent = { Text(stringResource(R.string.notifications)) },
+                supportingContent = { Text(stringResource(R.string.manage_alerts)) },
+                leadingContent = { Icon(Icons.Default.Notifications, contentDescription = null) },
+                modifier = Modifier.clickable { onNotifications() }
             )
             HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
 
             // Confidentialité
             ListItem(
-                headlineContent = { Text("Sécurité & Confidentialité") },
+                headlineContent = { Text(stringResource(R.string.security_privacy)) },
                 leadingContent = { Icon(Icons.Default.Lock, contentDescription = null) }
             )
             HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
 
             // Déconnexion
             ListItem(
-                headlineContent = { Text("Se déconnecter") },
+                headlineContent = { Text(stringResource(R.string.log_out)) },
                 leadingContent = {
                     Icon(
                         Icons.AutoMirrored.Filled.Logout,
@@ -129,7 +203,7 @@ fun SettingsScreen(
                         viewModel.signOut()
                         onLoggedOut()
                     }) {
-                        Text("Déconnexion", color = MaterialTheme.colorScheme.error)
+                        Text(stringResource(R.string.log_out), color = MaterialTheme.colorScheme.error)
                     }
                 }
             )
@@ -144,8 +218,37 @@ fun SettingsScreen(
                     .fillMaxWidth()
                     .padding(16.dp)
             ) {
-                Text("Supprimer le compte", color = MaterialTheme.colorScheme.onError)
+                Text(stringResource(R.string.delete_account), color = MaterialTheme.colorScheme.onError)
             }
         }
     }
+}
+
+@Composable
+private fun LanguageOption(
+    label: String,
+    code: String,
+    selected: Boolean,
+    onSelect: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .selectable(selected = selected, onClick = onSelect)
+            .padding(vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        RadioButton(selected = selected, onClick = onSelect)
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(label)
+    }
+}
+
+/** Nom affiché pour chaque code de langue dans le sous-titre du ListItem. */
+@Composable
+private fun languageDisplayName(code: String): String = when (code) {
+    LanguageManager.LANG_FRENCH -> stringResource(R.string.language_french)
+    LanguageManager.LANG_ENGLISH -> stringResource(R.string.language_english)
+    LanguageManager.LANG_ARABIC -> stringResource(R.string.language_arabic)
+    else -> stringResource(R.string.language_french)
 }

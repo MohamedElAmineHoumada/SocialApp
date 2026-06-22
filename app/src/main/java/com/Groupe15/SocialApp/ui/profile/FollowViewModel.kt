@@ -34,7 +34,8 @@ class FollowViewModel @Inject constructor(
         viewModelScope.launch {
             _followState.value = FollowState.Loading
             val isFollowing = followRepository.isFollowing(targetUid)
-            _followState.value = FollowState.IsFollowing(isFollowing)
+            val isFollowedBy = followRepository.isFollowedBy(targetUid)
+            _followState.value = FollowState.IsFollowing(isFollowing, isFollowedBy)
         }
     }
 

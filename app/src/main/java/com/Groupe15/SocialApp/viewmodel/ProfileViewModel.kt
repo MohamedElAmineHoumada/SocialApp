@@ -3,11 +3,13 @@ package com.Groupe15.SocialApp.ui.profile
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.Groupe15.SocialApp.models.Post
+import com.Groupe15.SocialApp.models.Story
 import com.Groupe15.SocialApp.models.User
 import com.Groupe15.SocialApp.repository.AuthRepository
 import com.Groupe15.SocialApp.repository.FeedRepository
 import com.Groupe15.SocialApp.repository.FollowRepository
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.AggregateSource
 import com.google.firebase.firestore.FirebaseFirestore
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
@@ -22,7 +24,7 @@ import javax.inject.Inject
 class ProfileViewModel @Inject constructor(
     private val authRepository: AuthRepository,
     private val followRepository: FollowRepository,
-    private val feedRepository: FeedRepository, // ✅ NOUVEAU
+    private val feedRepository: FeedRepository,
     private val firestore: FirebaseFirestore,
     private val auth: FirebaseAuth
 ) : ViewModel() {
@@ -38,6 +40,9 @@ class ProfileViewModel @Inject constructor(
 
     private val _isLoadingPosts = MutableStateFlow(false)
     val isLoadingPosts: StateFlow<Boolean> = _isLoadingPosts.asStateFlow()
+
+    private val _userStories = MutableStateFlow<List<Story>>(emptyList())
+    val userStories: StateFlow<List<Story>> = _userStories.asStateFlow()
 
     //  posts sauvegardés (onglet "Saved")
     private val _savedPosts = MutableStateFlow<List<Post>>(emptyList())
@@ -67,6 +72,8 @@ class ProfileViewModel @Inject constructor(
         }
 
         loadUserPosts(resolvedUid)
+        loadUserStories(resolvedUid)
+        resyncPostsCount(resolvedUid)
     }
 
     private fun loadUserPosts(uid: String) {
@@ -75,15 +82,42 @@ class ProfileViewModel @Inject constructor(
             try {
                 val snapshot = firestore.collection("posts")
                     .whereEqualTo("userId", uid)
-                    .limit(30)
+                    .limit(50) // Augmenté pour plus de "real posts"
                     .get()
                     .await()
                 _userPosts.value = snapshot.toObjects(Post::class.java)
+                    .onEach { post -> if (post.postId.isBlank()) post.postId = snapshot.documents.find { it.toObject(Post::class.java) == post }?.id ?: "" }
                     .sortedByDescending { it.getCreatedAtMillis() }
             } catch (e: Exception) {
                 _userPosts.value = emptyList()
             } finally {
                 _isLoadingPosts.value = false
+            }
+        }
+    }
+
+    private fun loadUserStories(uid: String) {
+        viewModelScope.launch {
+            _userStories.value = feedRepository.getStoriesByUserId(uid)
+        }
+    }
+
+    private fun resyncPostsCount(uid: String) {
+        viewModelScope.launch {
+            try {
+                val countQuery = firestore.collection("posts")
+                    .whereEqualTo("userId", uid)
+                    .count()
+                    .get(AggregateSource.SERVER)
+                    .await()
+                
+                val realCount = countQuery.count.toInt()
+                
+                // Mettre à jour Firestore pour que le compteur soit cohérent partout
+                firestore.collection("users").document(uid)
+                    .update("postsCount", realCount)
+            } catch (e: Exception) {
+                e.printStackTrace()
             }
         }
     }
