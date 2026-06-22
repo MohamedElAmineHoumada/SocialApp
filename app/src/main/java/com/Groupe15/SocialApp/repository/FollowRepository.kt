@@ -353,6 +353,25 @@ class FollowRepository @Inject constructor(
         }
     }
 
+    /**
+     * Indique si l'utilisateur courant est suivi par [targetUid].
+     * (L'inverse de isFollowing)
+     */
+    suspend fun isFollowedBy(targetUid: String): Boolean {
+        return try {
+            val currentUid = currentUid ?: return false
+            val doc = usersCollection
+                .document(targetUid)
+                .collection("following")
+                .document(currentUid)
+                .get()
+                .await()
+            doc.exists() && doc.getString("status") == "accepted"
+        } catch (e: Exception) {
+            false
+        }
+    }
+
     suspend fun getFollowers(uid: String): List<String> {
         return try {
             usersCollection.document(uid).collection("followers").get().await()

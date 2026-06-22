@@ -62,6 +62,7 @@
     <string name="accept">قبول</string>
     <string name="decline">رفض</string>
     <string name="follow">متابعة</string>
+    <string name="follow_back">رد المتابعة</string>
     <string name="see_all">عرض الكل</string>
     <string name="search">بحث</string>
     <string name="back">رجوع</string>

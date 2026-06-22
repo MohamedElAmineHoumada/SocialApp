@@ -62,6 +62,7 @@
     <string name="accept">Accepter</string>
     <string name="decline">Refuser</string>
     <string name="follow">Suivre</string>
+    <string name="follow_back">Suivre en retour</string>
     <string name="see_all">Voir tout</string>
     <string name="search">Rechercher</string>
     <string name="back">Retour</string>

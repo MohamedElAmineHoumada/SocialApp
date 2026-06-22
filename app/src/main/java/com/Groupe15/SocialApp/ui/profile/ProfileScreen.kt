@@ -2,6 +2,7 @@
 package com.Groupe15.SocialApp.ui.profile
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -20,13 +21,19 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import com.Groupe15.SocialApp.R
 import com.Groupe15.SocialApp.models.User
+import com.Groupe15.SocialApp.ui.feed.StoryViewerScreen
 import com.google.firebase.auth.FirebaseAuth
 
 enum class ProfileTab { POSTS, SAVED, TAGGED, REELS } // SAVED ajouté
@@ -45,6 +52,7 @@ fun ProfileScreen(
     val isOwnProfile by viewModel.isOwnProfile.collectAsState()
     val followState by followViewModel.followState.collectAsState()
     val userPosts by viewModel.userPosts.collectAsState()
+    val userStories by viewModel.userStories.collectAsState() // ✅ STORY
     val isLoadingPosts by viewModel.isLoadingPosts.collectAsState()
     val savedPosts by viewModel.savedPosts.collectAsState() // ✅ NOUVEAU
     val isLoadingSaved by viewModel.isLoadingSaved.collectAsState() // ✅ NOUVEAU
@@ -54,6 +62,8 @@ fun ProfileScreen(
     val isLoadingList by followViewModel.isLoadingList.collectAsState()
     var showFollowersSheet by remember { mutableStateOf(false) }
     var showFollowingSheet by remember { mutableStateOf(false) }
+
+    var showStoryViewer by remember { mutableStateOf(false) } // ✅ STORY
 
     val currentAuthUid = remember { FirebaseAuth.getInstance().currentUser?.uid ?: "" }
 
@@ -87,6 +97,14 @@ fun ProfileScreen(
         if (isOwnProfile) {
             viewModel.loadSavedPosts()
         }
+    }
+
+    if (showStoryViewer && userStories.isNotEmpty()) {
+        StoryViewerScreen(
+            stories = userStories,
+            onClose = { showStoryViewer = false }
+        )
+        return
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
@@ -125,18 +143,48 @@ fun ProfileScreen(
                     )
                 }
 
-                AsyncImage(
-                    model = user.profileImageUrl.ifBlank { null },
-                    contentDescription = "Photo de profil",
+                // Photo de profil avec bague de story si active
+                val hasActiveStory = userStories.isNotEmpty()
+                Box(
                     modifier = Modifier
-                        .size(90.dp)
+                        .size(100.dp) // Légèrement plus grand pour la bague
                         .align(Alignment.BottomStart)
-                        .padding(start = 16.dp)
+                        .padding(start = 12.dp)
                         .offset(y = 45.dp)
+                        .then(
+                            if (hasActiveStory) {
+                                Modifier
+                                    .background(
+                                        brush = Brush.sweepGradient(
+                                            listOf(
+                                                Color(0xFF6C47FF),
+                                                Color(0xFFE91E8C),
+                                                Color(0xFFFFC107),
+                                                Color(0xFF6C47FF)
+                                            )
+                                        ),
+                                        shape = CircleShape
+                                    )
+                                    .padding(3.dp)
+                            } else Modifier
+                        )
                         .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.surface),
-                    contentScale = ContentScale.Crop
-                )
+                        .background(MaterialTheme.colorScheme.surface)
+                        .clickable {
+                            if (hasActiveStory) showStoryViewer = true
+                            else { /* Optionnel: Plein écran image */ }
+                        },
+                    contentAlignment = Alignment.Center
+                ) {
+                    AsyncImage(
+                        model = user.profileImageUrl.ifBlank { null },
+                        contentDescription = "Photo de profil",
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .clip(CircleShape),
+                        contentScale = ContentScale.Crop
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(52.dp))
@@ -164,10 +212,10 @@ fun ProfileScreen(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-                    ProfileStat(count = user.postsCount, label = "Publications")
+                    ProfileStat(count = user.postsCount, label = stringResource(R.string.posts_stat))
                     ProfileStat(
                         count = user.followersCount,
-                        label = "Abonnés",
+                        label = stringResource(R.string.followers_stat),
                         onClick = {
                             followViewModel.loadFollowers(user.id)
                             showFollowersSheet = true
@@ -175,7 +223,7 @@ fun ProfileScreen(
                     )
                     ProfileStat(
                         count = user.followingCount,
-                        label = "Abonnements",
+                        label = stringResource(R.string.following_stat),
                         onClick = {
                             followViewModel.loadFollowing(user.id)
                             showFollowingSheet = true
@@ -196,6 +244,9 @@ fun ProfileScreen(
                         is FollowState.UnfollowSuccess -> false
                         else -> false
                     }
+                    val isFollowedBy = if (followState is FollowState.IsFollowing) 
+                        (followState as FollowState.IsFollowing).isFollowedBy else false
+                    
                     val isLoading = followState is FollowState.Loading
 
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -212,7 +263,10 @@ fun ProfileScreen(
                             if (isLoading) {
                                 CircularProgressIndicator(modifier = Modifier.size(18.dp))
                             } else {
-                                Text(if (isFollowing) "Abonné(e)" else "Suivre")
+                                val label = if (isFollowing) "Abonné(e)" 
+                                            else if (isFollowedBy) stringResource(R.string.follow_back) 
+                                            else stringResource(R.string.follow)
+                                Text(label)
                             }
                         }
                         OutlinedButton(onClick = { onMessage(user.username) }, modifier = Modifier.weight(1f)) {
