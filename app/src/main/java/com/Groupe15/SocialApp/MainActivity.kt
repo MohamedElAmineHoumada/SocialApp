@@ -199,6 +199,9 @@ fun MainScreen(
     LaunchedEffect(currentUserId) {
         if (currentUserId != null) {
             callViewModel.observeIncomingCalls(currentUserId)
+        } else {
+            // Reset incoming calls if user is logged out
+            callViewModel.clearIncomingCall()
         }
     }
 
