@@ -21,12 +21,15 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AddPhotoAlternate
 import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.Videocam
+import androidx.compose.material.icons.filled.DoneAll
 import androidx.compose.material.icons.filled.Gif
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.DoneAll
+import androidx.compose.material.icons.filled.SentimentSatisfiedAlt
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
@@ -68,10 +71,13 @@ fun ChatScreen(
     userName: String,
     userAvatar: String = "",
     onBack: () -> Unit,
-    onCall: (Boolean) -> Unit,
-    onShowToast: (String) -> Unit
+    onCall: (Boolean, String) -> Unit,
+    onShowToast: (String) -> Unit,
+    onHistoryClick: () -> Unit = {},
+    callViewModel: com.Groupe15.SocialApp.viewmodel.CallViewModel = androidx.hilt.navigation.compose.hiltViewModel()
 ) {
     val messages by viewModel.messages.observeAsState(emptyList())
+    val currentUserDoc by viewModel.currentUser.observeAsState()
     val otherUser by viewModel.otherUser.observeAsState()
     var textState by remember { mutableStateOf("") }
     val listState = rememberLazyListState()
@@ -87,6 +93,7 @@ fun ChatScreen(
 
     var showGifPicker by remember { mutableStateOf(false) }
     var showEmojiPicker by remember { mutableStateOf(false) }
+    var showDeleteDialog by remember { mutableStateOf(false) }
     var isRecording by remember { mutableStateOf(false) }
     val sheetState = rememberModalBottomSheetState()
     val keyboardController = LocalSoftwareKeyboardController.current
@@ -107,7 +114,10 @@ fun ChatScreen(
         val cameraGranted = permissions[android.Manifest.permission.CAMERA] ?: false
         val locationGranted = permissions[android.Manifest.permission.ACCESS_FINE_LOCATION] ?: false
         
-        if (recordAudioGranted) {
+        if (recordAudioGranted && cameraGranted) {
+             // Likely a call initiation
+             onShowToast("Permissions micro et caméra accordées.")
+        } else if (recordAudioGranted) {
             onShowToast("Permission micro accordée. Appuyez à nouveau pour enregistrer.")
         } else if (cameraGranted) {
             cameraLauncher.launch(null)
@@ -118,13 +128,6 @@ fun ChatScreen(
             onShowToast("Permission micro requise")
         }
     }
-
-    val requestPermissionLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { isGranted ->
-        // Handle single permission result if needed
-    }
-
     val imagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia()
     ) { uri ->
@@ -149,12 +152,34 @@ fun ChatScreen(
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
+            val displayAvatar = otherUser?.profileImageUrl ?: userAvatar
             ChatTopBar(
                 userName = userName,
-                userAvatar = userAvatar,
+                userAvatar = displayAvatar,
                 isOnline = otherUser?.isOnline ?: false,
                 onBack = onBack,
-                onCall = onCall
+                onCall = { isVideo, avatar ->
+                    permissionLauncher.launch(
+                        arrayOf(
+                            android.Manifest.permission.RECORD_AUDIO,
+                            android.Manifest.permission.CAMERA
+                        )
+                    )
+                    callViewModel.startCall(
+                        callerId = currentUserId,
+                        callerName = currentUserDoc?.username ?: "Moi",
+                        callerAvatar = currentUserDoc?.profileImageUrl ?: "",
+                        receiverId = otherUserId,
+                        receiverName = userName,
+                        receiverAvatar = avatar,
+                        isVideo = isVideo
+                    )
+                    onCall(isVideo, avatar)
+                },
+                onHistoryClick = onHistoryClick,
+                onDeleteChat = {
+                    showDeleteDialog = true
+                }
             )
         },
         bottomBar = {
@@ -255,6 +280,32 @@ fun ChatScreen(
                 )
             }
         }
+    }
+
+    if (showDeleteDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = false },
+            title = { Text("Supprimer la conversation") },
+            text = { Text("Êtes-vous sûr de vouloir supprimer cette conversation ? Cette action est irréversible.") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showDeleteDialog = false
+                        viewModel.deleteChat {
+                            onBack()
+                        }
+                    },
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text("Supprimer")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteDialog = false }) {
+                    Text("Annuler")
+                }
+            }
+        )
     }
 
     if (showEmojiPicker) {
@@ -391,8 +442,11 @@ private fun ChatTopBar(
     userAvatar: String,
     isOnline: Boolean,
     onBack: () -> Unit,
-    onCall: (Boolean) -> Unit
+    onCall: (Boolean, String) -> Unit,
+    onHistoryClick: () -> Unit,
+    onDeleteChat: () -> Unit
 ) {
+    var showMenu by remember { mutableStateOf(false) }
     Surface(
         color = MaterialTheme.colorScheme.surface,
         tonalElevation = 2.dp
@@ -460,17 +514,40 @@ private fun ChatTopBar(
                     )
                 }
 
-                IconButton(onClick = { onCall(false) }) {
+                IconButton(onClick = { onCall(false, userAvatar) }) {
                     Icon(Icons.Default.Call, contentDescription = "Appel vocal",
                         tint = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
-                IconButton(onClick = { onCall(true) }) {
+                IconButton(onClick = { onCall(true, userAvatar) }) {
                     Icon(Icons.Default.Videocam, contentDescription = "Appel vidéo",
                         tint = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
-                IconButton(onClick = {}) {
-                    Icon(Icons.Default.MoreVert, contentDescription = "Plus",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                Box {
+                    IconButton(onClick = { showMenu = true }) {
+                        Icon(Icons.Default.MoreVert, contentDescription = "Plus",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    DropdownMenu(
+                        expanded = showMenu,
+                        onDismissRequest = { showMenu = false }
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text("Historique d'appels") },
+                            onClick = {
+                                showMenu = false
+                                onHistoryClick()
+                            },
+                            leadingIcon = { Icon(Icons.Default.Call, contentDescription = null) }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Supprimer la conversation") },
+                            onClick = {
+                                showMenu = false
+                                onDeleteChat()
+                            },
+                            leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.error) }
+                        )
+                    }
                 }
             }
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, thickness = 0.5.dp)
@@ -488,10 +565,13 @@ fun MessageBubble(
         SimpleDateFormat("HH:mm", Locale.getDefault()).format(message.timestamp.toDate())
     }
 
+    val containerColor = if (isCurrentUser) Color.Transparent else Color(0xFFE9E9EB)
+    val contentColor = if (isCurrentUser) Color.White else Color(0xFF1C1C1E)
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 2.dp),
+            .padding(vertical = 4.dp, horizontal = 8.dp),
         horizontalArrangement = if (isCurrentUser) Arrangement.End else Arrangement.Start
     ) {
         Column(
@@ -500,7 +580,7 @@ fun MessageBubble(
         ) {
             when (message.type) {
                 MessageType.IMAGE, MessageType.GIF -> {
-                    ImageMessageBubble(
+                    ImageMessageBubbleContent(
                         imageUrl = message.imageUrl,
                         caption = message.text,
                         isCurrentUser = isCurrentUser
@@ -548,21 +628,23 @@ fun MessageBubble(
                 }
             }
 
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.padding(top = 2.dp, start = 4.dp, end = 4.dp)
+            ) {
                 Text(
                     text = timeLabel,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    fontSize = 11.sp,
-                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                    fontSize = 11.sp
                 )
                 if (isCurrentUser) {
-                    Spacer(modifier = Modifier.width(2.dp))
+                    Spacer(modifier = Modifier.width(3.dp))
                     if (message.isRead) {
-                        Text(
-                            text = "Seen",
-                            color = MaterialTheme.colorScheme.primary,
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold
+                        Icon(
+                            imageVector = Icons.Default.DoneAll,
+                            contentDescription = "Seen",
+                            tint = VioletStart,
+                            modifier = Modifier.size(14.dp)
                         )
                     } else if (message.isDelivered) {
                         Icon(
@@ -573,7 +655,7 @@ fun MessageBubble(
                         )
                     } else {
                         Icon(
-                            imageVector = Icons.Outlined.Check,
+                            imageVector = Icons.Default.Check,
                             contentDescription = "Sent",
                             modifier = Modifier.size(14.dp),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant
@@ -585,7 +667,6 @@ fun MessageBubble(
     }
 }
 
-// ── Voice Message Bubble ──────────────────────────────────────────────────
 @Composable
 private fun VoiceMessageBubble(
     isCurrentUser: Boolean,
@@ -630,8 +711,7 @@ private fun VoiceMessageBubble(
                         .width(2.dp)
                         .height((4..16).random().dp)
                         .background(
-                            if (isCurrentUser) Color.White.copy(alpha = 0.7f)
-                            else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                            if (isCurrentUser) Color.White.copy(alpha = 0.8f) else Color(0xFF1C1C1E).copy(alpha = 0.3f),
                             CircleShape
                         )
                 )
@@ -641,48 +721,33 @@ private fun VoiceMessageBubble(
     }
 }
 
-// ── Image Bubble ──────────────────────────────────────────────────────────
 @Composable
-private fun ImageMessageBubble(
+private fun ImageMessageBubbleContent(
     imageUrl: String,
     caption: String,
     isCurrentUser: Boolean
 ) {
-    Column(
-        modifier = Modifier
-            .clip(RoundedCornerShape(16.dp))
-            .background(
-                if (isCurrentUser)
-                    Brush.linearGradient(listOf(VioletStart, VioletEnd))
-                else
-                    Brush.linearGradient(
-                        listOf(
-                            MaterialTheme.colorScheme.surfaceVariant,
-                            MaterialTheme.colorScheme.surfaceVariant
-                        )
-                    )
-            )
-    ) {
+    Column {
         AsyncImage(
             model = imageUrl,
             contentDescription = null,
             modifier = Modifier
                 .fillMaxWidth()
-                .aspectRatio(1.4f)
-                .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp)),
-            contentScale = ContentScale.Crop
+                .padding(4.dp)
+                .clip(RoundedCornerShape(16.dp)),
+            contentScale = ContentScale.FillWidth
         )
-        if (caption.isNotBlank()) {
+        if (caption.isNotBlank() && caption != "Sent an image" && caption != "Sent a GIF") {
             Text(
                 text = caption,
-                color = if (isCurrentUser) Color.White
-                else MaterialTheme.colorScheme.onSurfaceVariant,
-                fontSize = 13.sp,
-                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
+                color = if (isCurrentUser) Color.White else Color(0xFF1C1C1E),
+                fontSize = 14.sp,
+                modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 12.dp, top = 4.dp)
             )
         }
     }
 }
+
 
 // ── Input Bar ─────────────────────────────────────────────────────────────
 @Composable

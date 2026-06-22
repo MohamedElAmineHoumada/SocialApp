@@ -55,11 +55,16 @@ fun PostDetailScreen(
                             post = post!!,
                             isLiked = post!!.postId in likedPostIds,
                             isSaved = post!!.postId in savedPostIds,
+                            currentUserId = viewModel.currentUserId,
                             onLikeClick = { viewModel.toggleLike(post!!.postId) },
                             onCommentClick = { /* Scroll to comments maybe? */ },
                             onShareClick = { sharePost = post },
                             onSaveClick = { viewModel.toggleSavePost(post!!.postId) },
-                            onAuthorClick = { onNavigateToProfile(post!!.authorUid) }
+                            onAuthorClick = { onNavigateToProfile(post!!.authorUid) },
+                            onDeleteClick = {
+                                viewModel.deletePost(post!!.postId)
+                                onBack()
+                            }
                         )
                     }
                     

@@ -28,9 +28,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.credentials.*
 import androidx.credentials.exceptions.GetCredentialException
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import androidx.navigation.NavDestination
+import coil.compose.AsyncImage
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.draw.clip
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavType
 import androidx.navigation.compose.*
@@ -187,6 +191,33 @@ fun MainScreen(
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
+
+    val callViewModel: CallViewModel = hiltViewModel()
+    val authViewModel: AuthViewModel = hiltViewModel()
+    val currentUserId = authViewModel.getCurrentUserUid()
+
+    LaunchedEffect(currentUserId) {
+        if (currentUserId != null) {
+            callViewModel.observeIncomingCalls(currentUserId)
+        }
+    }
+
+    val incomingCall by callViewModel.incomingCall.collectAsStateWithLifecycle()
+    val currentCall by callViewModel.currentCall.collectAsStateWithLifecycle()
+
+    // Overlay pour l'appel entrant
+    if (incomingCall != null && currentCall == null) {
+        IncomingCallDialog(
+            call = incomingCall!!,
+            onAccept = {
+                callViewModel.acceptCall()
+                navController.navigate("call/${incomingCall!!.callerName}/${incomingCall!!.isVideo}?avatar=${incomingCall!!.callerAvatar}")
+            },
+            onDecline = {
+                callViewModel.declineCall()
+            }
+        )
+    }
 
     val noBottomBarRoutes = listOf(
         "login", "register", "forgotPassword", "onboardingWelcome",
@@ -354,6 +385,38 @@ fun MainScreen(
                     viewModel = hiltViewModel(),
                     onConversationClick = { conv ->
                         navController.navigate("chat/${conv.userId}/${conv.username}")
+                    },
+                    onCallHistoryClick = {
+                        navController.navigate("call_history")
+                    }
+                )
+            }
+
+            composable("call_history") {
+                val authViewModel: AuthViewModel = hiltViewModel()
+                val currentUserId = authViewModel.getCurrentUserUid() ?: ""
+                
+                CallHistoryScreen(
+                    viewModel = callViewModel, // Utilise l'instance partagée
+                    currentUserId = currentUserId,
+                    onBack = { navController.popBackStack() },
+                    onCallClick = { call ->
+                        val isOutgoing = call.callerId == currentUserId
+                        val otherId = if (isOutgoing) call.receiverId else call.callerId
+                        val otherName = if (isOutgoing) call.receiverName else call.callerName
+                        val otherAvatar = if (isOutgoing) call.receiverAvatar else call.callerAvatar
+                        
+                        navController.navigate("call/$otherName/${call.isVideo}?avatar=$otherAvatar")
+                        
+                        callViewModel.startCall(
+                            callerId = currentUserId,
+                            callerName = "Moi", 
+                            callerAvatar = "",
+                            receiverId = otherId,
+                            receiverName = otherName,
+                            receiverAvatar = otherAvatar,
+                            isVideo = call.isVideo
+                        )
                     }
                 )
             }
@@ -396,7 +459,8 @@ fun MainScreen(
                     onSettings = { navController.navigate("settings") },
                     onMessage = { name -> navController.navigate("chat/$effectiveUid/$name") },
                     onNavigateToProfile = { otherUid -> navController.navigate("profile/$otherUid") },
-                    onPostClick = { postId -> navController.navigate("postDetail/$postId") }
+                    onPostClick = { postId -> navController.navigate("postDetail/$postId") },
+                    onNavigateToPost = { postId -> navController.navigate("postDetail/$postId") }
                 )
             }
 
@@ -491,29 +555,81 @@ fun MainScreen(
                     otherUserId = otherUserId,
                     userName = userName,
                     onBack = { navController.popBackStack() },
-                    onCall = { isVideo -> navController.navigate("call/$userName/$isVideo") },
-                    onShowToast = { msg -> Toast.makeText(context, msg, Toast.LENGTH_SHORT).show() }
+                    onCall = { isVideo, avatar -> navController.navigate("call/$userName/$isVideo?avatar=$avatar") },
+                    onShowToast = { msg -> Toast.makeText(context, msg, Toast.LENGTH_SHORT).show() },
+                    onHistoryClick = { navController.navigate("call_history") },
+                    callViewModel = callViewModel // Utilise l'instance partagée
                 )
             }
 
             composable(
-                "call/{userName}/{isVideo}",
+                "call/{userName}/{isVideo}?avatar={avatar}",
                 arguments = listOf(
                     navArgument("userName") { type = NavType.StringType },
-                    navArgument("isVideo") { type = NavType.BoolType }
+                    navArgument("isVideo") { type = NavType.BoolType },
+                    navArgument("avatar") { type = NavType.StringType; nullable = true; defaultValue = "" }
                 )
             ) { backStackEntry ->
                 val userName = backStackEntry.arguments?.getString("userName") ?: "User"
                 val isVideo = backStackEntry.arguments?.getBoolean("isVideo") ?: false
+                val avatar = backStackEntry.arguments?.getString("avatar") ?: ""
+                
+                // Si l'appel est terminé ailleurs, on ferme l'écran
+                val currentCall by callViewModel.currentCall.collectAsStateWithLifecycle()
+                LaunchedEffect(currentCall) {
+                    if (currentCall != null && (currentCall!!.status == com.Groupe15.SocialApp.models.CallStatus.ENDED.name || 
+                        currentCall!!.status == com.Groupe15.SocialApp.models.CallStatus.DECLINED.name)) {
+                        navController.popBackStack()
+                        callViewModel.clearCurrentCall()
+                    }
+                }
+
                 CallScreen(
                     userName = userName,
-                    userAvatar = "",
+                    userAvatar = avatar,
                     isVideoCall = isVideo,
-                    onHangUp = { navController.popBackStack() }
+                    onHangUp = {
+                        callViewModel.endCall()
+                        navController.popBackStack()
+                    }
                 )
             }
         }
     }
+}
+
+@Composable
+fun IncomingCallDialog(
+    call: com.Groupe15.SocialApp.models.Call,
+    onAccept: () -> Unit,
+    onDecline: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = { },
+        title = { Text("Appel entrant") },
+        text = {
+            Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
+                AsyncImage(
+                    model = call.callerAvatar.ifEmpty { "https://ui-avatars.com/api/?name=${call.callerName}" },
+                    contentDescription = null,
+                    modifier = Modifier.size(64.dp).clip(CircleShape)
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(call.callerName, fontWeight = FontWeight.Bold)
+                Text(if (call.isVideo) "Appel vidéo..." else "Appel vocal...")
+            }
+        },
+        confirmButton = {
+            Button(onClick = onAccept, colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00E676))) {
+                Text("Accepter")
+            }
+        },
+        dismissButton = {
+            Button(onClick = onDecline, colors = ButtonDefaults.buttonColors(containerColor = Color.Red)) {
+                Text("Refuser")
+            }
+        }
+    )
 }
 
 /**

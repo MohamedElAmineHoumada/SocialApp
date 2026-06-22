@@ -53,7 +53,8 @@ fun ProfileScreen(
     onSettings: () -> Unit,
     onMessage: (String) -> Unit,
     onNavigateToProfile: (String) -> Unit = {},
-    onPostClick: (String) -> Unit = {}
+    onPostClick: (String) -> Unit = {},
+    onNavigateToPost: (String) -> Unit = {}
 ) {
     val profileUser by viewModel.currentUser.collectAsState()
     val isOwnProfile by viewModel.isOwnProfile.collectAsState()
@@ -326,11 +327,21 @@ fun ProfileScreen(
 
             when (selectedTab) {
                 ProfileTab.POSTS -> {
-                    PostsGrid(posts = userPosts, isLoading = isLoadingPosts, emptyLabel = "Aucune publication", onPostClick = onPostClick)
+                    PostsGrid(
+                        posts = userPosts,
+                        isLoading = isLoadingPosts,
+                        emptyLabel = "Aucune publication",
+                        onPostClick = onPostClick.takeIf { it != {} } ?: onNavigateToPost
+                    )
                 }
                 //  grille des posts sauvegardés
                 ProfileTab.SAVED -> {
-                    PostsGrid(posts = savedPosts, isLoading = isLoadingSaved, emptyLabel = "Aucune publication enregistrée", onPostClick = onPostClick)
+                    PostsGrid(
+                        posts = savedPosts,
+                        isLoading = isLoadingSaved,
+                        emptyLabel = "Aucune publication enregistrée",
+                        onPostClick = onPostClick.takeIf { it != {} } ?: onNavigateToPost
+                    )
                 }
                 ProfileTab.TAGGED -> {
                     Box(modifier = Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
@@ -381,7 +392,7 @@ private fun PostsGrid(
     posts: List<com.Groupe15.SocialApp.models.Post>,
     isLoading: Boolean,
     emptyLabel: String,
-    onPostClick: (String) -> Unit
+    onPostClick: (String) -> Unit = {}
 ) {
     if (isLoading) {
         Box(modifier = Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
@@ -405,7 +416,7 @@ private fun PostsGrid(
                                 .clickable { onPostClick(post.postId) }
                         ) {
                             AsyncImage(
-                                model = post.imageUrls.firstOrNull(),
+                                model = post.imageUrl,
                                 contentDescription = null,
                                 modifier = Modifier
                                     .fillMaxSize()

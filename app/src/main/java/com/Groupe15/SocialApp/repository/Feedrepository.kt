@@ -47,6 +47,7 @@ class FeedRepository @Inject constructor(
                 if (error != null) return@addSnapshotListener
                 val stories = snapshot?.documents?.mapNotNull { doc ->
                     doc.toObject(Story::class.java)?.let { story ->
+                        // Si storyId est vide dans le doc, on utilise l'ID du document Firestore
                         if (story.storyId.isBlank()) story.copy(storyId = doc.id) else story
                     }
                 } ?: emptyList()
@@ -108,22 +109,22 @@ class FeedRepository @Inject constructor(
             val uid = auth.currentUser?.uid ?: throw Exception("Non connecté")
 
             // ✅ FIX BUG PHOTO : lecture Firestore au lieu de auth.currentUser?.photoUrl
-            // auth.currentUser?.photoUrl est souvent null pour les comptes email/password
-            // alors que profileImageUrl dans Firestore est toujours à jour
             val userDoc = firestore.collection("users").document(uid).get().await()
             val username = userDoc.getString("username") ?: auth.currentUser?.displayName ?: "User"
             val profileUrl = userDoc.getString("profileImageUrl") ?: ""
 
+            val storyId = firestore.collection("stories").document().id
             val story = hashMapOf(
+                "storyId" to storyId,
                 "userId" to uid,
                 "username" to username,
-                "userProfileUrl" to profileUrl,   // ✅ depuis Firestore, jamais vide
+                "userProfileUrl" to profileUrl,
                 "mediaUrl" to post.imageUrl,
                 "postId" to post.postId,
                 "timestamp" to FieldValue.serverTimestamp()
             )
 
-            firestore.collection("stories").add(story).await()
+            firestore.collection("stories").document(storyId).set(story).await()
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
@@ -217,5 +218,38 @@ class FeedRepository @Inject constructor(
                 transaction.update(postRef, "likesCount", FieldValue.increment(1))
             }
         }.await()
+    }
+
+    suspend fun deleteStory(storyId: String): Result<Unit> {
+        return try {
+            val uid = auth.currentUser?.uid ?: throw Exception("Non connecté")
+            val storyRef = firestore.collection("stories").document(storyId)
+            val storyDoc = storyRef.get().await()
+
+            if (!storyDoc.exists()) throw Exception("La story n'existe pas")
+
+            val authorUid = storyDoc.getString("userId") ?: ""
+            if (authorUid != uid) {
+                throw Exception("Vous n'êtes pas l'auteur de cette story")
+            }
+
+            // Ne supprimer l'image du Storage QUE si ce n'est pas un partage de post
+            val isSharedPost = storyDoc.contains("postId") && !storyDoc.getString("postId").isNullOrBlank()
+            val mediaUrl = storyDoc.getString("mediaUrl")
+
+            if (!isSharedPost && mediaUrl != null) {
+                try {
+                    FirebaseStorage.getInstance().getReferenceFromUrl(mediaUrl).delete().await()
+                } catch (e: Exception) {
+                    // Log mais continue la suppression du doc Firestore
+                    e.printStackTrace()
+                }
+            }
+
+            storyRef.delete().await()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
     }
 }

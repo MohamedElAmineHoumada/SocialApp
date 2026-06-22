@@ -15,6 +15,7 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.outlined.BookmarkBorder
 import androidx.compose.material.icons.outlined.ChatBubbleOutline
 import androidx.compose.material.icons.outlined.Send
@@ -48,14 +49,17 @@ fun PostCard(
     post: Post,
     isLiked: Boolean,
     isSaved: Boolean,
+    currentUserId: String?,
     onLikeClick: () -> Unit,
     onCommentClick: () -> Unit,
     onShareClick: () -> Unit,
     onSaveClick: () -> Unit,
     onAuthorClick: () -> Unit,
-    onMediaClick: (Post) -> Unit = {}
+    onMediaClick: (Post) -> Unit = {},
+    onDeleteClick: (() -> Unit)? = null
 ) {
     var showHeartBurst by remember { mutableStateOf(false) }
+    var showMenu by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
     Column(
@@ -98,8 +102,34 @@ fun PostCard(
                     }
                 }
             }
-            IconButton(onClick = { /* TODO: menu options */ }) {
-                Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.options))
+            Box {
+                IconButton(onClick = { showMenu = true }) {
+                    Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.options))
+                }
+                DropdownMenu(
+                    expanded = showMenu,
+                    onDismissRequest = { showMenu = false }
+                ) {
+                    if (post.authorUid == currentUserId && onDeleteClick != null) {
+                        DropdownMenuItem(
+                            text = { 
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(Icons.Default.Delete, contentDescription = null, tint = Color.Red, modifier = Modifier.size(20.dp))
+                                    Spacer(modifier = Modifier.width(12.dp))
+                                    Text("Supprimer", color = Color.Red)
+                                }
+                            },
+                            onClick = {
+                                showMenu = false
+                                onDeleteClick()
+                            }
+                        )
+                    }
+                    DropdownMenuItem(
+                        text = { Text("Signaler") },
+                        onClick = { showMenu = false }
+                    )
+                }
             }
         }
 
