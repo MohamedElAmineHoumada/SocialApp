@@ -1,6 +1,7 @@
 package com.Groupe15.SocialApp.repository
 
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.storage.FirebaseStorage
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -14,6 +15,7 @@ object RepositoryModule {
     @Provides
     @Singleton
     fun provideMessageRepository(
-        firestore: FirebaseFirestore
-    ): MessageRepository = MessageRepository(firestore)
+        firestore: FirebaseFirestore,
+        storage: FirebaseStorage
+    ): MessageRepository = MessageRepository(firestore, storage)
 }
