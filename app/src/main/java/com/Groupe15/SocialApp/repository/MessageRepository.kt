@@ -29,10 +29,7 @@ class MessageRepository @Inject constructor(
         return if (userId1 < userId2) "${userId1}_${userId2}" else "${userId2}_${userId1}"
     }
 
-    /**
-     * Écoute les messages d'une conversation en temps réel.
-     * orderBy sur une seule collection simple → pas d'index composite requis.
-     */
+
     fun getMessages(chatId: String): Flow<List<Message>> = callbackFlow {
         val listener = firestore
             .collection("chats")
@@ -184,11 +181,7 @@ class MessageRepository @Inject constructor(
         firestore.collection("chats").document(chatId).set(summaryData).await()
     }
 
-    /**
-     * Liste les conversations de l'utilisateur.
-     * PAS d'orderBy combiné avec whereArrayContains pour éviter l'index composite.
-     * Le tri se fait côté client.
-     */
+
     fun getConversations(userId: String): Flow<List<ConversationSummary>> = callbackFlow {
         val listener = firestore
             .collection("chats")

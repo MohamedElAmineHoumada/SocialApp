@@ -31,7 +31,7 @@ fun SettingsScreen(
     onShowToast: () -> Unit,
     onAccountDeleted: () -> Unit,
     onLoggedOut: () -> Unit = {},
-    onNotifications: () -> Unit = {}   // ← nouveau paramètre
+    onNotifications: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val prefs = context.getSharedPreferences("settings", Context.MODE_PRIVATE)
@@ -41,7 +41,7 @@ fun SettingsScreen(
     }
     var showDeleteDialog by remember { mutableStateOf(false) }
 
-    // ✅ NOUVEAU : état du dialog de sélection de langue
+
     var showLanguageDialog by remember { mutableStateOf(false) }
     var currentLanguage by remember {
         mutableStateOf(LanguageManager.getSavedLanguage(context) ?: LanguageManager.LANG_FRENCH)
@@ -67,7 +67,7 @@ fun SettingsScreen(
         )
     }
 
-    // ✅ NOUVEAU : dialog de sélection de langue
+
     if (showLanguageDialog) {
         AlertDialog(
             onDismissRequest = { showLanguageDialog = false },
@@ -159,7 +159,7 @@ fun SettingsScreen(
             )
             HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
 
-            // ✅ NOUVEAU : Langue de l'application
+
             ListItem(
                 headlineContent = { Text(stringResource(R.string.change_language)) },
                 supportingContent = { Text(languageDisplayName(currentLanguage)) },
@@ -244,7 +244,7 @@ private fun LanguageOption(
     }
 }
 
-/** Nom affiché pour chaque code de langue dans le sous-titre du ListItem. */
+
 @Composable
 private fun languageDisplayName(code: String): String = when (code) {
     LanguageManager.LANG_FRENCH -> stringResource(R.string.language_french)

@@ -18,9 +18,7 @@ class SocialApp : Application() {
             else AppCompatDelegate.MODE_NIGHT_NO
         )
 
-        // ✅ Appliquer la langue sauvegardée (français/anglais/arabe), si l'utilisateur
-        // en a déjà choisi une explicitement. Doit être appelé avant l'affichage de
-        // la première UI pour que l'app démarre directement dans la bonne langue.
+
         LanguageManager.applySavedLanguage(this)
     }
 }

@@ -46,7 +46,7 @@ class FeedViewModel @Inject constructor(
     private val recommendationRepository: RecommendationRepository,
     private val commentRepository: CommentRepository,
     private val followRepository: FollowRepository,
-    private val messageRepository: MessageRepository // ✅ NOUVEAU
+    private val messageRepository: MessageRepository
 ) : ViewModel() {
 
     private val _uiEvent = MutableSharedFlow<FeedUiEvent>()
@@ -105,7 +105,7 @@ class FeedViewModel @Inject constructor(
         loadFeed()
         loadStories()
         loadRecentContacts()
-        loadSavedPostIds() // ✅ NOUVEAU
+        loadSavedPostIds()
     }
 
     fun selectPost(postId: String) {

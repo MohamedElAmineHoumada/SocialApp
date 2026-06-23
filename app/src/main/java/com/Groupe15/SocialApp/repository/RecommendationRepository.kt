@@ -11,23 +11,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.math.ln
 
-/**
- * Génère le flux de posts pour l'onglet "For You" (découverte de nouveaux comptes).
- *
- * Règle d'exclusion : "For You" ne montre QUE des posts d'auteurs que l'utilisateur
- * ne suit PAS encore (et jamais ses propres posts). C'est ce qui différencie
- * structurellement cet onglet de "Following", même avec peu de données de test.
- *
- * Algorithme de scoring (calculé côté client, sans ML) :
- *   score = (likes * POIDS_LIKE) + (comments * POIDS_COMMENT)
- *           - decay(âge_en_heures)
- *           + bonus_proximite_sociale
- *
- * - decay : pénalise les posts anciens (log pour lisser l'effet)
- * - bonus_proximite_sociale : +N points si l'auteur est suivi par des gens
- *   que je suis (= "ami d'ami"), ce qui simule une recommandation sociale
- *   sans graphe complexe.
- */
+
 @Singleton
 class RecommendationRepository @Inject constructor(
     private val postRepository: PostRepository,
@@ -42,11 +26,7 @@ class RecommendationRepository @Inject constructor(
         private const val DECAY_FACTOR = 1.5
     }
 
-    /**
-     * Récupère, pour chaque auteur du pool de posts, le nombre de personnes
-     * que je suis qui suivent également cet auteur ("amis en commun").
-     * Limité aux auteurs présents dans le pool pour rester léger.
-     */
+
     private suspend fun computeSocialProximity(
         currentUid: String,
         authorUids: List<String>
@@ -91,15 +71,7 @@ class RecommendationRepository @Inject constructor(
         return likeScore + commentScore - decay
     }
 
-    /**
-     * Flux "For You" : posts de DÉCOUVERTE (auteurs non suivis + pas soi-même),
-     * scoré et trié par engagement/récence/proximité sociale.
-     *
-     * On exclut volontairement les auteurs déjà suivis : "For You" doit aider à
-     * découvrir de nouveaux comptes, "Following" reste le flux des gens qu'on suit.
-     * Sans cette exclusion, les deux onglets peuvent sembler identiques tant que
-     * la base de test contient peu de comptes/posts.
-     */
+
     fun getForYouPosts(excludeAlreadyLiked: Boolean = false): Flow<List<Post>> {
         val currentUid = auth.currentUser?.uid
             ?: return postRepository.getAllPosts(limit = 200)

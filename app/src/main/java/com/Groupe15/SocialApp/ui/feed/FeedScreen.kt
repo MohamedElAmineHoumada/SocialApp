@@ -259,10 +259,7 @@ private fun EmptyFeedState(tab: FeedTab) {
     }
 }
 
-/**
- * [onStoryClick]   → tap court sur la bulle  → ouvre le StoryViewerScreen
- * [onProfileClick] → tap long sur la bulle   → navigue vers profile/{userId}
- */
+
 @Composable
 private fun StoriesRow(
     stories: List<Story>,

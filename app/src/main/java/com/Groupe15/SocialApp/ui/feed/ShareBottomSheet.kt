@@ -152,7 +152,6 @@ fun ShareScreen(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        // ✅ MODIFIÉ : invite à choisir un contact ci-dessous au lieu de "Bientôt disponible"
         ShareActionButton(
             title = "Envoyer en message",
             iconRes = R.drawable.ic_send,
@@ -193,7 +192,6 @@ fun ShareScreen(
                 contentPadding = PaddingValues(bottom = 32.dp)
             ) {
                 items(recentContacts) { user ->
-                    // ✅ MODIFIÉ : envoie réellement le lien du post à ce contact
                     RecentContactItem(user = user, onClick = {
                         viewModel.sendPostToChat(user.id, post)
                         Toast.makeText(context, "Envoyé à ${user.displayName.ifBlank { user.username }}", Toast.LENGTH_SHORT).show()

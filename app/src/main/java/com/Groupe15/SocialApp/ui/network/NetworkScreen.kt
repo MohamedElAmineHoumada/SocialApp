@@ -174,7 +174,7 @@ fun NetworkContent(
                             )
                             if (followRequests.isNotEmpty()) {
                                 TextButton(onClick = { /* Handle see all requests */ }) {
-                                    Text("See all", color = Color(0xFF6C47FF))
+                                    Text("See all", color = Color(0xFF64067E))
                                 }
                             }
                         }

@@ -46,8 +46,7 @@ fun RegisterScreen(
     var acceptTerms by remember { mutableStateOf(false) }
     var isPasswordVisible by remember { mutableStateOf(false) }
 
-    // ✅ Afficher l'écran de confirmation email après inscription réussie,
-    //    AVANT de passer à l'onboarding (DOB → Genre → Centres d'intérêt)
+
     var showEmailSent by remember { mutableStateOf(false) }
 
     // Quand l'inscription réussit → montrer l'écran "vérifiez votre email"
@@ -202,7 +201,7 @@ fun RegisterScreen(
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // ✅ Bouton S'inscrire → appelle register() directement (Firebase envoie le vrai email)
+        // Bouton S'inscrire → appelle register() directement (Firebase envoie le vrai email)
         Button(
             onClick = { onRegisterClick(email, password, fullName) },
             modifier = Modifier
@@ -304,10 +303,7 @@ fun RegisterScreen(
     }
 }
 
-// ── Écran intermédiaire : confirmation de l'envoi du lien Firebase ───────────
-// Affiché après inscription réussie, avant de passer à l'onboarding.
-// L'utilisateur doit cliquer sur le lien reçu par email, puis appuyer sur
-// "J'ai vérifié" pour continuer vers Date de naissance → Genre → Centres d'intérêt.
+
 @Composable
 fun EmailVerificationUI(
     email: String,
@@ -345,7 +341,7 @@ fun EmailVerificationUI(
         )
         Spacer(modifier = Modifier.height(32.dp))
 
-        // ✅ Après avoir cliqué sur le lien → continuer vers l'onboarding
+
         Button(
             onClick = { onCodeEntered("") },
             modifier = Modifier
@@ -369,7 +365,6 @@ fun EmailVerificationUI(
     }
 }
 
-// ── Composants réutilisables ─────────────────────────────────────────────────
 
 @Composable
 fun CustomRegisterTextField(

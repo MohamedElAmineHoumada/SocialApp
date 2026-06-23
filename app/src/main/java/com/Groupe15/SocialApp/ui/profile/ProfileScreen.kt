@@ -60,10 +60,10 @@ fun ProfileScreen(
     val isOwnProfile by viewModel.isOwnProfile.collectAsState()
     val followState by followViewModel.followState.collectAsState()
     val userPosts by viewModel.userPosts.collectAsState()
-    val userStories by viewModel.userStories.collectAsState() // ✅ STORY
+    val userStories by viewModel.userStories.collectAsState()
     val isLoadingPosts by viewModel.isLoadingPosts.collectAsState()
-    val savedPosts by viewModel.savedPosts.collectAsState() // ✅ NOUVEAU
-    val isLoadingSaved by viewModel.isLoadingSaved.collectAsState() // ✅ NOUVEAU
+    val savedPosts by viewModel.savedPosts.collectAsState()
+    val isLoadingSaved by viewModel.isLoadingSaved.collectAsState()
 
     val followersList by followViewModel.followersList.collectAsState()
     val followingList by followViewModel.followingList.collectAsState()
@@ -71,7 +71,7 @@ fun ProfileScreen(
     var showFollowersSheet by remember { mutableStateOf(false) }
     var showFollowingSheet by remember { mutableStateOf(false) }
 
-    var showStoryViewer by remember { mutableStateOf(false) } // ✅ STORY
+    var showStoryViewer by remember { mutableStateOf(false) }
 
     val currentAuthUid = remember { FirebaseAuth.getInstance().currentUser?.uid ?: "" }
 
