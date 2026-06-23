@@ -1,5 +1,6 @@
-package com.Groupe15.SocialApp.repository
+package com.Groupe15.SocialApp.di
 
+import com.Groupe15.SocialApp.repository.MessageRepository
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.storage.FirebaseStorage
 import dagger.Module

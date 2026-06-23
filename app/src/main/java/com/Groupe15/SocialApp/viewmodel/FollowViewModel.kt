@@ -1,9 +1,10 @@
-package com.Groupe15.SocialApp.ui.profile
+package com.Groupe15.SocialApp.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.Groupe15.SocialApp.models.User
 import com.Groupe15.SocialApp.repository.FollowRepository
+import com.Groupe15.SocialApp.ui.profile.FollowState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow

@@ -40,6 +40,7 @@ import coil.compose.AsyncImage
 import com.Groupe15.SocialApp.R
 import com.Groupe15.SocialApp.models.User
 import com.Groupe15.SocialApp.ui.feed.StoryViewerScreen
+import com.Groupe15.SocialApp.viewmodel.FollowViewModel
 import com.google.firebase.auth.FirebaseAuth
 
 enum class ProfileTab { POSTS, SAVED, TAGGED, REELS } // SAVED ajouté
