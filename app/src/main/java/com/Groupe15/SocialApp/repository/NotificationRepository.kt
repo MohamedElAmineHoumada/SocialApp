@@ -27,7 +27,7 @@ class NotificationRepository @Inject constructor(
         // Ne pas se notifier soi-même
         if (targetUid.isBlank() || targetUid == fromUserId) return
 
-        // ✅ Vérifier les paramètres de l'utilisateur cible
+
         val prefs = context.getSharedPreferences("notification_settings_$targetUid", Context.MODE_PRIVATE)
         val pauseAll = prefs.getBoolean("pause_all", false)
         if (pauseAll) return

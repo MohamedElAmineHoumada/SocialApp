@@ -22,12 +22,7 @@ class RegisterViewModel @Inject constructor(
         _state.value = AuthState.Idle
     }
 
-    /**
-     * Inscription classique email/mot de passe.
-     * Firebase envoie automatiquement un vrai email de vérification avec lien cliquable.
-     * Après inscription → l'utilisateur voit l'écran de vérification et doit cliquer
-     * sur le lien reçu par mail avant de pouvoir continuer.
-     */
+
     fun register(email: String, password: String, displayName: String) {
         viewModelScope.launch {
             _state.value = AuthState.Loading

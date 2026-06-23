@@ -69,10 +69,10 @@ class MainActivity : AppCompatActivity() {
 
     @Inject lateinit var authRepository: AuthRepository
 
-    // ── Credential Manager (Google Sign-In moderne) ────────────────────────
+    // ── Credential Manager (Google Sign-In moderne)
     private lateinit var credentialManager: CredentialManager
 
-    // ── Facebook callback manager ──────────────────────────────────────────
+    // ── Facebook callback manager
     private lateinit var callbackManager: CallbackManager
 
     private var onGoogleResult: ((String) -> Unit)? = null
@@ -179,9 +179,6 @@ class MainActivity : AppCompatActivity() {
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Composable principal
-// ─────────────────────────────────────────────────────────────────────────────
 
 @Composable
 fun MainScreen(
@@ -315,9 +312,6 @@ fun MainScreen(
                             { error -> registerViewModel.resetState() }
                         )
                     },
-                    // ✅ FIX : popUpTo("register") pour vider la back-stack
-                    // avant d'aller vers l'onboarding. Sans ça, "register" restait
-                    // dans la pile et bloquait la navigation sur onboardingDob.
                     onSuccess = {
                         navController.navigate("onboardingWelcome") {
                             popUpTo("register") { inclusive = true }
@@ -353,8 +347,6 @@ fun MainScreen(
                 OnboardingInterestsScreen(
                     viewModel = onboardingViewModel,
                     onBack = { navController.popBackStack() },
-                    // ✅ FIX : popUpTo(0) vide toute la back-stack (login + onboarding)
-                    // pour que l'utilisateur ne puisse pas revenir en arrière depuis le feed.
                     onFinish = {
                         navController.navigate("feed") {
                             popUpTo(0) { inclusive = true }
@@ -635,10 +627,7 @@ fun IncomingCallDialog(
     )
 }
 
-/**
- * Affiche la bannière de vérification d'email uniquement si l'utilisateur
- * est connecté mais son email n'est pas encore vérifié.
- */
+
 @Composable
 fun EmailVerificationBannerWrapper(loginViewModel: LoginViewModel) {
     val state by loginViewModel.state.observeAsState(initial = com.Groupe15.SocialApp.ui.auth.AuthState.Idle)
@@ -651,9 +640,6 @@ fun EmailVerificationBannerWrapper(loginViewModel: LoginViewModel) {
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Bottom navigation
-// ─────────────────────────────────────────────────────────────────────────────
 
 @Composable
 fun CustomBottomNavigation(

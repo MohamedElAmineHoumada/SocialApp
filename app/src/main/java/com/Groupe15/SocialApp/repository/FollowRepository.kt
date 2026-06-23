@@ -15,19 +15,7 @@ import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 import javax.inject.Singleton
 
-/**
- * Gère les actions de suivi : follow, unfollow, vérification du statut,
- * liste des abonnés/abonnements, demandes en attente (comptes privés),
- * et utilitaires de synchronisation des compteurs.
- *
- * Schéma Firestore (sous-collections) :
- * - users/{uid}                    → document utilisateur (modèle User)
- * - users/{uid}/following/{targetUid} → { uid, status: "accepted"|"pending" }
- * - users/{uid}/followers/{targetUid} → { uid }
- *
- * Les comptes privés (isPrivate = true) reçoivent des demandes "pending"
- * dans la sous-collection following de l'initiateur, jusqu'à acceptation.
- */
+
 @Singleton
 class FollowRepository @Inject constructor(
     private val firestore: FirebaseFirestore,
@@ -38,15 +26,8 @@ class FollowRepository @Inject constructor(
 
     val currentUid get() = auth.currentUser?.uid
 
-    // ─────────────────────────────────────────────
-    // Follow / Unfollow
-    // ─────────────────────────────────────────────
 
-    /**
-     * Suit [targetUid].
-     * - Compte public  → suivi immédiat (status = "accepted"), compteurs mis à jour.
-     * - Compte privé   → demande en attente (status = "pending"), sans toucher aux compteurs.
-     */
+
     suspend fun followUser(targetUid: String): Result<Unit> {
         return try {
             val currentUid = currentUid ?: return Result.failure(Exception("Non connecté"))
@@ -141,10 +122,7 @@ class FollowRepository @Inject constructor(
         }
     }
 
-    /**
-     * Annule un suivi existant ou retire une demande en attente.
-     * Utilise une transaction pour éviter la désynchronisation des compteurs.
-     */
+
     suspend fun unfollowUser(targetUid: String): Result<Unit> {
         return try {
             val currentUid = currentUid ?: return Result.failure(Exception("Non connecté"))
@@ -182,14 +160,6 @@ class FollowRepository @Inject constructor(
         }
     }
 
-    // ─────────────────────────────────────────────
-    // Demandes en attente (comptes privés)
-    // ─────────────────────────────────────────────
-
-    /**
-     * Retourne les demandes de suivi en attente reçues par l'utilisateur courant.
-     * Pertinent uniquement si son compte est privé (isPrivate = true).
-     */
     suspend fun getPendingFollowRequests(): List<FollowRequest> {
         val uid = currentUid ?: return emptyList()
 
@@ -224,10 +194,7 @@ class FollowRepository @Inject constructor(
         }
     }
 
-    /**
-     * Accepte une demande de suivi en attente.
-     * [followerId] = uid de la personne qui a envoyé la demande.
-     */
+
     suspend fun acceptFollowRequest(followerId: String): Result<Unit> {
         return try {
             val currentUid = currentUid ?: return Result.failure(Exception("Non connecté"))
@@ -281,10 +248,6 @@ class FollowRepository @Inject constructor(
         }
     }
 
-    /**
-     * Refuse / supprime une demande de suivi en attente.
-     * [followerId] = uid de la personne qui a envoyé la demande.
-     */
     suspend fun rejectFollowRequest(followerId: String): Result<Unit> {
         return try {
             val currentUid = currentUid ?: return Result.failure(Exception("Non connecté"))
@@ -302,14 +265,6 @@ class FollowRepository @Inject constructor(
         }
     }
 
-    // ─────────────────────────────────────────────
-    // Lecture du statut / listes
-    // ─────────────────────────────────────────────
-
-    /**
-     * Indique si l'utilisateur courant suit [targetUid] (status = "accepted").
-     * Une demande "pending" est considérée comme "pas encore suivi".
-     */
     suspend fun isFollowing(targetUid: String): Boolean {
         return try {
             val currentUid = currentUid ?: return false
@@ -325,9 +280,7 @@ class FollowRepository @Inject constructor(
         }
     }
 
-    /**
-     * Indique si l'utilisateur courant a une demande en attente vers [targetUid].
-     */
+
     suspend fun isPendingFollow(targetUid: String): Boolean {
         return try {
             val currentUid = currentUid ?: return false
@@ -343,10 +296,7 @@ class FollowRepository @Inject constructor(
         }
     }
 
-    /**
-     * Indique si l'utilisateur courant est suivi par [targetUid].
-     * (L'inverse de isFollowing)
-     */
+
     suspend fun isFollowedBy(targetUid: String): Boolean {
         return try {
             val currentUid = currentUid ?: return false
@@ -396,21 +346,7 @@ class FollowRepository @Inject constructor(
         }
     }
 
-    /**
-     * ✅ CORRIGÉ : auparavant, un seul document "à problème" (erreur réseau ponctuelle
-     * sur un chunk, document avec un champ incompatible qui fait planter toObject(), etc.)
-     * faisait échouer la requête whereIn() ou le mapNotNull() de TOUT le chunk, ce qui était
-     * intercepté par le try/catch global et renvoyait emptyList() pour TOUS les ids demandés
-     * — y compris ceux des chunks qui auraient parfaitement fonctionné.
-     *
-     * Symptôme observé : le compteur (abonnés/abonnements) affiche un nombre correct
-     * (calculé séparément par resyncCounts, qui ne vérifie que l'existence des documents),
-     * mais la liste affichée est vide pour CERTAINS comptes seulement — exactement selon
-     * que leurs abonnés/abonnements contiennent ou non un document "à problème".
-     *
-     * Désormais, chaque chunk et chaque document sont traités indépendamment : un échec
-     * isolé est simplement ignoré, sans jamais vider le reste de la liste.
-     */
+
     suspend fun getUsersByIds(ids: List<String>): List<User> {
         if (ids.isEmpty()) return emptyList()
         val result = mutableListOf<User>()
@@ -432,13 +368,6 @@ class FollowRepository @Inject constructor(
         return result
     }
 
-    // ─────────────────────────────────────────────
-    // Gestion des abonnés
-    // ─────────────────────────────────────────────
-
-    /**
-     * Retire un abonné : [targetUid] arrête automatiquement de suivre l'utilisateur courant.
-     */
     suspend fun removeFollower(targetUid: String): Result<Unit> {
         return try {
             val currentUid = currentUid ?: return Result.failure(Exception("Non connecté"))
@@ -470,27 +399,7 @@ class FollowRepository @Inject constructor(
         }
     }
 
-    // ─────────────────────────────────────────────
-    // Utilitaires
-    // ─────────────────────────────────────────────
 
-    /**
-     * Recalcule followersCount / followingCount à partir du nombre réel
-     * de documents VALIDES (dont l'utilisateur cible existe encore) dans les
-     * sous-collections. Corrige les écarts éventuels.
-     *
-     * IMPORTANT : on ne se contente pas de compter les documents bruts
-     * (followersSnapshot.size()), car des relations "fantômes" peuvent exister
-     * si un compte a été supprimé ou n'a jamais été créé correctement
-     * (ex. comptes de test). Un document fantôme ferait gonfler le compteur
-     * sans jamais apparaître dans la liste affichée (getUsersByIds l'ignore
-     * silencieusement car le document users/{uid} n'existe plus).
-     *
-     * On vérifie donc l'existence réelle de chaque utilisateur référencé,
-     * et on supprime au passage les références fantômes pour que ce problème
-     * ne se reproduise plus à l'avenir (nettoyage définitif, pas juste un
-     * correctif d'affichage).
-     */
     suspend fun resyncCounts(uid: String): Result<Unit> {
         return try {
             if (uid.isEmpty()) return Result.success(Unit)
@@ -540,9 +449,6 @@ class FollowRepository @Inject constructor(
                 }
             }
 
-            // ✅ set(..., merge = true) au lieu de update() : ne plante jamais même
-            // si le document a été supprimé entre le check d'existence ci-dessus
-            // et cet appel (cas rare mais possible en cas de suppression concurrente).
             usersCollection.document(uid).set(
                 mapOf(
                     "followersCount" to validFollowersCount,

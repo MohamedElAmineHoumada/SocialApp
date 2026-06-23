@@ -15,7 +15,7 @@ import javax.inject.Singleton
 class CommentRepository @Inject constructor(
     private val firestore: FirebaseFirestore,
     private val auth: FirebaseAuth,
-    private val notificationRepository: NotificationRepository // ✅ NOUVEAU
+    private val notificationRepository: NotificationRepository
 ) {
 
     fun getComments(postId: String): Flow<List<Comment>> = callbackFlow {

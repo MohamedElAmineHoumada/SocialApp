@@ -12,7 +12,7 @@ data class Post(
     @get:PropertyName("caption") @set:PropertyName("caption") var content: String = "",
     @get:PropertyName("imageUrls") @set:PropertyName("imageUrls") var imageUrls: List<String> = emptyList(),
     var videoUrl: String = "",
-    var visibility: String = "Public", // Public, Friends, FriendsOfFriends, OnlyMe
+    var visibility: String = "Public",
     var hashtags: List<String> = emptyList(),
     @get:PropertyName("imageUrl") @set:PropertyName("imageUrl") var oldImageUrl: String = "",
     var likesCount: Int = 0,
@@ -27,7 +27,6 @@ data class Post(
         }
     }
 
-    // Compatibilité avec le code existant qui attend 'imageUrl' (1ère image ou ancien champ unique)
     @get:Exclude
     val imageUrl: String
         get() = when {
@@ -36,9 +35,7 @@ data class Post(
             else -> ""
         }
 
-    /**
-     * Âge du post en heures, utilisé pour le scoring "For You".
-     */
+
     @Exclude
     fun getAgeInHours(): Double {
         val ageMillis = System.currentTimeMillis() - getCreatedAtMillis()

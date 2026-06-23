@@ -47,7 +47,6 @@ fun CreatePostScreen(
 
     var showVisibilityMenu by remember { mutableStateOf(false) }
 
-    // ✅ Bouton Publier actif si TEXTE seul, IMAGE seule, VIDEO seule, ou combo
     val canPublish = (postText.isNotBlank() || selectedImages.isNotEmpty() || selectedVideo != null) && !isPosting
 
     val imagePickerLauncher = rememberLauncherForActivityResult(

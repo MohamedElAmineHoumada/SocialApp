@@ -73,7 +73,6 @@ class CreatePostViewModel @Inject constructor(
     fun createPost(caption: String) {
         if (_isPosting.value) return
 
-        // ✅ Validation : il faut AU MOINS du texte OU AU MOINS un média
         if (caption.isBlank() && _selectedImages.value.isEmpty() && _selectedVideo.value == null) {
             _error.value = "Ajoute du texte, une photo ou une vidéo pour publier"
             return

@@ -78,13 +78,7 @@ class CommentsBottomSheet : BottomSheetDialogFragment() {
     }
 }
 
-/**
- * Hauteur ADAPTATIVE : la zone de commentaires utilise une Column scrollable
- * avec un plafond (heightIn max), pas une hauteur fixe.
- *
- * [onNavigateToProfile] : appelé avec l'uid de l'auteur quand on clique
- * sur son avatar ou son nom dans la liste.
- */
+
 @Composable
 fun CommentsScreen(
     viewModel: FeedViewModel,

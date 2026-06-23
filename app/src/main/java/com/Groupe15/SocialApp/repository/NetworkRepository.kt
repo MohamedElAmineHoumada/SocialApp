@@ -74,8 +74,7 @@ class NetworkRepository @Inject constructor(
     suspend fun searchUsers(query: String): List<SuggestionUser> {
         if (query.isBlank()) return emptyList()
         return try {
-            // Firestore doesn't support case-insensitive contains, so we do a simple prefix search.
-            // A better solution would be using Algolia or keeping a lowercase field.
+
             val snapshot = usersCollection
                 .whereGreaterThanOrEqualTo("displayName", query)
                 .whereLessThanOrEqualTo("displayName", query + "\uf8ff")

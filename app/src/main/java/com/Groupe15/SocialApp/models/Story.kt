@@ -10,13 +10,13 @@ data class Story(
     val username: String = "",
     val userProfileUrl: String = "",
     val mediaUrl: String = "",
-    @get:PropertyName("imageUrl") val imageUrl: String = "", // Fallback pour compatibilité
-    val type: String = "image", // "image" ou "video"
+    @get:PropertyName("imageUrl") val imageUrl: String = "",
+    val type: String = "image",
     val text: String? = null,
     val filter: String = "Original",
     val timestamp: Timestamp? = null,
     val isViewed: Boolean = false,
-    val postId: String? = null // Référence si c'est un partage de post
+    val postId: String? = null
 ) {
     @get:Exclude
     val isCurrentUser: Boolean

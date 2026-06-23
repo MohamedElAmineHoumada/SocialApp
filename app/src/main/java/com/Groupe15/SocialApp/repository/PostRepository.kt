@@ -21,7 +21,7 @@ class PostRepository @Inject constructor(
     private val firestore: FirebaseFirestore,
     private val storage: FirebaseStorage,
     private val auth: FirebaseAuth,
-    private val notificationRepository: NotificationRepository // ✅ NOUVEAU
+    private val notificationRepository: NotificationRepository
 ) {
 
     suspend fun getFollowingUids(currentUid: String): List<String> {
@@ -146,7 +146,7 @@ class PostRepository @Inject constructor(
                 videoUrl         = videoUrl,
                 visibility       = visibility,
                 hashtags         = hashtags,
-                oldImageUrl      = imageUrls.firstOrNull() ?: "", // Pour la compatibilité ascendante
+                oldImageUrl      = imageUrls.firstOrNull() ?: "",
                 createdAt        = Timestamp.now()
             )
             firestore.collection("posts").document(postId).set(post).await()
@@ -179,7 +179,6 @@ class PostRepository @Inject constructor(
             }
         }.await()
 
-        // ✅ NOUVEAU : notification uniquement quand on LIKE (pas quand on unlike)
         if (isNowLiked) {
             try {
                 val postDoc = postRef.get().await()

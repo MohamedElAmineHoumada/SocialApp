@@ -16,13 +16,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
-/**
- * Bannière affichée en haut du feed lorsque l'email de l'utilisateur
- * n'est pas encore vérifié.
- *
- * @param onResend  appelé quand l'utilisateur clique sur "Renvoyer"
- * @param onDismiss appelé quand l'utilisateur a vérifié son email (optionnel)
- */
+
 @Composable
 fun EmailVerificationBanner(
     onResend: () -> Unit,

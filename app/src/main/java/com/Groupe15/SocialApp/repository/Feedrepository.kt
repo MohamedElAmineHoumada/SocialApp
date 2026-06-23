@@ -75,7 +75,7 @@ class FeedRepository @Inject constructor(
     suspend fun createStory(mediaUri: Uri, text: String?, filter: String): Result<Unit> {
         return try {
             val uid = auth.currentUser?.uid ?: throw Exception("Non connecté")
-            // ✅ Lecture Firestore — source de vérité pour username et photo
+
             val userDoc = firestore.collection("users").document(uid).get().await()
             val username = userDoc.getString("username") ?: "User"
             val profileUrl = userDoc.getString("profileImageUrl") ?: ""
@@ -108,7 +108,7 @@ class FeedRepository @Inject constructor(
         return try {
             val uid = auth.currentUser?.uid ?: throw Exception("Non connecté")
 
-            // ✅ FIX BUG PHOTO : lecture Firestore au lieu de auth.currentUser?.photoUrl
+
             val userDoc = firestore.collection("users").document(uid).get().await()
             val username = userDoc.getString("username") ?: auth.currentUser?.displayName ?: "User"
             val profileUrl = userDoc.getString("profileImageUrl") ?: ""

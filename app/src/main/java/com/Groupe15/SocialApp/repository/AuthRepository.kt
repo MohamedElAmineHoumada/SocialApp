@@ -111,7 +111,7 @@ class AuthRepository @Inject constructor(
             firestore.collection("users").document(uid).set(user).await()
             updateFcmToken()
 
-            // ✅ Vrai email de vérification Firebase (lien cliquable envoyé par mail)
+
             auth.currentUser?.sendEmailVerification()?.await()
 
             Result.success(Unit)
@@ -137,23 +137,13 @@ class AuthRepository @Inject constructor(
     }
 
 
-    /**
-     * Connexion Google via idToken (obtenu depuis Credential Manager).
-     * Crée le document Firestore + envoie email de vérification si nouvel utilisateur.
-     * Google fournit des emails déjà vérifiés, donc on marque isEmailVerified = true.
-     */
     suspend fun signInWithGoogle(idToken: String): Result<Unit> {
         return try {
             val credential = GoogleAuthProvider.getCredential(idToken, null)
             val result = auth.signInWithCredential(credential).await()
             val firebaseUser = result.user ?: throw Exception("Échec de la connexion Google.")
 
-            // ✅ On ne se fie plus uniquement à isNewUser : ce flag peut être incorrect
-            // si le compte Auth existe déjà mais que son document Firestore a été supprimé
-            // ou n'a jamais été créé (ex: crash pendant une inscription précédente, ou
-            // suppression manuelle pendant des tests). On vérifie l'existence RÉELLE du
-            // document dans Firestore, ce qui garantit qu'aucun compte "fantôme"
-            // (authentifié mais sans profil) ne peut se produire.
+
             val userDoc = firestore.collection("users").document(firebaseUser.uid).get().await()
             if (!userDoc.exists()) {
                 createFirestoreUserFromSocial(
@@ -162,30 +152,22 @@ class AuthRepository @Inject constructor(
                     displayName = firebaseUser.displayName ?: "Utilisateur",
                     photoUrl = firebaseUser.photoUrl?.toString() ?: ""
                 )
-                // Ne PAS envoyer d'email de vérification :
-                // Firebase marque automatiquement isEmailVerified = true pour Google OAuth
+
             }
             updateFcmToken()
-            // Que l'utilisateur soit nouveau ou existant → succès
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
         }
     }
 
-    /**
-     * Connexion Facebook via accessToken (obtenu depuis le SDK Facebook).
-     * Crée le document Firestore si nouvel utilisateur.
-     * Envoie un email de vérification car Facebook ne garantit pas la vérification d'email.
-     */
     suspend fun signInWithFacebook(accessToken: String): Result<Unit> {
         return try {
             val credential = FacebookAuthProvider.getCredential(accessToken)
             val result = auth.signInWithCredential(credential).await()
             val firebaseUser = result.user ?: throw Exception("Échec de la connexion Facebook.")
 
-            // ✅ Même garde que pour Google : on vérifie l'existence réelle du document
-            // Firestore plutôt que de se fier uniquement à isNewUser.
+
             val userDoc = firestore.collection("users").document(firebaseUser.uid).get().await()
             if (!userDoc.exists()) {
                 createFirestoreUserFromSocial(
@@ -206,9 +188,7 @@ class AuthRepository @Inject constructor(
         }
     }
 
-    /**
-     * Renvoie l'email de vérification à l'utilisateur courant.
-     */
+
     suspend fun resendVerificationEmail(): Result<Unit> {
         return try {
             val user = auth.currentUser ?: throw Exception("Aucun utilisateur connecté.")
@@ -219,10 +199,7 @@ class AuthRepository @Inject constructor(
         }
     }
 
-    /**
-     * Recharge l'état Firebase de l'utilisateur courant pour vérifier
-     * si son email a été vérifié depuis la dernière session.
-     */
+
     suspend fun reloadUser(): Result<Boolean> {
         return try {
             auth.currentUser?.reload()?.await()
@@ -326,7 +303,6 @@ class AuthRepository @Inject constructor(
         }
     }
 
-    // ── Helpers privés ───────────────────────────────────────────────────────
 
     private suspend fun createFirestoreUserFromSocial(
         uid: String, email: String, displayName: String, photoUrl: String
